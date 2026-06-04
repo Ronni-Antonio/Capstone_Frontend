@@ -391,7 +391,7 @@ const ecoStyles = `
   }
 `
 
-export default function Login() {
+export default function Login({ onLogin }) {
 
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
@@ -405,14 +405,16 @@ export default function Login() {
   const [forgotEmail, setForgotEmail] = useState('')
   const [countdown, setCountdown] = useState(30)
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      localStorage.setItem('plink_role', 'admin')
+ const handleSubmit = (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    }, 700)
+  setTimeout(() => {
+    setLoading(false);
+    localStorage.setItem('plink_role', 'admin');
+
+    onLogin(); // Go to dashboard
+  }, 700);
   }
 
   const handleForgotSubmit = (e) => {
@@ -517,7 +519,7 @@ export default function Login() {
                 }}
                 className="demo-btn"
               >
-                Use Admin Demo
+              Use the Admin Demo
               </button>
             </div>
 
