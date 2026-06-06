@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import Login from './Pages/Login.jsx';
 
-import { Sidebar } from './pages/sidebar';
-import { Header } from './pages/header';
-import { MachineMonitoring } from './pages/machine_monitoring';
-
+import { Sidebar } from './Pages/sidebar';
+import { Header } from './Pages/header';
+import { MachineMonitoring } from './Pages/machine_monitoring';
+import { Notifications } from './Pages/notifications';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);

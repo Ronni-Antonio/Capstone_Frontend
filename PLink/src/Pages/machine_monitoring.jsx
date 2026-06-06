@@ -40,11 +40,50 @@ export function MachineMonitoring() {
   // Max value calculation for bar chart styling height scaling
   const maxRejectedValue = Math.max(...rejectedByHour.map(d => d.v), 1);
 
+  // SVG Circumference for circular dial track calculation
+  const radius = 15.9155;
+  const circumference = 2 * Math.PI * radius; // Approx 100
+  const strokeDashoffset = 100 - fullness;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'sans-serif' }}>
       
+      {/* Pure CSS Keyframes injection - completely independent of packages */}
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fillBar {
+          from { width: 0%; }
+          to { width: ${fullness}%; }
+        }
+        @keyframes fillCircle {
+          from { stroke-dashoffset: 100; }
+          to { stroke-dashoffset: ${strokeDashoffset}; }
+        }
+        @keyframes growBar {
+          from { height: 2px; }
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-circle-fill {
+          animation: fillCircle 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .animate-bar-fill {
+          animation: fillBar 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .animate-chart-grow {
+          animation-name: growBar;
+          animation-duration: 0.8s;
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+          transform-origin: bottom;
+        }
+      `}</style>
+
       {/* Main monitoring card */}
-      <div style={{
+      <div className="animate-fade-in-up" style={{
         backgroundColor: COLORS.white,
         borderRadius: '24px',
         padding: '28px',
@@ -53,9 +92,9 @@ export function MachineMonitoring() {
       }}>
         
         {/* Header section */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexGrow: 1 }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '16px', backgroundColor: COLORS.mintMuted, display: 'flex', alignItems: 'center', justifyContents: 'center' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '16px', backgroundColor: COLORS.mintMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* Simplified Recycle Icon */}
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={COLORS.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5M12 2v10M12 2l-4 4M12 2l4 4"/></svg>
             </div>
@@ -89,19 +128,23 @@ export function MachineMonitoring() {
         {/* Content Layout Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
           
-          {/* Circular Fullness display (Replaced Recharts with dynamic SVG) */}
+          {/* Circular Fullness display */}
           <div style={{ backgroundColor: COLORS.ivory, borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.darkMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Real-time Fullness</div>
             
             <div style={{ position: 'relative', width: '224px', height: '224px' }}>
-              <svg width="100%" height="100%" viewBox="0 0 36 36">
+              <svg width="100%" height="100%" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
                 {/* Background circle track */}
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e8f5bd" strokeWidth="3" />
-                {/* Foreground active data track */}
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" 
+                {/* Foreground active data track with SVG animation parameters */}
+                <path 
+                  className="animate-circle-fill"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                  fill="none" 
                   stroke={fullness >= 85 ? COLORS.redText : fullness >= 65 ? '#f59e0b' : COLORS.dark} 
                   strokeWidth="3" 
-                  strokeDasharray={`${fullness}, 100`} 
+                  strokeDasharray="100"
+                  strokeDashoffset="100"
                   strokeLinecap="round"
                 />
               </svg>
@@ -129,12 +172,15 @@ export function MachineMonitoring() {
                 <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{fullness} / 100%</span>
               </div>
               <div style={{ width: '100%', height: '20px', backgroundColor: 'rgba(232,245,189,0.7)', borderRadius: '9999px', overflow: 'hidden', position: 'relative' }}>
-                <div style={{
-                  height: '100%',
-                  borderRadius: '9999px',
-                  width: `${fullness}%`,
-                  backgroundColor: status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : COLORS.sage
-                }} />
+                <div 
+                  className="animate-bar-fill"
+                  style={{
+                    height: '100%',
+                    borderRadius: '9999px',
+                    width: '0%',
+                    backgroundColor: status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : COLORS.sage
+                  }} 
+                />
                 <span style={{ position: 'absolute', top: 0, bottom: 0, width: '1px', backgroundColor: 'rgba(62,95,68,0.3)', left: '65%' }} />
                 <span style={{ position: 'absolute', top: 0, bottom: 0, width: '1px', backgroundColor: 'rgba(62,95,68,0.3)', left: '85%' }} />
               </div>
@@ -173,9 +219,9 @@ export function MachineMonitoring() {
       </div>
 
       {/* Analytics Breakdown Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+      <div className="animate-fade-in-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', animationDelay: '0.15s', opacity: 0 }}>
         
-        {/* Replaced ChartCard Container 1 */}
+        {/* Container 1 */}
         <div style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}` }}>
           <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>Rejected Items</h3>
           <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: COLORS.darkMuted }}>Breakdown of items the machine rejected today</p>
@@ -200,15 +246,13 @@ export function MachineMonitoring() {
           </div>
         </div>
 
-        {/* Replaced ChartCard Container 2 (Recharts Bar chart rewritten in HTML Flexbox bars) */}
+        {/* Container 2 (Bar chart with grow animation applied directly to elements) */}
         <div style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}`, gridColumn: 'span 1' }}>
           <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>Rejected Items by Hour</h3>
           <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: COLORS.darkMuted }}>When non-PET items were attempted today</p>
           
-          {/* Custom Pure HTML/CSS Bar Chart Grid Layout */}
           <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderBottom: `1px solid ${COLORS.mintMuted}`, paddingBottom: '8px', gap: '4px' }}>
             {rejectedByHour.map((item, index) => {
-              // Calculate percent height dynamically
               const heightPercent = (item.v / maxRejectedValue) * 100;
               return (
                 <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
@@ -217,14 +261,18 @@ export function MachineMonitoring() {
                       {item.v}
                     </div>
                   )}
-                  <div style={{
-                    width: '70%',
-                    minWidth: '12px',
-                    height: item.v === 0 ? '2px' : `${heightPercent}%`,
-                    backgroundColor: item.v === 0 ? '#e2e8f0' : '#dc2626',
-                    borderRadius: '4px 4px 0 0',
-                    transition: 'height 0.3s ease'
-                  }} title={`${item.h}: ${item.v} rejections`} />
+                  <div 
+                    className="animate-chart-grow"
+                    style={{
+                      width: '70%',
+                      minWidth: '12px',
+                      height: item.v === 0 ? '2px' : `${heightPercent}%`,
+                      backgroundColor: item.v === 0 ? '#e2e8f0' : '#dc2626',
+                      borderRadius: '4px 4px 0 0',
+                      transition: 'height 0.3s ease'
+                    }} 
+                    title={`${item.h}: ${item.v} rejections`} 
+                  />
                   <div style={{ fontSize: '10px', color: COLORS.dark, marginTop: '6px', whiteSpace: 'nowrap' }}>
                     {item.h}
                   </div>
@@ -237,7 +285,7 @@ export function MachineMonitoring() {
       </div>
 
       {/* Info Legend Panel Card */}
-      <div style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}` }}>
+      <div className="animate-fade-in-up" style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}`, animationDelay: '0.3s', opacity: 0 }}>
         <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>Status Indicators</h3>
         <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: COLORS.darkMuted }}>How the bin status is determined</p>
         

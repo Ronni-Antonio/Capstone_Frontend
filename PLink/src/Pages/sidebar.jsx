@@ -16,7 +16,7 @@ export function Sidebar({ activePage, setActivePage }) {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    padding: '10px 12px',
+    padding: '9px 12px', // Slightly adjusted from 10px to fit everything comfortably
     borderRadius: '12px',
     fontSize: '14px',
     fontWeight: '500',
@@ -43,13 +43,13 @@ export function Sidebar({ activePage, setActivePage }) {
       color: COLORS.white,
       fontFamily: 'sans-serif',
       boxSizing: 'border-box',
-      zIndex: 10
+      zIndex: 10,
+      overflow: 'hidden' // Prevents any rogue accidental scrolling on the entire container
     }}>
       
       {/* Header Logo */}
-      <div style={{ padding: '28px 24px 24px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ padding: '24px 24px 16px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '16px', backgroundColor: 'rgba(199, 234, 187, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* Font Awesome Leaf Icon for Logo */}
           <i className="fa-solid fa-leaf" style={{ color: COLORS.mint, fontSize: '18px' }}></i>
         </div>
         <div>
@@ -59,7 +59,7 @@ export function Sidebar({ activePage, setActivePage }) {
       </div>
 
       {/* Profile Button */}
-      <div style={{ padding: '0 16px 8px 16px' }}>
+      <div style={{ padding: '0 16px 4px 16px' }}>
         <button onClick={() => setActivePage('users')} style={getNavItemStyles('users')}>
           <i className="fa-solid fa-circle-user" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
           <span style={{ flex: 1 }}>Ms. Reyes</span>
@@ -67,8 +67,15 @@ export function Sidebar({ activePage, setActivePage }) {
       </div>
 
       {/* Navigation Menu */}
-      <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
-        <div style={{ padding: '16px 12px 8px 12px', fontSize: '11px', textTransform: 'uppercase', color: 'rgba(199, 234, 187, 0.6)', fontWeight: '600' }}>
+      <nav style={{ 
+        flex: 1, 
+        padding: '0 16px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '2px', // Tighter gaps to maximize screen room
+        overflow: 'hidden' // FIXED: Removed overflowY: 'auto' to kill the scrollbar completely
+      }}>
+        <div style={{ padding: '12px 12px 4px 12px', fontSize: '11px', textTransform: 'uppercase', color: 'rgba(199, 234, 187, 0.6)', fontWeight: '600' }}>
           Menu
         </div>
 
@@ -102,6 +109,12 @@ export function Sidebar({ activePage, setActivePage }) {
           <span style={{ flex: 1 }}>Reports & Analytics</span>
         </button>
 
+        {/* Incentives & Rewards */}
+        <button onClick={() => setActivePage('incentives')} style={getNavItemStyles('incentives')}>
+          <i className="fa-solid fa-gift" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
+          <span style={{ flex: 1 }}>Incentives & Rewards</span>
+        </button>
+
         {/* Notifications */}
         <button onClick={() => setActivePage('notifications')} style={getNavItemStyles('notifications')}>
           <i className="fa-solid fa-bell" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
@@ -117,7 +130,7 @@ export function Sidebar({ activePage, setActivePage }) {
       </nav>
 
       {/* Logout */}
-      <div style={{ padding: '16px' }}>
+      <div style={{ padding: '12px 16px 16px 16px' }}>
         <button onClick={() => alert('Logging out...')} style={getNavItemStyles('logout')}>
           <i className="fa-solid fa-right-from-bracket" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
           <span style={{ flex: 1 }}>Logout</span>

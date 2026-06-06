@@ -6,6 +6,7 @@ const titles = {
   students: { title: 'Student Points', subtitle: 'Manage Grade 3 student rewards & records' },
   rankings: { title: 'Sections Ranking', subtitle: 'See which Grade 3 section leads the eco race' },
   reports: { title: 'Reports & Analytics', subtitle: 'Insights & exportable recycling reports' },
+  incentives: { title: 'Incentives & Rewards', subtitle: 'Manage student reward distributions and gift items' },
   notifications: { title: 'Notifications', subtitle: 'System alerts and machine warnings' },
   users: { title: 'User Management', subtitle: 'Profile, security & account activity' },
   settings: { title: 'Settings', subtitle: 'Customize your Plink system' },
