@@ -3,15 +3,25 @@ import Login from './Pages/Login.jsx';
 
 import { Sidebar } from './Pages/sidebar';
 import { Header } from './Pages/header';
+
+import Dashboard from './Pages/Dashboard.jsx';
+import Reports from './Pages/Reports.jsx';
+
 import { MachineMonitoring } from './Pages/machine_monitoring';
 import { Notifications } from './Pages/notifications';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activePage, setActivePage] = useState('machines');
+  const [activePage, setActivePage] = useState('dashboard');
 
   const renderPageContent = () => {
     switch (activePage) {
+      case 'dashboard':
+        return <Dashboard />;
+
+      case 'reports':
+        return <Reports />;
+
       case 'machines':
         return <MachineMonitoring />;
 
@@ -26,6 +36,7 @@ function App() {
             <h2 className="text-xl font-bold capitalize text-[#3e5f44]">
               {activePage}
             </h2>
+
             <p className="mt-2 text-sm text-[#3e5f44]/70">
               This screen tab view is successfully linked!
             </p>
@@ -34,7 +45,6 @@ function App() {
     }
   };
 
-  // LOGIN SCREEN
   if (!isLoggedIn) {
     return (
       <Login
@@ -43,9 +53,8 @@ function App() {
     );
   }
 
-  // DASHBOARD
   return (
-    <div className="flex min-h-screen bg-[#f4f6f3] overflow-x-hidden">
+    <div className="min-h-screen bg-[#f7f8f3]">
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
