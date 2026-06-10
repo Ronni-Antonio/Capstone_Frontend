@@ -1,142 +1,143 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  LayoutDashboardIcon,
+  CpuIcon,
+  UsersIcon,
+  TrophyIcon,
+  BarChart3Icon,
+  BellIcon,
+  SettingsIcon,
+  LeafIcon,
+  LogOutIcon,
+  GiftIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
+  UserCircleIcon,
+} from 'lucide-react';
 
-const COLORS = {
-  dark: '#3e5f44',
-  white: '#ffffff',
-  mint: '#c7eabb',
-  mintMuted: 'rgba(199, 234, 187, 0.8)',
-  sage: '#5a7c61',
-  lime: '#e8f5bd',
-  hoverBg: 'rgba(255, 255, 255, 0.05)',
-};
+const navItems = [
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
+  { key: 'machines', label: 'Machine Monitoring', icon: CpuIcon },
+  { key: 'students', label: 'Student Points', icon: UsersIcon },
+  { key: 'rankings', label: 'Sections Ranking', icon: TrophyIcon },
+  { key: 'reports', label: 'Reports & Analytics', icon: BarChart3Icon },
+  { key: 'incentives', label: 'Incentives & Rewards', icon: GiftIcon },
+  { key: 'notifications', label: 'Notifications', icon: BellIcon, badge: 3 },
+  { key: 'settings', label: 'Settings', icon: SettingsIcon },
+];
 
 export function Sidebar({ activePage, setActivePage }) {
-  
-  const getNavItemStyles = (pageName) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '9px 12px', // Slightly adjusted from 10px to fit everything comfortably
-    borderRadius: '12px',
-    fontSize: '14px',
-    fontWeight: '500',
-    backgroundColor: activePage === pageName ? COLORS.sage : 'transparent',
-    color: activePage === pageName ? COLORS.white : COLORS.mintMuted,
-    cursor: 'pointer',
-    border: 'none',
-    width: '100%',
-    textAlign: 'left',
-    transition: 'all 0.2s ease',
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem('plink_sidebar_collapsed');
+    return saved === 'true';
   });
 
+  useEffect(() => {
+    localStorage.setItem('plink_sidebar_collapsed', String(collapsed));
+  }, [collapsed]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('plink_role');
+    alert('Logging out...');
+  };
+
   return (
-    <aside style={{
-      display: 'flex',
-      flexDirection: 'column',
-      width: '260px',
-      flexShrink: 0,
-      height: '100vh',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      backgroundColor: COLORS.dark,
-      color: COLORS.white,
-      fontFamily: 'sans-serif',
-      boxSizing: 'border-box',
-      zIndex: 10,
-      overflow: 'hidden' // Prevents any rogue accidental scrolling on the entire container
-    }}>
-      
-      {/* Header Logo */}
-      <div style={{ padding: '24px 24px 16px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '16px', backgroundColor: 'rgba(199, 234, 187, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <i className="fa-solid fa-leaf" style={{ color: COLORS.mint, fontSize: '18px' }}></i>
+    <aside
+      className={`hidden lg:flex flex-col shrink-0 h-screen fixed top-0 left-0 bg-[#3e5f44] text-white transition-all duration-300 z-10 overflow-hidden ${
+        collapsed ? 'w-20' : 'w-[260px]'
+      }`}
+    >
+      {/* 1. Header Logo */}
+      <div className={`px-6 pt-7 pb-6 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+            <LeafIcon className="w-5 h-5 text-[#c7eabb]" />
+          </div>
+          {!collapsed && (
+            <div className="transition-opacity duration-300">
+              <div className="font-sans font-bold text-lg leading-tight whitespace-nowrap">Plink</div>
+              <div className="text-xs text-[#c7eabb]/80 leading-tight whitespace-nowrap">Recycling Admin</div>
+            </div>
+          )}
         </div>
-        <div>
-          <div style={{ fontWeight: '700', fontSize: '18px', lineHeight: '1.2' }}>Plink</div>
-          <div style={{ fontSize: '12px', color: COLORS.mintMuted, lineHeight: '1.2' }}>Recycling Admin</div>
-        </div>
-      </div>
-
-      {/* Profile Button */}
-      <div style={{ padding: '0 16px 4px 16px' }}>
-        <button onClick={() => setActivePage('users')} style={getNavItemStyles('users')}>
-          <i className="fa-solid fa-circle-user" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Ms. Reyes</span>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={`w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-[#c7eabb] transition-colors ${
+            collapsed ? 'absolute -right-4 top-8 bg-[#3e5f44] border border-[#c7eabb]/20 shadow-sm' : ''
+          }`}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <PanelLeftOpenIcon className="w-4 h-4" /> : <PanelLeftCloseIcon className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Navigation Menu */}
-      <nav style={{ 
-        flex: 1, 
-        padding: '0 16px', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '2px', // Tighter gaps to maximize screen room
-        overflow: 'hidden' // FIXED: Removed overflowY: 'auto' to kill the scrollbar completely
-      }}>
-        <div style={{ padding: '12px 12px 4px 12px', fontSize: '11px', textTransform: 'uppercase', color: 'rgba(199, 234, 187, 0.6)', fontWeight: '600' }}>
-          Menu
-        </div>
-
-        {/* Dashboard */}
-        <button onClick={() => setActivePage('dashboard')} style={getNavItemStyles('dashboard')}>
-          <i className="fa-solid fa-chart-simple" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Dashboard</span>
+      {/* 2. User Account Button */}
+      <div className={`px-4 pb-2 ${collapsed ? 'flex justify-center' : ''}`}>
+        <button
+          onClick={() => setActivePage('users')}
+          title={collapsed ? 'Ms. Reyes (Profile)' : undefined}
+          className={`group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 border-none cursor-pointer w-full ${
+            collapsed ? 'justify-center w-12 h-12' : 'px-3 py-2.5'
+          } ${activePage === 'users' ? 'bg-[#5a7c61] text-white' : 'text-[#c7eabb]/90 hover:bg-white/5 hover:text-white'}`}
+        >
+          <UserCircleIcon className="w-[18px] h-[18px] shrink-0" />
+          {!collapsed && <span className="flex-1 text-left whitespace-nowrap">Ms. Reyes</span>}
         </button>
+      </div>
 
-        {/* Machine Monitoring */}
-        <button onClick={() => setActivePage('machines')} style={getNavItemStyles('machines')}>
-          <i className="fa-solid fa-microchip" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Machine Monitoring</span>
-        </button>
-
-        {/* Student Points */}
-        <button onClick={() => setActivePage('students')} style={getNavItemStyles('students')}>
-          <i className="fa-solid fa-graduation-cap" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Student Points</span>
-        </button>
-
-        {/* Sections Ranking */}
-        <button onClick={() => setActivePage('rankings')} style={getNavItemStyles('rankings')}>
-          <i className="fa-solid fa-trophy" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Sections Ranking</span>
-        </button>
-
-        {/* Reports & Analytics */}
-        <button onClick={() => setActivePage('reports')} style={getNavItemStyles('reports')}>
-          <i className="fa-solid fa-chart-line" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Reports & Analytics</span>
-        </button>
-
-        {/* Incentives & Rewards */}
-        <button onClick={() => setActivePage('incentives')} style={getNavItemStyles('incentives')}>
-          <i className="fa-solid fa-gift" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Incentives & Rewards</span>
-        </button>
-
-        {/* Notifications */}
-        <button onClick={() => setActivePage('notifications')} style={getNavItemStyles('notifications')}>
-          <i className="fa-solid fa-bell" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Notifications</span>
-          <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: COLORS.lime, color: COLORS.dark, padding: '2px 6px', borderRadius: '9999px' }}>3</span>
-        </button>
-
-        {/* Settings */}
-        <button onClick={() => setActivePage('settings')} style={getNavItemStyles('settings')}>
-          <i className="fa-solid fa-gear" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Settings</span>
-        </button>
+      {/* 3. Dynamic Navigation Loop */}
+      <nav className="flex-1 px-4 space-y-1 overflow-hidden" aria-label="Main navigation">
+        {!collapsed && (
+          <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-[#c7eabb]/60 font-semibold transition-opacity duration-300">
+            Menu
+          </div>
+        )}
+        {collapsed && <div className="pt-4" />}
+        
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activePage === item.key;
+          return (
+            <button
+              key={item.key}
+              onClick={() => setActivePage(item.key)}
+              title={collapsed ? item.label : undefined}
+              className={`group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 relative border-none cursor-pointer w-full ${
+                collapsed ? 'justify-center w-12 h-12 mx-auto' : 'px-3 py-2.5'
+              } ${isActive ? 'bg-[#5a7c61] text-white' : 'text-[#c7eabb]/90 hover:bg-white/5 hover:text-white'}`}
+            >
+              <Icon className="w-[18px] h-[18px] shrink-0" />
+              {!collapsed && (
+                <span className="flex-1 text-left whitespace-nowrap transition-opacity duration-300">
+                  {item.label}
+                </span>
+              )}
+              {item.badge && !collapsed && (
+                <span className="text-[10px] font-bold bg-[#e8f5bd] text-[#3e5f44] px-1.5 py-0.5 rounded-full shrink-0">
+                  {item.badge}
+                </span>
+              )}
+              {item.badge && collapsed && (
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#e8f5bd]" />
+              )}
+            </button>
+          );
+        })}
       </nav>
 
-      {/* Logout */}
-      <div style={{ padding: '12px 16px 16px 16px' }}>
-        <button onClick={() => alert('Logging out...')} style={getNavItemStyles('logout')}>
-          <i className="fa-solid fa-right-from-bracket" style={{ fontSize: '16px', width: '18px', textAlign: 'center' }}></i>
-          <span style={{ flex: 1 }}>Logout</span>
+      {/* 4. Logout Section */}
+      <div className="p-4">
+        <button
+          onClick={handleLogout}
+          title={collapsed ? 'Logout' : undefined}
+          className={`group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 border-none cursor-pointer text-[#c7eabb]/90 hover:bg-white/5 hover:text-white ${
+            collapsed ? 'justify-center w-12 h-12 mx-auto' : 'w-full px-3 py-2.5 text-left'
+          }`}
+        >
+          <LogOutIcon className="w-[18px] h-[18px] shrink-0" />
+          {!collapsed && <span className="flex-1 whitespace-nowrap transition-opacity duration-300">Logout</span>}
         </button>
       </div>
-
     </aside>
   );
 }
