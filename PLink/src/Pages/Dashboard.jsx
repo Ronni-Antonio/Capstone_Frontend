@@ -117,29 +117,6 @@ export default function Dashboard() {
         }
       `}</style>
 
-      {/* Header */}
-
-      <div className="fade-up">
-        <h1
-          style={{
-            margin: 0,
-            fontSize: '28px',
-            color: COLORS.dark
-          }}
-        >
-          Dashboard
-        </h1>
-
-        <p
-          style={{
-            marginTop: '6px',
-            color: COLORS.darkMuted,
-            fontSize: '14px'
-          }}
-        >
-          Overview of recycling activity today
-        </p>
-      </div>
 
       {/* Stats */}
 
