@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const COLORS = {
   white: '#ffffff',
@@ -63,6 +63,8 @@ const students = [
 ];
 
 export default function StudentPoints() {
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <div
       style={{
@@ -299,18 +301,19 @@ export default function StudentPoints() {
         ))}
 
         <button
-          style={{
-            border: 'none',
-            background: COLORS.dark,
-            color: 'white',
-            padding: '12px 18px',
-            borderRadius: '14px',
-            cursor: 'pointer',
-            fontWeight: '600'
-          }}
-        >
-          <i className="fa-solid fa-plus"></i> Add Student
-        </button>
+  onClick={() => setShowModal(true)}
+  style={{
+    border: 'none',
+    background: COLORS.dark,
+    color: 'white',
+    padding: '12px 18px',
+    borderRadius: '14px',
+    cursor: 'pointer',
+    fontWeight: '600'
+  }}
+>
+  <i className="fa-solid fa-plus"></i> Add Student
+</button>
       </div>
 
       {/* TABLE */}
@@ -438,7 +441,143 @@ export default function StudentPoints() {
             ))}
           </tbody>
         </table>
-      </div>
+            </div>
+
+      {showModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.45)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999
+          }}
+        >
+          <div
+            style={{
+              width: '750px',
+              maxWidth: '95%',
+              background: '#fff',
+              borderRadius: '24px',
+              padding: '24px',
+              border: `1px solid ${COLORS.mintLight}`
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px'
+              }}
+            >
+              <h2
+                style={{
+                  margin: 0,
+                  color: COLORS.dark
+                }}
+              >
+                Add Students
+              </h2>
+
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '22px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                border: `2px dashed ${COLORS.mint}`,
+                borderRadius: '18px',
+                padding: '30px',
+                textAlign: 'center',
+                marginBottom: '24px'
+              }}
+            >
+              <h3 style={{ color: COLORS.dark }}>
+                Upload CSV File
+              </h3>
+
+              <p
+                style={{
+                  color: COLORS.darkMuted,
+                  fontSize: '14px'
+                }}
+              >
+                Upload a CSV file containing student records.
+              </p>
+
+              <input
+                type="file"
+                accept=".csv"
+              />
+            </div>
+
+            <h3
+              style={{
+                color: COLORS.dark
+              }}
+            >
+              Add Individual Student
+            </h3>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px'
+              }}
+            >
+              <input
+                placeholder="Student Name"
+                style={modalInput}
+              />
+
+              <input
+                placeholder="Student ID"
+                style={modalInput}
+              />
+
+              <select style={modalInput}>
+                <option>3-Sampaguita</option>
+                <option>3-Rosal</option>
+                <option>3-Orchid</option>
+                <option>3-Jasmine</option>
+              </select>
+
+              <input
+                placeholder="Initials"
+                style={modalInput}
+              />
+            </div>
+
+            <button
+              style={{
+                marginTop: '20px',
+                border: 'none',
+                background: COLORS.dark,
+                color: '#fff',
+                padding: '12px 18px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Add Student
+            </button>
+          </div>
+        </div>
+            )}
     </div>
   );
 }
@@ -464,4 +603,13 @@ const actionBtn = {
   cursor: 'pointer',
   background: '#c7eabb',
   color: '#3e5f44'
+};
+
+const modalInput = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '12px',
+  border: '1px solid rgba(199,234,187,.5)',
+  outline: 'none',
+  boxSizing: 'border-box'
 };

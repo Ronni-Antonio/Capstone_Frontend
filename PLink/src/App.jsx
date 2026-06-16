@@ -8,6 +8,8 @@ import Dashboard from './Pages/Dashboard.jsx';
 import Reports from './Pages/Reports.jsx';
 import StudentPoints from './Pages/student_points.jsx';
 import SectionsRanking from './Pages/sections_ranking.jsx';
+import IncentivesRewards from './Pages/incentives_rewards.jsx';
+import Profile from './Pages/Profile.jsx';
 
 import { MachineMonitoring } from './Pages/machine_monitoring.jsx';
 import { Notifications } from './Pages/notifications.jsx';
@@ -17,20 +19,17 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activePage, setActivePage] = useState('dashboard');
 
-  // Track sidebar collapse state globally to synchronize layout margins
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('plink_sidebar_collapsed');
     return saved === 'true';
   });
 
-  // Keep state matching local storage updates smoothly
   useEffect(() => {
     const handleStorageChange = () => {
       const saved = localStorage.getItem('plink_sidebar_collapsed');
       setSidebarCollapsed(saved === 'true');
     };
 
-    // Listen for local state mutations or clicks
     window.addEventListener('click', handleStorageChange);
 
     return () => {
@@ -49,6 +48,9 @@ function App() {
       case 'rankings':
         return <SectionsRanking />;
 
+      case 'incentives':
+        return <IncentivesRewards />;
+
       case 'reports':
       case 'reports & analytics':
         return <Reports />;
@@ -58,7 +60,14 @@ function App() {
         return <MachineMonitoring />;
 
       case 'notifications':
-        return <Notifications onNavigate={setActivePage} />;
+        return (
+          <Notifications
+            onNavigate={setActivePage}
+          />
+        );
+
+      case 'users':
+        return <Profile />;
 
       case 'settings':
         return <Settings />;
@@ -81,7 +90,9 @@ function App() {
   if (!isLoggedIn) {
     return (
       <Login
-        onLogin={() => setIsLoggedIn(true)}
+        onLogin={() =>
+          setIsLoggedIn(true)
+        }
       />
     );
   }
@@ -93,7 +104,6 @@ function App() {
         setActivePage={setActivePage}
       />
 
-      {/* Margins dynamically scale back and forth smoothly matching the sidebar state */}
       <div
         className={`min-h-screen flex flex-col p-10 transition-all duration-300 ${
           sidebarCollapsed
