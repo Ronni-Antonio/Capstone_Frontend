@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../api.jsx';
 
 const titles = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of recycling activity today' },
@@ -12,11 +13,28 @@ const titles = {
   settings: { title: 'Settings', subtitle: 'Customize your Plink system' },
 };
 
-export function Header({ activePage, setActivePage }) {
+export function Header({ activePage, setActivePage, onLogout }) {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const meta = titles[activePage] || titles.machines;
+
+  const handleLogout = async () => {
+    console.log('Header handleLogout called');
+    setIsLoggingOut(true);
+    try {
+      await api.post('/auth/logout');
+      console.log('Backend logout successful');
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
+      setMenuOpen(false);
+      console.log('Calling onLogout');
+      onLogout();
+    }
+  };
 
   return (
     <header className="w-full flex items-center justify-between pb-4 font-sans select-none">
@@ -103,10 +121,11 @@ export function Header({ activePage, setActivePage }) {
                 </button>
                 <div className="h-px bg-[#ebebeb] my-1 mx-1" />
                 <button 
-                  onClick={() => { setMenuOpen(false); localStorage.removeItem('plink_role'); alert('Logged out'); }}
-                  className="px-3 py-1.5 text-left bg-transparent border-none cursor-pointer text-[#dc2626] text-xs font-bold hover:bg-red-50 rounded-lg"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="px-3 py-1.5 text-left bg-transparent border-none cursor-pointer text-[#dc2626] text-xs font-bold hover:bg-red-50 rounded-lg disabled:opacity-50"
                 >
-                  Logout
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </div>
             </>

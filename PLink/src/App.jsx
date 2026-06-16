@@ -16,8 +16,19 @@ import { Notifications } from './Pages/notifications.jsx';
 import { Settings } from './Pages/Settings.jsx';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem('ACCESS_TOKEN');
+  });
   const [activePage, setActivePage] = useState('dashboard');
+
+  console.log('Current isLoggedIn state:', isLoggedIn);
+
+  const handleLogout = () => {
+    console.log('Logging out...');
+    localStorage.removeItem('ACCESS_TOKEN');
+    setIsLoggedIn(false);
+    console.log('isLoggedIn set to false');
+  };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('plink_sidebar_collapsed');
@@ -30,10 +41,10 @@ function App() {
       setSidebarCollapsed(saved === 'true');
     };
 
-    window.addEventListener('click', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      window.removeEventListener('click', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -102,6 +113,7 @@ function App() {
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
+        onLogout={handleLogout}
       />
 
       <div
@@ -114,6 +126,7 @@ function App() {
         <Header
           activePage={activePage}
           setActivePage={setActivePage}
+          onLogout={handleLogout}
         />
 
         <div className="flex-1 mt-4">

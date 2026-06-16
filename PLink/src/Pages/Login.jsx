@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import api from '../api';
 import { motion, AnimatePresence } from "motion/react"
 import {
   LeafIcon,
@@ -398,6 +399,7 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   // Forgot password state
   const [showForgotModal, setShowForgotModal] = useState(false)
@@ -405,16 +407,26 @@ export default function Login({ onLogin }) {
   const [forgotEmail, setForgotEmail] = useState('')
   const [countdown, setCountdown] = useState(30)
 
- const handleSubmit = (e) => {
-  e.preventDefault();
-  setLoading(true);
-
-  setTimeout(() => {
-    setLoading(false);
-    localStorage.setItem('plink_role', 'admin');
-
-    onLogin(); // Go to dashboard
-  }, 700);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.post('auth/login', { email, password });
+      
+      // Save the token to persist the session
+      localStorage.setItem('ACCESS_TOKEN', response.data.access_token);
+      
+      if (onLogin) {
+        onLogin();
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      console.error('Error response:', err.response);
+      setError(err.response?.data?.message || err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleForgotSubmit = (e) => {
@@ -509,23 +521,22 @@ export default function Login({ onLogin }) {
               Enter your administrator credentials to access the Plink management console.
             </p>
 
-            {/* Demo Credentials */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@plink.ph')
-                  setPassword('admin123')
-                }}
-                className="demo-btn"
-              >
-              Use the Admin Demo
-              </button>
-            </div>
 
             <form onSubmit={handleSubmit} style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {error && (
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  borderRadius: '0.75rem',
+                  color: '#dc2626',
+                  fontSize: '0.875rem',
+                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                }}>
+                  {error}
+                </div>
+              )}
               <Field
-                label="Email or Username"
+                label="Email"
                 icon={MailIcon}
                 type="text"
                 value={email}

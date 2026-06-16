@@ -26,7 +26,7 @@ const navItems = [
   { key: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export function Sidebar({ activePage, setActivePage }) {
+export function Sidebar({ activePage, setActivePage, onLogout }) {
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('plink_sidebar_collapsed');
     return saved === 'true';
@@ -35,11 +35,6 @@ export function Sidebar({ activePage, setActivePage }) {
   useEffect(() => {
     localStorage.setItem('plink_sidebar_collapsed', String(collapsed));
   }, [collapsed]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('plink_role');
-    alert('Logging out...');
-  };
 
   return (
     <aside
@@ -128,7 +123,7 @@ export function Sidebar({ activePage, setActivePage }) {
       {/* 4. Logout Section */}
       <div className="p-4">
         <button
-          onClick={handleLogout}
+          onClick={onLogout}
           title={collapsed ? 'Logout' : undefined}
           className={`group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 border-none cursor-pointer text-[#c7eabb]/90 hover:bg-white/5 hover:text-white ${
             collapsed ? 'justify-center w-12 h-12 mx-auto' : 'w-full px-3 py-2.5 text-left'
