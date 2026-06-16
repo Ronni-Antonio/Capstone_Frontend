@@ -6,6 +6,8 @@ import { Header } from './Pages/header.jsx';
 
 import Dashboard from './Pages/Dashboard.jsx';
 import Reports from './Pages/Reports.jsx';
+import StudentPoints from './Pages/student_points.jsx';
+import SectionsRanking from './Pages/sections_ranking.jsx';
 
 import { MachineMonitoring } from './Pages/machine_monitoring.jsx';
 import { Notifications } from './Pages/notifications.jsx';
@@ -30,7 +32,10 @@ function App() {
 
     // Listen for local state mutations or clicks
     window.addEventListener('click', handleStorageChange);
-    return () => window.removeEventListener('click', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('click', handleStorageChange);
+    };
   }, []);
 
   const renderPageContent = () => {
@@ -38,18 +43,24 @@ function App() {
       case 'dashboard':
         return <Dashboard />;
 
+      case 'students':
+        return <StudentPoints />;
+
+      case 'rankings':
+        return <SectionsRanking />;
+
       case 'reports':
-      case 'reports & analytics': // Matches sidebar text casing smoothly
+      case 'reports & analytics':
         return <Reports />;
 
       case 'machines':
-      case 'machine monitoring': // Matches sidebar text casing smoothly
+      case 'machine monitoring':
         return <MachineMonitoring />;
 
       case 'notifications':
         return <Notifications onNavigate={setActivePage} />;
 
-      case 'settings': // Adds your actual settings view case mapping
+      case 'settings':
         return <Settings />;
 
       default:
@@ -76,16 +87,18 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f7f8f3] overflow-x-hidden">
+    <>
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
       />
 
       {/* Margins dynamically scale back and forth smoothly matching the sidebar state */}
-      <div 
+      <div
         className={`min-h-screen flex flex-col p-10 transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-20 w-[calc(100%-80px)]' : 'ml-[260px] w-[calc(100%-260px)]'
+          sidebarCollapsed
+            ? 'ml-20 w-[calc(100%-80px)]'
+            : 'ml-[260px] w-[calc(100%-260px)]'
         }`}
       >
         <Header
@@ -97,7 +110,7 @@ function App() {
           {renderPageContent()}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
