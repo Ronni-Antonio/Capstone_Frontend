@@ -6,31 +6,46 @@ import { Header } from './Pages/header.jsx';
 
 import Dashboard from './Pages/Dashboard.jsx';
 import Reports from './Pages/Reports.jsx';
+import StudentPoints from './Pages/student_points.jsx';
+import SectionsRanking from './Pages/sections_ranking.jsx';
+import IncentivesRewards from './Pages/incentives_rewards.jsx';
+import Profile from './Pages/Profile.jsx';
 
 import { MachineMonitoring } from './Pages/machine_monitoring.jsx';
 import { Notifications } from './Pages/notifications.jsx';
 import { Settings } from './Pages/Settings.jsx';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem('ACCESS_TOKEN');
+  });
   const [activePage, setActivePage] = useState('dashboard');
 
-  // Track sidebar collapse state globally to synchronize layout margins
+  console.log('Current isLoggedIn state:', isLoggedIn);
+
+  const handleLogout = () => {
+    console.log('Logging out...');
+    localStorage.removeItem('ACCESS_TOKEN');
+    setIsLoggedIn(false);
+    console.log('isLoggedIn set to false');
+  };
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('plink_sidebar_collapsed');
     return saved === 'true';
   });
 
-  // Keep state matching local storage updates smoothly
   useEffect(() => {
     const handleStorageChange = () => {
       const saved = localStorage.getItem('plink_sidebar_collapsed');
       setSidebarCollapsed(saved === 'true');
     };
 
-    // Listen for local state mutations or clicks
-    window.addEventListener('click', handleStorageChange);
-    return () => window.removeEventListener('click', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const renderPageContent = () => {
@@ -38,18 +53,34 @@ function App() {
       case 'dashboard':
         return <Dashboard />;
 
+      case 'students':
+        return <StudentPoints />;
+
+      case 'rankings':
+        return <SectionsRanking />;
+
+      case 'incentives':
+        return <IncentivesRewards />;
+
       case 'reports':
-      case 'reports & analytics': // Matches sidebar text casing smoothly
+      case 'reports & analytics':
         return <Reports />;
 
       case 'machines':
-      case 'machine monitoring': // Matches sidebar text casing smoothly
+      case 'machine monitoring':
         return <MachineMonitoring />;
 
       case 'notifications':
-        return <Notifications onNavigate={setActivePage} />;
+        return (
+          <Notifications
+            onNavigate={setActivePage}
+          />
+        );
 
-      case 'settings': // Adds your actual settings view case mapping
+      case 'users':
+        return <Profile />;
+
+      case 'settings':
         return <Settings />;
 
       default:
@@ -70,34 +101,39 @@ function App() {
   if (!isLoggedIn) {
     return (
       <Login
-        onLogin={() => setIsLoggedIn(true)}
+        onLogin={() =>
+          setIsLoggedIn(true)
+        }
       />
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f7f8f3] overflow-x-hidden">
+    <>
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
+        onLogout={handleLogout}
       />
 
-      {/* Margins dynamically scale back and forth smoothly matching the sidebar state */}
-      <div 
+      <div
         className={`min-h-screen flex flex-col p-10 transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-20 w-[calc(100%-80px)]' : 'ml-[260px] w-[calc(100%-260px)]'
+          sidebarCollapsed
+            ? 'ml-20 w-[calc(100%-80px)]'
+            : 'ml-[260px] w-[calc(100%-260px)]'
         }`}
       >
         <Header
           activePage={activePage}
           setActivePage={setActivePage}
+          onLogout={handleLogout}
         />
 
         <div className="flex-1 mt-4">
           {renderPageContent()}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
