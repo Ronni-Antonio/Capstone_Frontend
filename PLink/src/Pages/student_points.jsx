@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../api';
 
 const COLORS = {
   white: '#ffffff',
@@ -11,59 +12,164 @@ const COLORS = {
   sage: '#5a7c61'
 };
 
-const students = [
-  {
-    initials: 'MC',
-    name: 'Maria Clara Santos',
-    id: '#0001',
-    section: '3-Sampaguita',
-    bottles: 142,
-    points: 710
-  },
-  {
-    initials: 'JM',
-    name: 'Juan Miguel Dela Cruz',
-    id: '#0002',
-    section: '3-Rosal',
-    bottles: 128,
-    points: 640
-  },
-  {
-    initials: 'LM',
-    name: 'Liza Marie Mendoza',
-    id: '#0003',
-    section: '3-Orchid',
-    bottles: 119,
-    points: 595
-  },
-  {
-    initials: 'AR',
-    name: 'Andres Bonifacio Reyes',
-    id: '#0004',
-    section: '3-Sampaguita',
-    bottles: 112,
-    points: 560
-  },
-  {
-    initials: 'SI',
-    name: 'Sofia Isabel Ramos',
-    id: '#0005',
-    section: '3-Jasmine',
-    bottles: 98,
-    points: 490
-  },
-  {
-    initials: 'ML',
-    name: 'Mateo Lorenzo Garcia',
-    id: '#0006',
-    section: '3-Rosal',
-    bottles: 94,
-    points: 470
-  }
-];
 
 export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
+  const [students, setStudents] = useState(() => {
+    // Load cached data immediately on first render
+    try {
+      const cached = localStorage.getItem('students_cache');
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [transactions, setTransactions] = useState(() => {
+    // Load cached transactions immediately on first render
+    try {
+      const cached = localStorage.getItem('transactions_cache');
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    // Only show loading if there's no cached data
+    try {
+      const cached = localStorage.getItem('students_cache');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterSection, setFilterSection] = useState('All');
+  const [newStudent, setNewStudent] = useState({
+    first_name: '',
+    last_name: '',
+    section: '3-Sampaguita',
+    bottles: 0,
+    points: 0
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch both students and transactions in parallel
+      const [studentsRes, transactionsRes] = await Promise.all([
+        api.getStudents(),
+        api.getTransactions()
+      ]);
+      
+      const studentsData = studentsRes.data;
+      const transactionsData = transactionsRes.data;
+      
+      setStudents(studentsData);
+      setTransactions(transactionsData);
+      
+      // Save to cache
+      localStorage.setItem('students_cache', JSON.stringify(studentsData));
+      localStorage.setItem('transactions_cache', JSON.stringify(transactionsData));
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      // If there's cached data, use it
+      try {
+        const cachedStudents = localStorage.getItem('students_cache');
+        const cachedTransactions = localStorage.getItem('transactions_cache');
+        if (cachedStudents) setStudents(JSON.parse(cachedStudents));
+        if (cachedTransactions) setTransactions(JSON.parse(cachedTransactions));
+      } catch {}
+      
+      setError(err.response?.data?.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate total bottles per student from transactions
+  const getTotalBottlesForStudent = (studentId) => {
+    // Ensure transactions is always an array
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+    return safeTransactions
+      .filter(tx => tx && (tx.student_id === studentId || tx.student_number === studentId))
+      .reduce((total, tx) => total + (tx.bottles_deposited || tx.bottles || tx.bottles_qty || 0), 0);
+  };
+
+  // Helper to safely get student data with defaults
+  const safeStudent = (student) => {
+    // Combine first_name and last_name into full name
+    const fullName = student?.name 
+      ? student.name 
+      : [student?.first_name, student?.last_name].filter(Boolean).join(' ').trim() || 'Unknown Student';
+    
+    // Generate initials if not provided
+    const getInitials = () => {
+      if (student?.initials) return student.initials;
+      if (student?.first_name && student?.last_name) {
+        return `${student.first_name[0]}${student.last_name[0]}`.toUpperCase();
+      }
+      if (fullName && fullName !== 'Unknown Student') {
+        const nameParts = fullName.split(' ');
+        return nameParts.length > 1 
+          ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+          : nameParts[0][0].toUpperCase();
+      }
+      return 'NA';
+    };
+
+    const studentId = student?.student_number || student?.id || 0;
+    const totalFromTransactions = getTotalBottlesForStudent(studentId);
+    return {
+      id: studentId,
+      name: fullName,
+      initials: getInitials(),
+      section: student?.section || 'No Section',
+      bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
+      points: student?.points_balance ?? student?.points ?? 0
+    };
+  };
+
+  // Calculate stats for top cards
+  const processedStudents = students.map(safeStudent);
+  const topStudent = [...processedStudents].sort((a, b) => b.points - a.points)[0];
+  const totalStudents = students.length;
+  const uniqueSections = [...new Set(processedStudents.map(s => s.section).filter(Boolean))];
+
+  // Filter students
+  const filteredStudents = processedStudents.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSection = filterSection === 'All' || student.section === filterSection;
+    return matchesSearch && matchesSection;
+  });
+
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    try {
+      await api.addStudent(newStudent);
+      setShowModal(false);
+      setNewStudent({
+        first_name: '',
+        last_name: '',
+        initials: '',
+        section: '3-Sampaguita',
+        bottles: 0,
+        points: 0
+      });
+      fetchData();
+    } catch (err) {
+      console.error('Error adding student:', err);
+      alert('Failed to add student');
+    }
+  };
 
   return (
     <div
@@ -104,36 +210,44 @@ export default function StudentPoints() {
             Top Recycler
           </div>
 
-          <div
-            style={{
-              fontSize: '36px',
-              fontWeight: '700',
-              marginTop: '8px'
-            }}
-          >
-            Maria Clara Santos
-          </div>
+          {topStudent ? (
+            <>
+              <div
+                style={{
+                  fontSize: '36px',
+                  fontWeight: '700',
+                  marginTop: '8px'
+                }}
+              >
+                {topStudent.name}
+              </div>
 
-          <div
-            style={{
-              marginTop: '8px',
-              opacity: 0.85
-            }}
-          >
-            3-Sampaguita · 142 bottles
-          </div>
+              <div
+                style={{
+                  marginTop: '8px',
+                  opacity: 0.85
+                }}
+              >
+                {topStudent.section} · {topStudent.bottles} bottles
+              </div>
 
-          <div
-            style={{
-              marginTop: '14px',
-              display: 'inline-block',
-              background: 'rgba(255,255,255,0.15)',
-              padding: '8px 14px',
-              borderRadius: '999px'
-            }}
-          >
-            🏆 710 points earned
-          </div>
+              <div
+                style={{
+                  marginTop: '14px',
+                  display: 'inline-block',
+                  background: 'rgba(255,255,255,0.15)',
+                  padding: '8px 14px',
+                  borderRadius: '999px'
+                }}
+              >
+                🏆 {topStudent.points} points earned
+              </div>
+            </>
+          ) : (
+            <div style={{ marginTop: '20px', opacity: 0.7 }}>
+              No students yet
+            </div>
+          )}
         </div>
 
         {/* MOST IMPROVED */}
@@ -167,7 +281,7 @@ export default function StudentPoints() {
               color: COLORS.darkMuted
             }}
           >
-            Most Improved
+            Total Participants
           </div>
 
           <div
@@ -178,7 +292,7 @@ export default function StudentPoints() {
               marginTop: '6px'
             }}
           >
-            Diego Villanueva
+            {totalStudents}
           </div>
 
           <div
@@ -187,11 +301,11 @@ export default function StudentPoints() {
               marginTop: '4px'
             }}
           >
-            +48 bottles this week
+            Students
           </div>
         </div>
 
-        {/* TOTAL PARTICIPANTS */}
+        {/* TOTAL SECTIONS */}
 
         <div
           style={{
@@ -222,7 +336,7 @@ export default function StudentPoints() {
               color: COLORS.darkMuted
             }}
           >
-            Total Participants
+            Sections
           </div>
 
           <div
@@ -233,7 +347,7 @@ export default function StudentPoints() {
               marginTop: '6px'
             }}
           >
-            18 Students
+            {uniqueSections.length}
           </div>
 
           <div
@@ -241,7 +355,7 @@ export default function StudentPoints() {
               color: COLORS.darkMuted
             }}
           >
-            across 5 sections
+            Active
           </div>
         </div>
       </div>
@@ -262,6 +376,8 @@ export default function StudentPoints() {
       >
         <input
           placeholder="Search student..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             flex: 1,
             minWidth: '250px',
@@ -272,23 +388,18 @@ export default function StudentPoints() {
           }}
         />
 
-        {[
-          'All',
-          '3-Sampaguita',
-          '3-Rosal',
-          '3-Orchid',
-          '3-Jasmine'
-        ].map((section) => (
+        {['All', ...uniqueSections].map((section) => (
           <button
             key={section}
+            onClick={() => setFilterSection(section)}
             style={{
               border: 'none',
               background:
-                section === 'All'
+                filterSection === section
                   ? COLORS.dark
                   : COLORS.lime,
               color:
-                section === 'All'
+                filterSection === section
                   ? 'white'
                   : COLORS.dark,
               padding: '10px 16px',
@@ -301,22 +412,28 @@ export default function StudentPoints() {
         ))}
 
         <button
-  onClick={() => setShowModal(true)}
-  style={{
-    border: 'none',
-    background: COLORS.dark,
-    color: 'white',
-    padding: '12px 18px',
-    borderRadius: '14px',
-    cursor: 'pointer',
-    fontWeight: '600'
-  }}
->
-  <i className="fa-solid fa-plus"></i> Add Student
-</button>
+          onClick={() => setShowModal(true)}
+          style={{
+            border: 'none',
+            background: COLORS.dark,
+            color: 'white',
+            padding: '12px 18px',
+            borderRadius: '14px',
+            cursor: 'pointer',
+            fontWeight: '600'
+          }}
+        >
+          <i className="fa-solid fa-plus"></i> Add Student
+        </button>
       </div>
 
       {/* TABLE */}
+
+      {error && (
+        <div style={{ padding: '20px', background: '#fee2e2', borderRadius: '12px', color: '#dc2626' }}>
+          {error}
+        </div>
+      )}
 
       <div
         style={{
@@ -348,100 +465,114 @@ export default function StudentPoints() {
           </thead>
 
           <tbody>
-            {students.map((student) => (
-              <tr
-                key={student.id}
-                style={{
-                  borderTop:
-                    '1px solid rgba(199,234,187,0.3)'
-                }}
-              >
-                <td style={td}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        background: COLORS.mint,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '700'
-                      }}
-                    >
-                      {student.initials}
-                    </div>
-
-                    <div>
-                      <div
-                        style={{
-                          fontWeight: '600',
-                          color: COLORS.dark
-                        }}
-                      >
-                        {student.name}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          color: COLORS.darkMuted
-                        }}
-                      >
-                        ID {student.id}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-
-                <td style={td}>Grade 3</td>
-
-                <td style={td}>
-                  <span
-                    style={{
-                      background: COLORS.mint,
-                      padding: '6px 12px',
-                      borderRadius: '999px',
-                      fontSize: '12px'
-                    }}
-                  >
-                    {student.section}
-                  </span>
-                </td>
-
-                <td style={td}>{student.bottles}</td>
-
-                <td
-                  style={{
-                    ...td,
-                    color: '#6aa96f',
-                    fontWeight: '700'
-                  }}
-                >
-                  +{student.points} pts
-                </td>
-
-                <td style={td}>
-                  <button style={actionBtn}>
-                    <i className="fa-solid fa-eye"></i>
-                  </button>
-
-                  <button style={actionBtn}>
-                    <i className="fa-solid fa-pen"></i>
-                  </button>
+            {loading ? (
+              <tr>
+                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
+                  Loading students...
                 </td>
               </tr>
-            ))}
+            ) : filteredStudents.length > 0 ? (
+              filteredStudents.map((student) => (
+                <tr
+                  key={student.id}
+                  style={{
+                    borderTop:
+                      '1px solid rgba(199,234,187,0.3)'
+                  }}
+                >
+                  <td style={td}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          background: COLORS.mint,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700'
+                        }}
+                      >
+                        {student.initials}
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: '600',
+                            color: COLORS.dark
+                          }}
+                        >
+                          {student.name}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: COLORS.darkMuted
+                          }}
+                        >
+                          ID {student.id}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td style={td}>Grade 3</td>
+
+                  <td style={td}>
+                    <span
+                      style={{
+                        background: COLORS.mint,
+                        padding: '6px 12px',
+                        borderRadius: '999px',
+                        fontSize: '12px'
+                      }}
+                    >
+                      {student.section}
+                    </span>
+                  </td>
+
+                  <td style={td}>{student.bottles}</td>
+
+                  <td
+                    style={{
+                      ...td,
+                      color: '#6aa96f',
+                      fontWeight: '700'
+                    }}
+                  >
+                    {student.points} pts
+                  </td>
+
+                  <td style={td}>
+                    <button style={actionBtn}>
+                      <i className="fa-solid fa-eye"></i>
+                    </button>
+
+                    <button style={actionBtn}>
+                      <i className="fa-solid fa-pen"></i>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
+                  No students found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
-            </div>
+      </div>
 
       {showModal && (
         <div
@@ -523,61 +654,92 @@ export default function StudentPoints() {
               />
             </div>
 
-            <h3
-              style={{
-                color: COLORS.dark
-              }}
-            >
-              Add Individual Student
-            </h3>
+            <form onSubmit={handleAddStudent}>
+              <h3
+                style={{
+                  color: COLORS.dark
+                }}
+              >
+                Add Individual Student
+              </h3>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '12px'
-              }}
-            >
-              <input
-                placeholder="Student Name"
-                style={modalInput}
-              />
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px'
+                }}
+              >
+                <input
+                  placeholder="First Name"
+                  value={newStudent.first_name}
+                  onChange={(e) => setNewStudent({ ...newStudent, first_name: e.target.value })}
+                  style={modalInput}
+                  required
+                />
 
-              <input
-                placeholder="Student ID"
-                style={modalInput}
-              />
+                <input
+                  placeholder="Last Name"
+                  value={newStudent.last_name}
+                  onChange={(e) => setNewStudent({ ...newStudent, last_name: e.target.value })}
+                  style={modalInput}
+                  required
+                />
 
-              <select style={modalInput}>
-                <option>3-Sampaguita</option>
-                <option>3-Rosal</option>
-                <option>3-Orchid</option>
-                <option>3-Jasmine</option>
-              </select>
+                <input
+                  placeholder="Initials (optional)"
+                  value={newStudent.initials}
+                  onChange={(e) => setNewStudent({ ...newStudent, initials: e.target.value })}
+                  style={modalInput}
+                />
 
-              <input
-                placeholder="Initials"
-                style={modalInput}
-              />
-            </div>
+                <select
+                  value={newStudent.section}
+                  onChange={(e) => setNewStudent({ ...newStudent, section: e.target.value })}
+                  style={modalInput}
+                >
+                  <option>3-Sampaguita</option>
+                  <option>3-Rosal</option>
+                  <option>3-Orchid</option>
+                  <option>3-Jasmine</option>
+                </select>
 
-            <button
-              style={{
-                marginTop: '20px',
-                border: 'none',
-                background: COLORS.dark,
-                color: '#fff',
-                padding: '12px 18px',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontWeight: '600'
-              }}
-            >
-              Add Student
-            </button>
+                <input
+                  placeholder="Initial Bottles"
+                  type="number"
+                  value={newStudent.bottles}
+                  onChange={(e) => setNewStudent({ ...newStudent, bottles: parseInt(e.target.value) || 0 })}
+                  style={modalInput}
+                />
+
+                <input
+                  placeholder="Initial Points"
+                  type="number"
+                  value={newStudent.points}
+                  onChange={(e) => setNewStudent({ ...newStudent, points: parseInt(e.target.value) || 0 })}
+                  style={modalInput}
+                />
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  marginTop: '20px',
+                  border: 'none',
+                  background: COLORS.dark,
+                  color: '#fff',
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Add Student
+              </button>
+            </form>
           </div>
         </div>
-            )}
+      )}
     </div>
   );
 }
