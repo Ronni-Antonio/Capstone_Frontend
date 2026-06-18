@@ -15,7 +15,35 @@ const COLORS = {
 
 export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState(() => {
+    // Load cached data immediately on first render
+    try {
+      const cached = localStorage.getItem('students_cache');
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [transactions, setTransactions] = useState(() => {
+    // Load cached transactions immediately on first render
+    try {
+      const cached = localStorage.getItem('transactions_cache');
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    // Only show loading if there's no cached data
+    try {
+      const cached = localStorage.getItem('students_cache');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
@@ -28,18 +56,52 @@ export default function StudentPoints() {
   });
 
   useEffect(() => {
-    fetchStudents();
+    fetchData();
   }, []);
 
-  const fetchStudents = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.getStudents();
-      setStudents(res.data);
+      setLoading(true);
+      // Fetch both students and transactions in parallel
+      const [studentsRes, transactionsRes] = await Promise.all([
+        api.getStudents(),
+        api.getTransactions()
+      ]);
+      
+      const studentsData = studentsRes.data;
+      const transactionsData = transactionsRes.data;
+      
+      setStudents(studentsData);
+      setTransactions(transactionsData);
+      
+      // Save to cache
+      localStorage.setItem('students_cache', JSON.stringify(studentsData));
+      localStorage.setItem('transactions_cache', JSON.stringify(transactionsData));
+      
       setError(null);
     } catch (err) {
-      console.error('Error fetching students:', err);
-      setError(err.response?.data?.message || 'Failed to load students');
+      console.error('Error fetching data:', err);
+      // If there's cached data, use it
+      try {
+        const cachedStudents = localStorage.getItem('students_cache');
+        const cachedTransactions = localStorage.getItem('transactions_cache');
+        if (cachedStudents) setStudents(JSON.parse(cachedStudents));
+        if (cachedTransactions) setTransactions(JSON.parse(cachedTransactions));
+      } catch {}
+      
+      setError(err.response?.data?.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Calculate total bottles per student from transactions
+  const getTotalBottlesForStudent = (studentId) => {
+    // Ensure transactions is always an array
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+    return safeTransactions
+      .filter(tx => tx && (tx.student_id === studentId || tx.student_number === studentId))
+      .reduce((total, tx) => total + (tx.bottles_deposited || tx.bottles || tx.bottles_qty || 0), 0);
   };
 
   // Helper to safely get student data with defaults
@@ -64,13 +126,15 @@ export default function StudentPoints() {
       return 'NA';
     };
 
+    const studentId = student?.student_number || student?.id || 0;
+    const totalFromTransactions = getTotalBottlesForStudent(studentId);
     return {
-      id: student?.student_number || 0,
+      id: studentId,
       name: fullName,
       initials: getInitials(),
       section: student?.section || 'No Section',
-      bottles: student?.bottles ?? 0,
-      points: student?.points ?? 0
+      bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
+      points: student?.points_balance ?? student?.points ?? 0
     };
   };
 
@@ -100,7 +164,7 @@ export default function StudentPoints() {
         bottles: 0,
         points: 0
       });
-      fetchStudents();
+      fetchData();
     } catch (err) {
       console.error('Error adding student:', err);
       alert('Failed to add student');
@@ -401,7 +465,13 @@ export default function StudentPoints() {
           </thead>
 
           <tbody>
-            {filteredStudents.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
+                  Loading students...
+                </td>
+              </tr>
+            ) : filteredStudents.length > 0 ? (
               filteredStudents.map((student) => (
                 <tr
                   key={student.id}

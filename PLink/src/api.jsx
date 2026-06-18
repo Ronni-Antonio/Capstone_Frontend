@@ -19,4 +19,8 @@ api.addStudent = (data) => api.post('/students', data);
 api.updateStudent = (id, data) => api.put(`/students/${id}`, data);
 api.deleteStudent = (id) => api.delete(`/students/${id}`);
 
+// Bottles deposited per student API methods
+api.getTransactions = (id) => api.get(`/transactions`);
+api.updateTransaction = (id, data) => api.put(`/transactions/${id}`, data);
+
 export default api;
