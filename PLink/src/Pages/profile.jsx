@@ -43,6 +43,19 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
 
+  // --- NEW STATES FOR SHOW/HIDE PASSWORD ---
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // --- NEW STATE FOR CONFIRMATION MODAL ---
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: '', // 'profile' or 'password'
+    title: '',
+    message: ''
+  });
+
   // Load User Data from Backend
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/api/users/${userId}`)
@@ -60,7 +73,6 @@ export default function Profile() {
           school: data.school || ''
         });
 
-        // Sync to storage on initial load if needed
         if (fetchedName) {
           localStorage.setItem('plink_user_name', fetchedName);
           window.dispatchEvent(new Event('storage'));
@@ -78,7 +90,57 @@ export default function Profile() {
     }
   }, [userId]);
 
-  // Save Profile Info Updates
+  // Intercept profile submission to show modal
+  const handleProfileSubmit = () => {
+    setConfirmModal({
+      isOpen: true,
+      type: 'profile',
+      title: 'Confirm Profile Changes',
+      message: 'Are you sure in this changes?'
+    });
+  };
+
+  // Intercept password submission to validate first, then show modal
+  const handlePasswordSubmit = () => {
+    if (!password.current || !password.newPass || !password.confirmPass) {
+      setMessageType('error');
+      setMessage('Please complete all password fields.');
+      return;
+    }
+
+    if (password.newPass !== password.confirmPass) {
+      setMessageType('error');
+      setMessage('Passwords do not match.');
+      return;
+    }
+
+    if (password.newPass.length < 8) {
+      setMessageType('error');
+      setMessage('Password must be at least 8 characters.');
+      return;
+    }
+
+    setConfirmModal({
+      isOpen: true,
+      type: 'password',
+      title: 'Confirm Password Change',
+      message: 'Are you sure you want to change your password?'
+    });
+  };
+
+  // Execute the final update on user confirmation
+  const handleConfirmAction = () => {
+    const actionType = confirmModal.type;
+    setConfirmModal({ isOpen: false, type: '', title: '', message: '' });
+
+    if (actionType === 'profile') {
+      saveProfile();
+    } else if (actionType === 'password') {
+      executePasswordUpdate();
+    }
+  };
+
+  // Actual Profile Update API call
   const saveProfile = async () => {
     try {
       const response = await fetch(`http://127.0.0.1:8000/api/users/${userId}`, {
@@ -101,11 +163,8 @@ export default function Profile() {
       if (response.ok && data.success) {
         setMessageType('success');
         setMessage(data.message || 'Profile updated successfully.');
-        
-        // --- SYNCS NEW NAME TO STORAGE AND ALERTS SIDEBAR ---
         localStorage.setItem('plink_user_name', profile.fullName);
         window.dispatchEvent(new Event('storage'));
-        
       } else {
         setMessageType('error');
         setMessage(data.message || 'Failed to update profile.');
@@ -114,30 +173,11 @@ export default function Profile() {
       setMessageType('error');
       setMessage('Server communication error.');
     }
-
     setTimeout(() => setMessage(''), 3000);
   };
 
-  // Change Password Updates
-  const updatePassword = async () => {
-    if (!password.current || !password.newPass || !password.confirmPass) {
-      setMessageType('error');
-      setMessage('Please complete all password fields.');
-      return;
-    }
-
-    if (password.newPass !== password.confirmPass) {
-      setMessageType('error');
-      setMessage('Passwords do not match.');
-      return;
-    }
-
-    if (password.newPass.length < 8) {
-      setMessageType('error');
-      setMessage('Password must be at least 8 characters.');
-      return;
-    }
-
+  // Actual Password Update API call
+  const executePasswordUpdate = async () => {
     try {
       const response = await fetch(`http://127.0.0.1:8000/api/users/${userId}/password`, {
         method: 'PUT',
@@ -165,7 +205,6 @@ export default function Profile() {
       setMessageType('error');
       setMessage('Server error changing password.');
     }
-
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -221,6 +260,7 @@ export default function Profile() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(400px,1fr))', gap: '20px' }}>
+        {/* EDIT PROFILE */}
         <div style={{
           background: COLORS.white,
           borderRadius: '24px',
@@ -260,11 +300,12 @@ export default function Profile() {
               placeholder="School"
               style={inputStyle}
             />
-            <button onClick={saveProfile} style={buttonStyle}>Save Changes</button>
+            <button onClick={handleProfileSubmit} style={buttonStyle}>Save Changes</button>
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* CHANGE PASSWORD */}
           <div style={{
             background: COLORS.white,
             borderRadius: '24px',
@@ -274,31 +315,66 @@ export default function Profile() {
           }}>
             <h3 style={{ marginTop: 0, color: COLORS.dark }}>Change Password</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <input
-                type="password"
-                placeholder="Current Password"
-                value={password.current}
-                onChange={(e) => setPassword({ ...password, current: e.target.value })}
-                style={inputStyle}
-              />
-              <input
-                type="password"
-                placeholder="New Password"
-                value={password.newPass}
-                onChange={(e) => setPassword({ ...password, newPass: e.target.value })}
-                style={inputStyle}
-              />
-              <input
-                type="password"
-                placeholder="Confirm Password"
-                value={password.confirmPass}
-                onChange={(e) => setPassword({ ...password, confirmPass: e.target.value })}
-                style={inputStyle}
-              />
-              <button onClick={updatePassword} style={buttonStyle}>Update Password</button>
+              
+              {/* Current Password Field */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showCurrent ? "text" : "password"}
+                  placeholder="Current Password"
+                  value={password.current}
+                  onChange={(e) => setPassword({ ...password, current: e.target.value })}
+                  style={inputStyle}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowCurrent(!showCurrent)} 
+                  style={eyeButtonStyle}
+                >
+                  <i className={`fa-solid ${showCurrent ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                </button>
+              </div>
+
+              {/* New Password Field */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showNew ? "text" : "password"}
+                  placeholder="New Password"
+                  value={password.newPass}
+                  onChange={(e) => setPassword({ ...password, newPass: e.target.value })}
+                  style={inputStyle}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowNew(!showNew)} 
+                  style={eyeButtonStyle}
+                >
+                  <i className={`fa-solid ${showNew ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                </button>
+              </div>
+
+              {/* Confirm Password Field */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="Confirm Password"
+                  value={password.confirmPass}
+                  onChange={(e) => setPassword({ ...password, confirmPass: e.target.value })}
+                  style={inputStyle}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowConfirm(!showConfirm)} 
+                  style={eyeButtonStyle}
+                >
+                  <i className={`fa-solid ${showConfirm ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                </button>
+              </div>
+
+              <button onClick={handlePasswordSubmit} style={buttonStyle}>Update Password</button>
             </div>
           </div>
 
+          {/* SECURITY SETTINGS */}
           <div style={{
             background: COLORS.white,
             borderRadius: '24px',
@@ -349,13 +425,41 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* --- CONFIRMATION MODAL JSX --- */}
+      {confirmModal.isOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={modalBoxStyle}>
+            <h3 style={{ margin: '0 0 12px 0', color: COLORS.dark }}>{confirmModal.title}</h3>
+            <p style={{ margin: '0 0 24px 0', color: COLORS.darkMuted, fontSize: '15px', lineHeight: '1.5' }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '' })} 
+                style={cancelButtonStyle}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConfirmAction} 
+                style={confirmButtonStyle}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+// --- STYLES ---
 const inputStyle = {
   width: '100%',
   padding: '12px',
+  paddingRight: '40px', // Extra padding to keep the text from overlapping the eye icon
   borderRadius: '12px',
   border: '1px solid rgba(199,234,187,.8)',
   outline: 'none',
@@ -369,6 +473,63 @@ const buttonStyle = {
   border: 'none',
   padding: '12px',
   borderRadius: '12px',
+  cursor: 'pointer',
+  fontWeight: '600',
+  fontSize: '14px'
+};
+
+const eyeButtonStyle = {
+  position: 'absolute',
+  right: '12px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+  display: 'flex',
+  alignItems: 'center'
+};
+
+const modalOverlayStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 9999
+};
+
+const modalBoxStyle = {
+  background: '#fff',
+  padding: '24px',
+  borderRadius: '18px',
+  width: '400px',
+  maxWidth: '90%',
+  boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
+};
+
+const cancelButtonStyle = {
+  background: '#f3f4f6',
+  color: '#4b5563',
+  border: 'none',
+  padding: '10px 16px',
+  borderRadius: '10px',
+  cursor: 'pointer',
+  fontWeight: '600',
+  fontSize: '14px'
+};
+
+const confirmButtonStyle = {
+  background: '#3e5f44',
+  color: '#fff',
+  border: 'none',
+  padding: '10px 16px',
+  borderRadius: '10px',
   cursor: 'pointer',
   fontWeight: '600',
   fontSize: '14px'
