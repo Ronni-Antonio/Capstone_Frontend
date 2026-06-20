@@ -23,12 +23,13 @@ function App() {
 
   console.log('Current isLoggedIn state:', isLoggedIn);
 
-  const handleLogout = () => {
-    console.log('Logging out...');
+  const handleLogout = () => {console.log('Logging out...');
     localStorage.removeItem('ACCESS_TOKEN');
     setIsLoggedIn(false);
     console.log('isLoggedIn set to false');
-  };
+
+  }; 
+
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('plink_sidebar_collapsed');

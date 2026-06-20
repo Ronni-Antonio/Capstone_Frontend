@@ -15,26 +15,8 @@ const titles = {
 
 export function Header({ activePage, setActivePage, onLogout }) {
   const [search, setSearch] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const meta = titles[activePage] || titles.machines;
-
-  const handleLogout = async () => {
-    console.log('Header handleLogout called');
-    setIsLoggingOut(true);
-    try {
-      await api.post('/auth/logout');
-      console.log('Backend logout successful');
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      setIsLoggingOut(false);
-      setMenuOpen(false);
-      console.log('Calling onLogout');
-      onLogout();
-    }
-  };
 
   return (
     <header className="w-full flex items-center justify-between pb-4 font-sans select-none">
@@ -79,58 +61,6 @@ export function Header({ activePage, setActivePage, onLogout }) {
             3
           </span>
         </button>
-
-        {/* User Account Dropdown Menu */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="flex items-center gap-2.5 bg-white border border-[#dbe6db] rounded-full pl-1 pr-3.5 py-1 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#7da47d] text-white flex items-center justify-center text-xs font-bold">
-              MR
-            </div>
-            
-            <div className="text-left hidden sm:block">
-              <div className="text-xs font-bold text-[#2d4a33] line-clamp-1">
-                Ms. Reyes
-              </div>
-              <div className="text-[10px] text-[#9cb5a0] font-medium leading-none">
-                Admin
-              </div>
-            </div>
-
-            <i className="fa-solid fa-chevron-down text-[#7a947e] text-[10px] ml-0.5"></i>
-          </button>
-
-          {/* Simple Dropdown Card Menu */}
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 bg-white border border-[#dbe6db] rounded-xl shadow-md p-1 min-w-[130px] flex flex-col z-50 animate-in fade-in slide-in-from-top-1 duration-100">
-                <button 
-                  onClick={() => { setMenuOpen(false); setActivePage('users'); }}
-                  className="px-3 py-1.5 text-left bg-transparent border-none cursor-pointer text-[#2d4a33] text-xs font-semibold hover:bg-[#f4f6f3] rounded-lg"
-                >
-                  Profile
-                </button>
-                <button 
-                  onClick={() => { setMenuOpen(false); setActivePage('settings'); }}
-                  className="px-3 py-1.5 text-left bg-transparent border-none cursor-pointer text-[#2d4a33] text-xs font-semibold hover:bg-[#f4f6f3] rounded-lg"
-                >
-                  Settings
-                </button>
-                <div className="h-px bg-[#ebebeb] my-1 mx-1" />
-                <button 
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="px-3 py-1.5 text-left bg-transparent border-none cursor-pointer text-[#dc2626] text-xs font-bold hover:bg-red-50 rounded-lg disabled:opacity-50"
-                >
-                  {isLoggingOut ? 'Logging out...' : 'Logout'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
 
       </div>
     </header>

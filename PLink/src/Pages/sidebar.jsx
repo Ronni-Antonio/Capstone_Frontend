@@ -32,9 +32,24 @@ export function Sidebar({ activePage, setActivePage, onLogout }) {
     return saved === 'true';
   });
 
+  // --- ADDED STATE FOR DYNAMIC NAME MATCHING ---
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem('plink_user_name') || 'Ms. Reyes';
+  });
+
   useEffect(() => {
     localStorage.setItem('plink_sidebar_collapsed', String(collapsed));
   }, [collapsed]);
+
+  // --- LISTEN FOR REAL-TIME CHANGES FROM PROFILE WORKERS ---
+  useEffect(() => {
+    const handleNameSync = () => {
+      setUserName(localStorage.getItem('plink_user_name') || 'Ms. Reyes');
+    };
+
+    window.addEventListener('storage', handleNameSync);
+    return () => window.removeEventListener('storage', handleNameSync);
+  }, []);
 
   return (
     <aside
@@ -70,13 +85,13 @@ export function Sidebar({ activePage, setActivePage, onLogout }) {
       <div className={`px-4 pb-2 ${collapsed ? 'flex justify-center' : ''}`}>
         <button
           onClick={() => setActivePage('users')}
-          title={collapsed ? 'Ms. Reyes (Profile)' : undefined}
+          title={collapsed ? `${userName} (Profile)` : undefined} // Updated dynamic fallback title
           className={`group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 border-none cursor-pointer w-full ${
             collapsed ? 'justify-center w-12 h-12' : 'px-3 py-2.5'
           } ${activePage === 'users' ? 'bg-[#5a7c61] text-white' : 'text-[#c7eabb]/90 hover:bg-white/5 hover:text-white'}`}
         >
           <UserCircleIcon className="w-[18px] h-[18px] shrink-0" />
-          {!collapsed && <span className="flex-1 text-left whitespace-nowrap">Ms. Reyes</span>}
+          {!collapsed && <span className="flex-1 text-left whitespace-nowrap">{userName}</span>} {/* Dynamic variable replaces Ms. Reyes */}
         </button>
       </div>
 
