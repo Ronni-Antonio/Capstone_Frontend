@@ -50,10 +50,15 @@ export default function StudentPoints() {
   const [newStudent, setNewStudent] = useState({
     first_name: '',
     last_name: '',
-    section: '3-Sampaguita',
+    grade_level: '3',
+    section: 'Sampaguita',
     bottles: 0,
     points: 0
   });
+  // CSV Upload State
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvError, setCsvError] = useState(null);
+  const [csvSuccess, setCsvSuccess] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -96,16 +101,28 @@ export default function StudentPoints() {
   };
 
   // Calculate total bottles per student from transactions
-  const getTotalBottlesForStudent = (studentId) => {
+  const getTotalBottlesForStudent = (actualStudentId) => {
+    console.log(`🔍 Calculating bottles for student_id: ${actualStudentId}`);
     // Ensure transactions is always an array
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    return safeTransactions
-      .filter(tx => tx && (tx.student_id === studentId || tx.student_number === studentId))
-      .reduce((total, tx) => total + (tx.bottles_deposited || tx.bottles || tx.bottles_qty || 0), 0);
+    console.log(`  - All transactions:`, safeTransactions);
+    
+    const matchingTransactions = safeTransactions.filter(tx => tx && tx.student_id === actualStudentId);
+    console.log(`  - Matching transactions for student_id ${actualStudentId}:`, matchingTransactions);
+    
+    const total = matchingTransactions.reduce((total, tx) => {
+      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
+      console.log(`  - Transaction ${tx.transaction_id || tx.id}: +${bottles} bottles`);
+      return total + bottles;
+    }, 0);
+    
+    console.log(`  - Total bottles for student_id ${actualStudentId}: ${total}`);
+    return total;
   };
 
   // Helper to safely get student data with defaults
   const safeStudent = (student) => {
+    console.log('👤 Processing student:', student);
     // Combine first_name and last_name into full name
     const fullName = student?.name 
       ? student.name 
@@ -126,16 +143,25 @@ export default function StudentPoints() {
       return 'NA';
     };
 
-    const studentId = student?.student_number || student?.id || 0;
-    const totalFromTransactions = getTotalBottlesForStudent(studentId);
-    return {
-      id: studentId,
+    // Get the actual student_id (foreign key) and student_number (display ID)
+    const actualStudentId = student?.id || student?.student_id || 0;
+    const displayId = student?.student_number || student?.id || 'N/A';
+    console.log(`  - actualStudentId: ${actualStudentId}, displayId: ${displayId}`);
+    
+    const totalFromTransactions = getTotalBottlesForStudent(actualStudentId);
+    
+    const finalStudent = {
+      id: displayId, // use student_number for display in the table
+      actual_student_id: actualStudentId, // keep the actual id for transaction matching
       name: fullName,
       initials: getInitials(),
+      grade_level: student?.grade_level || '3',
       section: student?.section || 'No Section',
       bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
       points: student?.points_balance ?? student?.points ?? 0
     };
+    console.log('  - Final student object:', finalStudent);
+    return finalStudent;
   };
 
   // Calculate stats for top cards
@@ -157,10 +183,12 @@ export default function StudentPoints() {
       await api.addStudent(newStudent);
       setShowModal(false);
       setNewStudent({
+        student_number: '',
         first_name: '',
         last_name: '',
+        grade_level: '3',
         initials: '',
-        section: '3-Sampaguita',
+        section: 'Sampaguita',
         bottles: 0,
         points: 0
       });
@@ -168,6 +196,94 @@ export default function StudentPoints() {
     } catch (err) {
       console.error('Error adding student:', err);
       alert('Failed to add student');
+    }
+  };
+
+  // --- CSV Upload Functions ---
+
+  // 1. Download Sample CSV
+  const downloadSampleCsv = () => {
+    const sampleContent = [
+      ['student_number', 'first_name', 'last_name', 'grade_level', 'section'],
+      ['1001', 'John', 'Doe', '3', '3-Sampaguita'],
+      ['1002', 'Jane', 'Smith', '3', '3-Rosal'],
+      ['1003', 'Mike', 'Johnson', '3', '3-Orchid'],
+    ];
+    const csvContent = sampleContent.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'students_sample.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 3. Handle CSV File Upload
+  const handleCsvFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setCsvError(null);
+    setCsvSuccess(null);
+    setCsvLoading(true);
+
+    try {
+      console.log('📤 Uploading CSV file:', file.name);
+      const response = await api.importStudentsCsv(file);
+      console.log('✅ CSV Import Response:', response.data);
+
+      // Success!
+      const importedCount = response.data?.imported || 0;
+      const errors = response.data?.errors || [];
+      
+      if (importedCount > 0 && errors.length === 0) {
+        // Fully successful - close modal and refresh
+        setCsvSuccess(`Successfully imported ${importedCount} student(s)!`);
+        setShowModal(false);
+        fetchData();
+        // Clear file input
+        e.target.value = '';
+      } else {
+        // Partial success or all errors - show detailed errors and keep modal open
+        let message = '';
+        if (importedCount > 0) {
+          message = `Imported ${importedCount} student(s). However, ${errors.length} row(s) had errors.`;
+        } else {
+          message = `Failed to import students. ${errors.length} row(s) had errors.`;
+        }
+        
+        // Format detailed errors
+        const formattedErrors = errors.map((err, idx) => 
+          `Row ${err.row || (idx + 2)}: ${err.message || JSON.stringify(err)}`
+        ).join(' • ');
+        
+        setCsvError(`${message} Errors: ${formattedErrors}`);
+        console.warn('⚠️ CSV Import Errors:', errors);
+      }
+    } catch (err) {
+      console.error('❌ CSV Upload Error:', err);
+      
+      // Try to get detailed error from backend
+      let errorMessage = 'Failed to upload CSV';
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        }
+        if (err.response.data.errors) {
+          const formattedErrors = err.response.data.errors.map((err, idx) => 
+            `Row ${err.row || (idx + 2)}: ${err.message || JSON.stringify(err)}`
+          ).join(' • ');
+          errorMessage += ` Errors: ${formattedErrors}`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setCsvError(errorMessage);
+    } finally {
+      setCsvLoading(false);
     }
   };
 
@@ -525,7 +641,7 @@ export default function StudentPoints() {
                     </div>
                   </td>
 
-                  <td style={td}>Grade 3</td>
+                  <td style={td}>Grade {student.grade_level}</td>
 
                   <td style={td}>
                     <span
@@ -635,23 +751,105 @@ export default function StudentPoints() {
                 marginBottom: '24px'
               }}
             >
-              <h3 style={{ color: COLORS.dark }}>
+              <h3 style={{ color: COLORS.dark, margin: '0 0 8px 0' }}>
                 Upload CSV File
               </h3>
 
               <p
                 style={{
                   color: COLORS.darkMuted,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  margin: '0 0 16px 0'
                 }}
               >
-                Upload a CSV file containing student records.
+                Upload a CSV file with columns: student_number, first_name, last_name, grade_level, section.
               </p>
+
+              <button
+                onClick={downloadSampleCsv}
+                style={{
+                  background: COLORS.mintLight,
+                  border: `1px solid ${COLORS.mint}`,
+                  padding: '8px 16px',
+                  borderRadius: '12px',
+                  color: COLORS.dark,
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginBottom: '16px'
+                }}
+              >
+                📥 Download Sample CSV
+              </button>
 
               <input
                 type="file"
                 accept=".csv"
+                onChange={handleCsvFileChange}
+                disabled={csvLoading}
+                style={{
+                  margin: '0 auto',
+                  display: 'block',
+                  cursor: csvLoading ? 'not-allowed' : 'pointer',
+                  opacity: csvLoading ? 0.6 : 1
+                }}
               />
+
+              {/* CSV Error */}
+              {csvError && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    textAlign: 'left',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}
+                >
+                  ❌ <strong>Error:</strong>
+                  <div style={{ marginTop: '8px', lineHeight: '1.5' }}>
+                    {csvError.split(' • ').map((error, idx) => (
+                      <div key={idx} style={{ marginBottom: '4px' }}>• {error}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CSV Success */}
+              {csvSuccess && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    background: '#dcfce7',
+                    color: '#166534',
+                    borderRadius: '12px',
+                    fontSize: '14px'
+                  }}
+                >
+                  ✅ {csvSuccess}
+                </div>
+              )}
+
+              {/* CSV Loading */}
+              {csvLoading && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    background: '#e0f2fe',
+                    color: '#0369a1',
+                    borderRadius: '12px',
+                    fontSize: '14px'
+                  }}
+                >
+                  ⏳ Uploading and processing CSV...
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleAddStudent}>
@@ -671,6 +869,22 @@ export default function StudentPoints() {
                 }}
               >
                 <input
+                  placeholder="Student Number"
+                  value={newStudent.student_number || ''}
+                  onChange={(e) => setNewStudent({ ...newStudent, student_number: e.target.value })}
+                  style={modalInput}
+                  required
+                />
+
+                <input
+                  placeholder="Grade Level"
+                  value={newStudent.grade_level || ''}
+                  onChange={(e) => setNewStudent({ ...newStudent, grade_level: e.target.value })}
+                  style={modalInput}
+                  required
+                />
+
+                <input
                   placeholder="First Name"
                   value={newStudent.first_name}
                   onChange={(e) => setNewStudent({ ...newStudent, first_name: e.target.value })}
@@ -688,7 +902,7 @@ export default function StudentPoints() {
 
                 <input
                   placeholder="Initials (optional)"
-                  value={newStudent.initials}
+                  value={newStudent.initials || ''}
                   onChange={(e) => setNewStudent({ ...newStudent, initials: e.target.value })}
                   style={modalInput}
                 />
@@ -698,27 +912,11 @@ export default function StudentPoints() {
                   onChange={(e) => setNewStudent({ ...newStudent, section: e.target.value })}
                   style={modalInput}
                 >
-                  <option>3-Sampaguita</option>
-                  <option>3-Rosal</option>
-                  <option>3-Orchid</option>
-                  <option>3-Jasmine</option>
+                  <option>Sampaguita</option>
+                  <option>Rosal</option>
+                  <option>Orchid</option>
+                  <option>Jasmine</option>
                 </select>
-
-                <input
-                  placeholder="Initial Bottles"
-                  type="number"
-                  value={newStudent.bottles}
-                  onChange={(e) => setNewStudent({ ...newStudent, bottles: parseInt(e.target.value) || 0 })}
-                  style={modalInput}
-                />
-
-                <input
-                  placeholder="Initial Points"
-                  type="number"
-                  value={newStudent.points}
-                  onChange={(e) => setNewStudent({ ...newStudent, points: parseInt(e.target.value) || 0 })}
-                  style={modalInput}
-                />
               </div>
 
               <button

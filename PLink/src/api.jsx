@@ -18,6 +18,15 @@ api.getStudents = () => api.get('/students');
 api.addStudent = (data) => api.post('/students', data);
 api.updateStudent = (id, data) => api.put(`/students/${id}`, data);
 api.deleteStudent = (id) => api.delete(`/students/${id}`);
+api.importStudentsCsv = (file) => {
+  const formData = new FormData();
+  formData.append('csv_file', file);
+  return api.post('/students/import-csv', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
 
 // Bottles deposited per student API methods
 api.getTransactions = (id) => api.get(`/transactions`);
