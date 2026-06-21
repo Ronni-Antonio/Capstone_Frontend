@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../api';
 
 /* ===================== DASHBOARD DATA ===================== */
 const stats = [
@@ -31,24 +32,59 @@ const stats = [
 ];
 
 const popularRewards = [
-  { name: 'Extra Recess Time', count: 92 },
-  { name: 'Eco-Warrior Badge', count: 60 },
-  { name: 'Homework Pass', count: 42 },
-  { name: 'Cafeteria Voucher', count: 28 },
+    { name: 'Extra Recess Time', count: 92 },
+    { name: 'Eco-Warrior Badge', count: 60 },
+    { name: 'Homework Pass', count: 42 },
+    { name: 'Cafeteria Voucher', count: 28 },
 ];
 
 const trendData = [12, 18, 15, 22, 30, 5, 8];
 
 /* ===================== REWARDS TAB ===================== */
 function RewardsTab() {
-  const rewards = [
-    { name: 'Extra Recess Time', points: 50, stock: 20, status: 'Active' },
-    { name: 'Homework Pass', points: 100, stock: 5, status: 'Inactive' },
-    { name: 'Cafeteria Voucher', points: 75, stock: 10, status: 'Active' },
-  ];
+  const [rewards, setRewards] = useState([]);
+  const [error, setError] = useState(null);
+
+  const fetchRewards = async () => {
+    try {
+      setError(null);
+      console.log('📥 Fetching rewards...');
+      const res = await api.getRewards();
+      console.log('✅ Rewards API response:', res);
+      
+      // Try to get data from common response structures
+      let rawRewards = res.data?.rewards || res.data?.data || res.data || [];
+      
+      // Make sure it's an array
+      if (!Array.isArray(rawRewards)) {
+        console.warn('⚠️ rawRewards is not an array! Converting...');
+        rawRewards = [];
+      }
+      
+      // Map the API fields to the UI fields
+      const rewardsData = rawRewards.map(r => ({
+        id: r.reward_id || r.id,
+        name: r.reward_name || r.name,
+        points: r.points_cost || r.points || r.points_required,
+        stock: r.stock_quantity || r.stock,
+        status: r.status || 'Active' // Default to Active if no status
+      }));
+      
+      console.log('✅ Final rewardsData:', rewardsData);
+      setRewards(rewardsData);
+    } catch (error) {
+      console.error('❌ Error fetching rewards:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to load rewards');
+    }
+  };
+
+  useEffect(() => {
+    fetchRewards();
+  }, []);
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+
 
       <div className="flex justify-between items-center mb-6 gap-4">
         <input
@@ -62,6 +98,12 @@ function RewardsTab() {
         </button>
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-xl">
+          ❌ {error}
+        </div>
+      )}
+
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[#6f876f] border-b">
@@ -74,10 +116,17 @@ function RewardsTab() {
         </thead>
 
         <tbody>
+          {rewards.length === 0 && !error && (
+            <tr>
+              <td colSpan="5" className="py-6 text-center text-[#6f876f]">
+                No rewards found
+              </td>
+            </tr>
+          )}
           {rewards.map((r, idx) => (
-            <tr key={idx} className="border-b">
+            <tr key={r.id || r.reward_id || idx} className="border-b">
               <td className="py-3 text-[#3e5f44] font-medium">{r.name}</td>
-              <td>{r.points}</td>
+              <td>{r.points || r.points_required}</td>
               <td>{r.stock}</td>
 
               <td>

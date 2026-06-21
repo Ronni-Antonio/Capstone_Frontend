@@ -102,28 +102,21 @@ export default function StudentPoints() {
 
   // Calculate total bottles per student from transactions
   const getTotalBottlesForStudent = (actualStudentId) => {
-    console.log(`🔍 Calculating bottles for student_id: ${actualStudentId}`);
     // Ensure transactions is always an array
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    console.log(`  - All transactions:`, safeTransactions);
     
     const matchingTransactions = safeTransactions.filter(tx => tx && tx.student_id === actualStudentId);
-    console.log(`  - Matching transactions for student_id ${actualStudentId}:`, matchingTransactions);
     
     const total = matchingTransactions.reduce((total, tx) => {
       const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-      console.log(`  - Transaction ${tx.transaction_id || tx.id}: +${bottles} bottles`);
       return total + bottles;
     }, 0);
-    
-    console.log(`  - Total bottles for student_id ${actualStudentId}: ${total}`);
+  
     return total;
   };
 
   // Helper to safely get student data with defaults
   const safeStudent = (student) => {
-    console.log('👤 Processing student:', student);
-    // Combine first_name and last_name into full name
     const fullName = student?.name 
       ? student.name 
       : [student?.first_name, student?.last_name].filter(Boolean).join(' ').trim() || 'Unknown Student';
@@ -146,7 +139,6 @@ export default function StudentPoints() {
     // Get the actual student_id (foreign key) and student_number (display ID)
     const actualStudentId = student?.id || student?.student_id || 0;
     const displayId = student?.student_number || student?.id || 'N/A';
-    console.log(`  - actualStudentId: ${actualStudentId}, displayId: ${displayId}`);
     
     const totalFromTransactions = getTotalBottlesForStudent(actualStudentId);
     
@@ -160,7 +152,6 @@ export default function StudentPoints() {
       bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
       points: student?.points_balance ?? student?.points ?? 0
     };
-    console.log('  - Final student object:', finalStudent);
     return finalStudent;
   };
 
@@ -205,9 +196,9 @@ export default function StudentPoints() {
   const downloadSampleCsv = () => {
     const sampleContent = [
       ['student_number', 'first_name', 'last_name', 'grade_level', 'section'],
-      ['1001', 'John', 'Doe', '3', '3-Sampaguita'],
-      ['1002', 'Jane', 'Smith', '3', '3-Rosal'],
-      ['1003', 'Mike', 'Johnson', '3', '3-Orchid'],
+      ['1001', 'John', 'Doe', '3', 'Sampaguita'],
+      ['1002', 'Jane', 'Smith', '3', 'Rosal'],
+      ['1003', 'Mike', 'Johnson', '3', 'Orchid'],
     ];
     const csvContent = sampleContent.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -230,9 +221,7 @@ export default function StudentPoints() {
     setCsvLoading(true);
 
     try {
-      console.log('📤 Uploading CSV file:', file.name);
       const response = await api.importStudentsCsv(file);
-      console.log('✅ CSV Import Response:', response.data);
 
       // Success!
       const importedCount = response.data?.imported || 0;
