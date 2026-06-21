@@ -44,20 +44,25 @@ const trendData = [12, 18, 15, 22, 30, 5, 8];
 function RewardsTab() {
   const [rewards, setRewards] = useState([]);
   const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [newReward, setNewReward] = useState({
+    reward_name: '',
+    points_cost: '',
+    stock_quantity: ''
+  });
+  const [modalError, setModalError] = useState(null);
+  const [modalSuccess, setModalSuccess] = useState(null);
 
   const fetchRewards = async () => {
     try {
       setError(null);
-      console.log('📥 Fetching rewards...');
       const res = await api.getRewards();
-      console.log('✅ Rewards API response:', res);
       
       // Try to get data from common response structures
       let rawRewards = res.data?.rewards || res.data?.data || res.data || [];
       
       // Make sure it's an array
       if (!Array.isArray(rawRewards)) {
-        console.warn('⚠️ rawRewards is not an array! Converting...');
         rawRewards = [];
       }
       
@@ -70,11 +75,52 @@ function RewardsTab() {
         status: r.status || 'Active' // Default to Active if no status
       }));
       
-      console.log('✅ Final rewardsData:', rewardsData);
       setRewards(rewardsData);
     } catch (error) {
-      console.error('❌ Error fetching rewards:', error);
       setError(error.response?.data?.message || error.message || 'Failed to load rewards');
+    }
+  };
+
+  const handleCreateReward = async (e) => {
+    e.preventDefault();
+    try {
+      setModalError(null);
+      setModalSuccess(null);
+      
+      // Validate inputs
+      if (!newReward.reward_name.trim()) {
+        setModalError('Please enter a reward name');
+        return;
+      }
+      if (!newReward.points_cost || Number(newReward.points_cost) <= 0) {
+        setModalError('Please enter a valid points cost');
+        return;
+      }
+      if (!newReward.stock_quantity || Number(newReward.stock_quantity) <= 0) {
+        setModalError('Please enter a valid stock quantity');
+        return;
+      }
+      
+      // Send to API
+      const rewardData = {
+        reward_name: newReward.reward_name.trim(),
+        points_cost: Number(newReward.points_cost),
+        stock_quantity: Number(newReward.stock_quantity)
+      };
+      
+      await api.addReward(rewardData);
+      setModalSuccess('Reward created successfully!');
+      
+      // Reset form and close modal after a delay
+      setTimeout(() => {
+        setShowModal(false);
+        setNewReward({ reward_name: '', points_cost: '', stock_quantity: '' });
+        setModalSuccess(null);
+        fetchRewards(); // Refresh the list
+      }, 1500);
+    } catch (error) {
+      console.error('❌ Error creating reward:', error);
+      setModalError(error.response?.data?.message || error.message || 'Failed to create reward');
     }
   };
 
@@ -85,7 +131,6 @@ function RewardsTab() {
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
 
-
       <div className="flex justify-between items-center mb-6 gap-4">
         <input
           type="text"
@@ -93,10 +138,98 @@ function RewardsTab() {
           className="border border-[#dbe6db] rounded-xl px-4 py-2 w-1/3 outline-none"
         />
 
-        <button className="bg-[#3e5f44] text-white px-5 py-2 rounded-xl text-sm font-semibold">
+        <button 
+          onClick={() => setShowModal(true)}
+          className="bg-[#3e5f44] text-white px-5 py-2 rounded-xl text-sm font-semibold"
+        >
           + Create Reward
         </button>
       </div>
+
+      {/* Create Reward Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <h2 className="text-2xl font-bold text-[#3e5f44] mb-6">Create New Reward</h2>
+            
+            {modalError && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-xl">
+                ❌ {modalError}
+              </div>
+            )}
+            
+            {modalSuccess && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-xl">
+                ✅ {modalSuccess}
+              </div>
+            )}
+            
+            <form onSubmit={handleCreateReward} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                  Reward Name
+                </label>
+                <input
+                  type="text"
+                  value={newReward.reward_name}
+                  onChange={(e) => setNewReward({ ...newReward, reward_name: e.target.value })}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  placeholder="Enter reward name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                  Points Cost
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newReward.points_cost}
+                  onChange={(e) => setNewReward({ ...newReward, points_cost: e.target.value })}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  placeholder="Enter points cost"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                  Stock Quantity
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newReward.stock_quantity}
+                  onChange={(e) => setNewReward({ ...newReward, stock_quantity: e.target.value })}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  placeholder="Enter stock quantity"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    setNewReward({ reward_name: '', points_cost: '', stock_quantity: '' });
+                    setModalError(null);
+                    setModalSuccess(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-[#3e5f44] text-white font-semibold"
+                >
+                  Create Reward
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-xl">
