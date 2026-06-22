@@ -32,4 +32,11 @@ api.importStudentsCsv = (file) => {
 api.getTransactions = (id) => api.get(`/transactions`);
 api.updateTransaction = (id, data) => api.put(`/transactions/${id}`, data);
 
+//Rewards API Methods
+api.getRewards = () => api.get('/rewards');
+api.addReward = (data) => api.post('/rewards', data);
+api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
+api.deleteReward = (id) => api.delete(`/rewards/${id}`);
+
+
 export default api;
