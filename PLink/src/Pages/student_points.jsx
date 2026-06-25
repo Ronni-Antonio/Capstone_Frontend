@@ -15,36 +15,9 @@ const COLORS = {
 
 export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
-  const [students, setStudents] = useState(() => {
-    // Load cached data immediately on first render
-    try {
-      const cached = localStorage.getItem('students_cache');
-      const parsed = cached ? JSON.parse(cached) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-  const [transactions, setTransactions] = useState(() => {
-    // Load cached transactions immediately on first render
-    try {
-      const cached = localStorage.getItem('transactions_cache');
-      const parsed = cached ? JSON.parse(cached) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-  const [loading, setLoading] = useState(() => {
-    // Only show loading if there's no cached data
-    try {
-      const cached = localStorage.getItem('students_cache');
-      return !cached;
-    } catch {
-      return true;
-    }
-  });
-  const [error, setError] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
   const [newStudent, setNewStudent] = useState({
@@ -73,28 +46,19 @@ export default function StudentPoints() {
         api.getTransactions()
       ]);
       
-      const studentsData = studentsRes.data;
-      const transactionsData = transactionsRes.data;
+      let studentsData = studentsRes.data;
+      let transactionsData = transactionsRes.data;
+      
+      // Ensure data is always an array
+      if (!Array.isArray(studentsData)) studentsData = [];
+      if (!Array.isArray(transactionsData)) transactionsData = [];
       
       setStudents(studentsData);
       setTransactions(transactionsData);
-      
-      // Save to cache
-      localStorage.setItem('students_cache', JSON.stringify(studentsData));
-      localStorage.setItem('transactions_cache', JSON.stringify(transactionsData));
-      
-      setError(null);
     } catch (err) {
       console.error('Error fetching data:', err);
-      // If there's cached data, use it
-      try {
-        const cachedStudents = localStorage.getItem('students_cache');
-        const cachedTransactions = localStorage.getItem('transactions_cache');
-        if (cachedStudents) setStudents(JSON.parse(cachedStudents));
-        if (cachedTransactions) setTransactions(JSON.parse(cachedTransactions));
-      } catch {}
-      
-      setError(err.response?.data?.message || 'Failed to load data');
+      setStudents([]);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -533,12 +497,6 @@ export default function StudentPoints() {
       </div>
 
       {/* TABLE */}
-
-      {error && (
-        <div style={{ padding: '20px', background: '#fee2e2', borderRadius: '12px', color: '#dc2626' }}>
-          {error}
-        </div>
-      )}
 
       <div
         style={{
