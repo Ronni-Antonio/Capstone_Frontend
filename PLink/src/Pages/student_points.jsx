@@ -20,11 +20,12 @@ export default function StudentPoints() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
+  const [sectionsList, setSectionsList] = useState([]);
   const [newStudent, setNewStudent] = useState({
     first_name: '',
     last_name: '',
     grade_level: '3',
-    section: 'Sampaguita',
+    section: '',
     bottles: 0,
     points: 0
   });
@@ -40,25 +41,35 @@ export default function StudentPoints() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch both students and transactions in parallel
-      const [studentsRes, transactionsRes] = await Promise.all([
+      // Fetch students, transactions, and sections list in parallel
+      const [studentsRes, transactionsRes, sectionsRes] = await Promise.all([
         api.getStudents(),
-        api.getTransactions()
+        api.getTransactions(),
+        api.getSectionsList()
       ]);
       
       let studentsData = studentsRes.data;
       let transactionsData = transactionsRes.data;
+      let sectionsData = sectionsRes.data;
       
       // Ensure data is always an array
       if (!Array.isArray(studentsData)) studentsData = [];
       if (!Array.isArray(transactionsData)) transactionsData = [];
+      if (!Array.isArray(sectionsData)) sectionsData = [];
       
       setStudents(studentsData);
       setTransactions(transactionsData);
+      setSectionsList(sectionsData);
+      
+      // Set default section to first in list if available
+      if (sectionsData.length > 0) {
+        setNewStudent(prev => ({ ...prev, section: sectionsData[0] }));
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
       setStudents([]);
       setTransactions([]);
+      setSectionsList([]);
     } finally {
       setLoading(false);
     }
@@ -143,7 +154,7 @@ export default function StudentPoints() {
         last_name: '',
         grade_level: '3',
         initials: '',
-        section: 'Sampaguita',
+        section: sectionsList.length > 0 ? sectionsList[0] : '',
         bottles: 0,
         points: 0
       });
@@ -858,11 +869,11 @@ export default function StudentPoints() {
                   value={newStudent.section}
                   onChange={(e) => setNewStudent({ ...newStudent, section: e.target.value })}
                   style={modalInput}
+                  required
                 >
-                  <option>Sampaguita</option>
-                  <option>Rosal</option>
-                  <option>Orchid</option>
-                  <option>Jasmine</option>
+                  {sectionsList.map((section) => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
                 </select>
               </div>
 
