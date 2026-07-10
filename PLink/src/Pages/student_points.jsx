@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
   white: '#ffffff',
@@ -15,65 +16,49 @@ const COLORS = {
 
 export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
-  const [students, setStudents] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [showRfidModal, setShowRfidModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const { 
+    students, 
+    transactions, 
+    sections: sectionsList,
+    refreshStudents,
+    addStudent: addStudentToContext,
+    updateStudent,
+    activateStudent
+  } = useData();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
-  const [sectionsList, setSectionsList] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Initialize newStudent with first section from context
   const [newStudent, setNewStudent] = useState({
     first_name: '',
     last_name: '',
-    grade_level: '3',
+    grade_level: '',
     section: '',
     bottles: 0,
     points: 0
   });
+  
+  useEffect(() => {
+    if (sectionsList.length > 0) {
+      setNewStudent(prev => ({ ...prev, section: sectionsList[0] }));
+    }
+  }, [sectionsList]);
+  
   // CSV Upload State
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState(null);
   const [csvSuccess, setCsvSuccess] = useState(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      // Fetch students, transactions, and sections list in parallel
-      const [studentsRes, transactionsRes, sectionsRes] = await Promise.all([
-        api.getStudents(),
-        api.getTransactions(),
-        api.getSectionsList()
-      ]);
-      
-      let studentsData = studentsRes.data;
-      let transactionsData = transactionsRes.data;
-      let sectionsData = sectionsRes.data;
-      
-      // Ensure data is always an array
-      if (!Array.isArray(studentsData)) studentsData = [];
-      if (!Array.isArray(transactionsData)) transactionsData = [];
-      if (!Array.isArray(sectionsData)) sectionsData = [];
-      
-      setStudents(studentsData);
-      setTransactions(transactionsData);
-      setSectionsList(sectionsData);
-      
-      // Set default section to first in list if available
-      if (sectionsData.length > 0) {
-        setNewStudent(prev => ({ ...prev, section: sectionsData[0] }));
-      }
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setStudents([]);
-      setTransactions([]);
-      setSectionsList([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // Add Individual Student State
+  const [addStudentError, setAddStudentError] = useState(null);
+  const [addStudentSuccess, setAddStudentSuccess] = useState(null);
 
   // Calculate total bottles per student from transactions
   const getTotalBottlesForStudent = (actualStudentId) => {
@@ -117,21 +102,30 @@ export default function StudentPoints() {
     
     const totalFromTransactions = getTotalBottlesForStudent(actualStudentId);
     
+    // Normalize status to Title Case (e.g., "active" → "Active")
+    const normalizeStatus = (status) => {
+      if (!status) return 'Inactive';
+      const lowerStatus = status.toLowerCase();
+      if (lowerStatus === 'active') return 'Active';
+      return 'Inactive';
+    };
+    
     const finalStudent = {
       id: displayId, // use student_number for display in the table
       actual_student_id: actualStudentId, // keep the actual id for transaction matching
       name: fullName,
       initials: getInitials(),
-      grade_level: student?.grade_level || '3',
+      grade_level: student?.grade_level,
       section: student?.section || 'No Section',
       bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
-      points: student?.points_balance ?? student?.points ?? 0
+      points: student?.points_balance ?? student?.points ?? 0,
+      status: normalizeStatus(student?.status) // normalize status
     };
     return finalStudent;
   };
 
   // Calculate stats for top cards
-  const processedStudents = students.map(safeStudent);
+  const processedStudents = students.map(safeStudent);  
   const topStudent = [...processedStudents].sort((a, b) => b.points - a.points)[0];
   const totalStudents = students.length;
   const uniqueSections = [...new Set(processedStudents.map(s => s.section).filter(Boolean))];
@@ -143,25 +137,58 @@ export default function StudentPoints() {
     return matchesSearch && matchesSection;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterSection]);
+
+  // Calculate pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleAddStudent = async (e) => {
     e.preventDefault();
+    setAddStudentError(null);
+    setAddStudentSuccess(null);
+    
     try {
-      await api.addStudent(newStudent);
-      setShowModal(false);
-      setNewStudent({
-        student_number: '',
-        first_name: '',
-        last_name: '',
-        grade_level: '3',
-        initials: '',
-        section: sectionsList.length > 0 ? sectionsList[0] : '',
-        bottles: 0,
-        points: 0
-      });
-      fetchData();
+      const res = await api.addStudent(newStudent);
+      // If the API returns the created student, add it directly to context (optimistic update)
+      if (res.data) {
+        addStudentToContext(res.data);
+      } else {
+        // Otherwise refresh just the students list
+        await refreshStudents();
+      }
+      
+      setAddStudentSuccess('Student added successfully!');
+      
+      // Wait 1.5 seconds then close modal and reset
+      setTimeout(() => {
+        setShowModal(false);
+        setNewStudent({
+          student_number: '',
+          first_name: '',
+          last_name: '',
+          grade_level: '',
+          initials: '',
+          section: sectionsList.length > 0 ? sectionsList[0] : '',
+          bottles: 0,
+          points: 0
+        });
+        setAddStudentSuccess(null);
+      }, 1500);
+      
     } catch (err) {
       console.error('Error adding student:', err);
-      alert('Failed to add student');
+      setAddStudentError(err.response?.data?.message || err.message || 'Failed to add student');
     }
   };
 
@@ -171,9 +198,8 @@ export default function StudentPoints() {
   const downloadSampleCsv = () => {
     const sampleContent = [
       ['student_number', 'first_name', 'last_name', 'grade_level', 'section'],
-      ['1001', 'John', 'Doe', '3', 'Sampaguita'],
-      ['1002', 'Jane', 'Smith', '3', 'Rosal'],
-      ['1003', 'Mike', 'Johnson', '3', 'Orchid'],
+      ['136721000000', 'John', 'Doe', '3', 'Sampaguita'],
+
     ];
     const csvContent = sampleContent.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -203,13 +229,13 @@ export default function StudentPoints() {
       const errors = response.data?.errors || [];
       
       if (importedCount > 0 && errors.length === 0) {
-        // Fully successful - close modal and refresh
-        setCsvSuccess(`Successfully imported ${importedCount} student(s)!`);
-        setShowModal(false);
-        fetchData();
-        // Clear file input
-        e.target.value = '';
-      } else {
+                // Fully successful - close modal and refresh just students
+                setCsvSuccess(`Successfully imported ${importedCount} student(s)!`);
+                setShowModal(false);
+                await refreshStudents();
+                // Clear file input
+                e.target.value = '';
+              } else {
         // Partial success or all errors - show detailed errors and keep modal open
         let message = '';
         if (importedCount > 0) {
@@ -249,6 +275,37 @@ export default function StudentPoints() {
     } finally {
       setCsvLoading(false);
     }
+  };
+
+  // Handle Activate Card button click
+  const handleActivateCard = (student) => {
+    setSelectedStudent(student);
+    setScanning(false);
+    setScanSuccess(false);
+    setShowRfidModal(true);
+  };
+
+  // Handle simulated RFID scan
+  const handleScanRfid = async () => {
+    if (!selectedStudent) return;
+    setScanning(true);
+
+    // Simulate scanning delay
+    setTimeout(async () => {
+      setScanSuccess(true);
+      
+      // Update student status to active
+      await activateStudent(selectedStudent.actual_student_id);
+      
+      // Refresh students from API to get latest data
+      await refreshStudents();
+
+      // Close modal after delay
+      setTimeout(() => {
+        setShowRfidModal(false);
+        setSelectedStudent(null);
+      }, 1500);
+    }, 1500);
   };
 
   return (
@@ -468,28 +525,24 @@ export default function StudentPoints() {
           }}
         />
 
-        {['All', ...uniqueSections].map((section) => (
-          <button
-            key={section}
-            onClick={() => setFilterSection(section)}
-            style={{
-              border: 'none',
-              background:
-                filterSection === section
-                  ? COLORS.dark
-                  : COLORS.lime,
-              color:
-                filterSection === section
-                  ? 'white'
-                  : COLORS.dark,
-              padding: '10px 16px',
-              borderRadius: '999px',
-              cursor: 'pointer'
-            }}
-          >
-            {section}
-          </button>
-        ))}
+        <select
+          value={filterSection}
+          onChange={(e) => setFilterSection(e.target.value)}
+          style={{
+            border: `1px solid ${COLORS.mintLight}`,
+            borderRadius: '12px',
+            padding: '10px 16px',
+            background: COLORS.white,
+            color: COLORS.dark,
+            cursor: 'pointer',
+            outline: 'none',
+            fontSize: '14px'
+          }}
+        >
+          {['All', ...uniqueSections].map((section) => (
+            <option key={section} value={section}>{section}</option>
+          ))}
+        </select>
 
         <button
           onClick={() => setShowModal(true)}
@@ -532,6 +585,7 @@ export default function StudentPoints() {
               <th style={th}>Student Name</th>
               <th style={th}>Grade</th>
               <th style={th}>Section</th>
+              <th style={th}>Status</th>
               <th style={th}>Bottles</th>
               <th style={th}>Points</th>
               <th style={th}>Actions</th>
@@ -539,14 +593,8 @@ export default function StudentPoints() {
           </thead>
 
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
-                  Loading students...
-                </td>
-              </tr>
-            ) : filteredStudents.length > 0 ? (
-              filteredStudents.map((student) => (
+            {currentStudents.length > 0 ? (
+              currentStudents.map((student) => (
                 <tr
                   key={student.id}
                   style={{
@@ -614,6 +662,21 @@ export default function StudentPoints() {
                     </span>
                   </td>
 
+                  <td style={td}>
+                    <span
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        background: student.status === 'Active' ? COLORS.mint : '#fee2e2',
+                        color: student.status === 'Active' ? COLORS.dark : '#dc2626'
+                      }}
+                    >
+                      {student.status}
+                    </span>
+                  </td>
+
                   <td style={td}>{student.bottles}</td>
 
                   <td
@@ -634,18 +697,94 @@ export default function StudentPoints() {
                     <button style={actionBtn}>
                       <i className="fa-solid fa-pen"></i>
                     </button>
+
+                    {student.status !== 'Active' && (
+                      <button
+                        onClick={() => handleActivateCard(student)}
+                        style={{
+                          ...actionBtn,
+                          background: '#3e5f44',
+                          color: '#fff'
+                        }}
+                        title="Activate Card"
+                      >
+                        <i className="fa-solid fa-id-card"></i>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
+                <td colSpan="7" style={{ ...td, textAlign: 'center' }}>
                   No students found
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '20px',
+            borderTop: `1px solid ${COLORS.mintLight}`
+          }}>
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.mintLight}`,
+                background: currentPage === 1 ? '#f4f4f4' : 'white',
+                color: currentPage === 1 ? '#aaa' : COLORS.dark,
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Previous
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: currentPage === page ? COLORS.dark : 'transparent',
+                  color: currentPage === page ? 'white' : COLORS.dark,
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                {page}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.mintLight}`,
+                background: currentPage === totalPages ? '#f4f4f4' : 'white',
+                color: currentPage === totalPages ? '#aaa' : COLORS.dark,
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -688,7 +827,13 @@ export default function StudentPoints() {
               </h2>
 
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setAddStudentError(null);
+                  setAddStudentSuccess(null);
+                  setCsvError(null);
+                  setCsvSuccess(null);
+                }}
                 style={{
                   border: 'none',
                   background: 'transparent',
@@ -818,6 +963,38 @@ export default function StudentPoints() {
               >
                 Add Individual Student
               </h3>
+              
+              {/* Add Individual Student Error */}
+              {addStudentError && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    borderRadius: '12px',
+                    fontSize: '13px'
+                  }}
+                >
+                  ❌ {addStudentError}
+                </div>
+              )}
+              
+              {/* Add Individual Student Success */}
+              {addStudentSuccess && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    background: '#dcfce7',
+                    color: '#166534',
+                    borderRadius: '12px',
+                    fontSize: '14px'
+                  }}
+                >
+                  ✅ {addStudentSuccess}
+                </div>
+              )}
 
               <div
                 style={{
@@ -834,13 +1011,16 @@ export default function StudentPoints() {
                   required
                 />
 
-                <input
-                  placeholder="Grade Level"
+                <select
                   value={newStudent.grade_level || ''}
                   onChange={(e) => setNewStudent({ ...newStudent, grade_level: e.target.value })}
                   style={modalInput}
                   required
-                />
+                >
+                  {[3, 4, 5, 6].map((grade) => (
+                    <option key={grade} value={grade}>Grade {grade}</option>
+                  ))}
+                </select>
 
                 <input
                   placeholder="First Name"
@@ -893,6 +1073,168 @@ export default function StudentPoints() {
                 Add Student
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* RFID Scan Modal */}
+      {showRfidModal && selectedStudent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.45)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999
+          }}
+        >
+          <div
+            style={{
+              width: '500px',
+              maxWidth: '95%',
+              background: '#fff',
+              borderRadius: '24px',
+              padding: '32px',
+              border: `1px solid ${COLORS.mintLight}`,
+              textAlign: 'center'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '16px'
+              }}
+            >
+              <button
+                onClick={() => setShowRfidModal(false)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '22px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                fontSize: '64px',
+                marginBottom: '16px'
+              }}
+            >
+              {scanSuccess ? '✅' : scanning ? '📶' : '🪪'}
+            </div>
+
+            <h2
+              style={{
+                margin: '0 0 8px 0',
+                color: COLORS.dark
+              }}
+            >
+              {scanSuccess 
+                ? 'Card Activated!' 
+                : scanning 
+                  ? 'Scanning RFID Card...' 
+                  : 'Activate Student Card'}
+            </h2>
+
+            <p
+              style={{
+                margin: '0 0 24px 0',
+                color: COLORS.darkMuted,
+                fontSize: '14px',
+                lineHeight: '1.5'
+              }}
+            >
+              {scanSuccess 
+                ? `${selectedStudent.name}'s card has been activated successfully!` 
+                : scanning 
+                  ? 'Please hold the RFID card near the scanner...' 
+                  : `Click "Scan RFID Card" to write ${selectedStudent.name}'s information to an RFID card.`}
+            </p>
+
+            {selectedStudent && (
+              <div
+                style={{
+                  background: '#eef4df',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  marginBottom: '24px',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      background: COLORS.dark,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      fontWeight: '700'
+                    }}
+                  >
+                    {selectedStudent.initials}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>
+                      {selectedStudent.name}
+                    </div>
+                    <div style={{ fontSize: '14px', color: COLORS.darkMuted }}>
+                      {selectedStudent.section} • Grade {selectedStudent.grade_level}
+                    </div>
+                    <div style={{ fontSize: '14px', color: COLORS.darkMuted }}>
+                      ID: {selectedStudent.id}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!scanning && !scanSuccess && (
+              <button
+                onClick={handleScanRfid}
+                style={{
+                  width: '100%',
+                  border: 'none',
+                  background: COLORS.dark,
+                  color: '#fff',
+                  padding: '16px 24px',
+                  borderRadius: '16px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <i className="fa-solid fa-wand-magic-sparkles"></i>
+                Scan RFID Card
+              </button>
+            )}
+
+            {scanning && (
+              <div
+                style={{
+                  fontSize: '16px',
+                  color: COLORS.dark,
+                  fontWeight: '600'
+                }}
+              >
+                Processing...
+              </div>
+            )}
           </div>
         </div>
       )}

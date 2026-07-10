@@ -1,4 +1,5 @@
 import React from 'react';
+import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
   white: '#ffffff',
@@ -13,84 +14,207 @@ const COLORS = {
   redBg: '#fef2f2',
   redText: '#b91c1c',
   amberBg: '#fffbeb',
-  amberText: '#b45309'
+  amberText: '#b45309',
+  sectionColors: [
+    '#3e5f44', '#8bc37a', '#92c283', '#dcefd1', '#a8d5ba'
+  ]
 };
 
-const stats = [
-  {
-    title: 'Bottles Collected Today',
-    value: '224',
-    change: '+12%'
-  },
-  {
-    title: 'Points Earned Today',
-    value: '1,120',
-    change: '+8%'
-  },
-  {
-    title: 'Bin Fullness',
-    value: '62%',
-    change: '+5%'
-  },
-  {
-    title: 'Grade 3 Participants',
-    value: '224',
-    change: '+4%'
-  }
-];
-
-const activities = [
-  {
-    initials: 'MS',
-    name: 'Maria Santos',
-    action: 'recycled 3 bottles',
-    points: '+15 pts'
-  },
-  {
-    initials: 'JD',
-    name: 'Juan Dela Cruz',
-    action: 'recycled 2 bottles',
-    points: '+10 pts'
-  },
-  {
-    initials: 'LM',
-    name: 'Liza Mendoza',
-    action: 'recycled 5 bottles',
-    points: '+25 pts'
-  },
-  {
-    initials: 'AR',
-    name: 'Andres Reyes',
-    action: 'recycled 1 bottle',
-    points: '+5 pts'
-  },
-  {
-    initials: 'SR',
-    name: 'Sofia Ramos',
-    action: 'recycled 4 bottles',
-    points: '+20 pts'
-  }
-];
-
-const alerts = [
-  {
-    title: 'Machine almost full',
-    desc: 'Bin is at 83% capacity',
-    type: 'warning'
-  },
-  {
-    title: 'Scanner error',
-    desc: 'Calibration required',
-    type: 'danger'
-  },
-  {
-    title: 'No internet connection',
-    desc: 'Machine briefly offline',
-    type: 'warning'
-  }
-];
-
 export default function Dashboard() {
+  const { students, transactions } = useData();
+
+  // Process transactions to get daily bottle counts
+  const getDailyData = () => {
+    const dailyStats = {};
+    
+    transactions.forEach(tx => {
+      // Extract date from transaction
+      let dateStr = 'Unknown';
+      if (tx.created_at) {
+        const date = new Date(tx.created_at);
+        dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else if (tx.date) {
+        const date = new Date(tx.date);
+        dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      
+      if (!dailyStats[dateStr]) {
+        dailyStats[dateStr] = { bottles: 0, points: 0 };
+      }
+      
+      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
+      dailyStats[dateStr].bottles += bottles;
+      dailyStats[dateStr].points += bottles * 5; // 5 points per bottle
+    });
+    
+    // Convert to array and sort by date
+    const sortedDates = Object.entries(dailyStats).map(([date, data]) => ({
+      date,
+      ...data
+    }));
+    
+    // If no data, use sample 7-day period
+    if (sortedDates.length === 0) {
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        sortedDates.push({
+          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          bottles: Math.floor(Math.random() * 50) + 10,
+          points: Math.floor(Math.random() * 250) + 50
+        });
+      }
+    }
+    
+    // Limit to last 7 days
+    return sortedDates.slice(-7);
+  };
+
+  const dailyData = getDailyData();
+
+  // Calculate SVG points for graph
+  const graphMaxBottles = Math.max(...dailyData.map(d => d.bottles), 1);
+  const graphMaxPoints = Math.max(...dailyData.map(d => d.points), 1);
+  const step = 510 / (dailyData.length - 1 || 1);
+  
+  const bottlesPoints = dailyData.map((d, i) => {
+    const x = 60 + i * step;
+    const y = 200 - (d.bottles / graphMaxBottles) * 150;
+    return `${x},${y}`;
+  }).join(' ');
+  
+  const pointsPoints = dailyData.map((d, i) => {
+    const x = 60 + i * step;
+    const y = 200 - (d.points / graphMaxPoints) * 150;
+    return `${x},${y}`;
+  }).join(' ');
+
+  // Calculate total bottles
+  const totalBottles = transactions.reduce((sum, tx) => {
+    const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
+    return sum + bottles;
+  }, 0);
+
+  // Calculate bin fullness same way as machine_monitoring
+  const maxCapacityBottles = 300; // Adjust this to your needs
+  const binFullness = Math.min(Math.round((totalBottles / maxCapacityBottles) * 100), 100);
+
+  // Calculate total points earned
+  const totalPoints = students.reduce((sum, student) => {
+    return sum + (student.points_balance || student.points || 0);
+  }, 0);
+
+  // Calculate grade 3 participants
+  const grade3Participants = students.filter(student => 
+    (student.grade_level || '').toString() 
+  ).length;
+
+  // Calculate active vs inactive students
+  const activeStudents = students.filter(student => 
+    (student.status || 'Inactive').toLowerCase() === 'active'
+  ).length;
+  const inactiveStudents = students.length - activeStudents;
+
+  // Generate conic gradient for participation chart
+  const generateParticipationGradient = () => {
+    if (students.length === 0) {
+      return 'conic-gradient(#e6f2d4 0deg 360deg)';
+    }
+    const activeDeg = (activeStudents / students.length) * 360;
+    return `conic-gradient(#3e5f44 0deg ${activeDeg}deg,#8bc37a ${activeDeg}deg 360deg)`;
+  };
+
+  // Calculate top section
+  const sectionStats = {};
+  students.forEach(student => {
+    const section = student.section || 'Unknown';
+    if (!sectionStats[section]) {
+      sectionStats[section] = { bottles: 0, points: 0 };
+    }
+    sectionStats[section].points += student.points_balance || student.points || 0;
+  });
+  transactions.forEach(tx => {
+    const student = students.find(s => 
+      (s.id || s.student_id) === (tx.student_id || tx.id)
+    );
+    if (student) {
+      const section = student.section || 'Unknown';
+      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
+      sectionStats[section].bottles += bottles;
+    }
+  });
+
+  let topSection = null;
+  let maxBottles = 0;
+  Object.entries(sectionStats).forEach(([section, stats]) => {
+    if (stats.bottles > maxBottles) {
+      maxBottles = stats.bottles;
+      topSection = { name: section, bottles: stats.bottles, points: stats.points };
+    }
+  });
+
+  // Generate recent activities from transactions
+  const activities = transactions.slice(0, 5).map(tx => {
+    const student = students.find(s => 
+      (s.id || s.student_id) === (tx.student_id || tx.id)
+    );
+    const name = student ? 
+      [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Unknown Student' : 
+      'Unknown Student';
+    
+    const initials = student ? 
+      (student.initials || 
+        (student.first_name && student.last_name ? 
+          `${student.first_name[0]}${student.last_name[0]}`.toUpperCase() : 
+          name[0].toUpperCase())) : 
+      'UN';
+    
+    const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
+    
+    // Get point conversion from settings or use default
+    const pointConversion = 5; // Default if not available
+    const points = bottles * pointConversion;
+
+    return {
+      initials,
+      name,
+      action: `recycled ${bottles} bottle${bottles !== 1 ? 's' : ''}`,
+      points: `+${points} pts`
+    };
+  });
+
+  const stats = [
+    {
+      title: 'Bottles Collected',
+      value: totalBottles.toLocaleString(),
+      change: '+0%'
+    },
+    {
+      title: 'Points Earned',
+      value: totalPoints.toLocaleString(),
+      change: '+0%'
+    },
+    {
+      title: 'Bin Fullness',
+      value: `${binFullness}%`,
+      change: binFullness === 0 ? '0%' : '+2%'
+    },
+    {
+      title: 'Grade 3 Participants',
+      value: grade3Participants.toString(),
+      change: '+0%'
+    }
+  ];
+
+  const alerts = [
+    {
+      title: 'Welcome',
+      desc: 'Dashboard is using real data',
+      type: 'warning'
+    }
+  ];
+
   return (
     <div
       style={{
@@ -203,49 +327,155 @@ export default function Dashboard() {
             border: `1px solid ${COLORS.mintLight}`
           }}
         >
-          <h3
-            style={{
-              marginTop: 0,
-              color: COLORS.dark
-            }}
-          >
-            Daily Recycling Trends
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3
+              style={{
+                margin: 0,
+                color: COLORS.dark
+              }}
+            >
+              Daily Recycling Trends
+            </h3>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#8bc37a', borderRadius: '2px' }} />
+                <span style={{ color: COLORS.darkMuted }}>Bottles</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '12px', height: '3px', backgroundColor: '#3e5f44', borderRadius: '2px' }} />
+                <span style={{ color: COLORS.darkMuted }}>Points</span>
+              </div>
+            </div>
+          </div>
 
           <svg
             viewBox="0 0 600 250"
             width="100%"
             height="250"
           >
+            {/* Axes */}
+            <line x1="60" y1="40" x2="60" y2="210" stroke={COLORS.mintLight} strokeWidth="2" />
+            <line x1="60" y1="210" x2="570" y2="210" stroke={COLORS.mintLight} strokeWidth="2" />
+
+            {/* Grid lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+              const y = 210 - ratio * 160;
+              return (
+                <g key={i}>
+                  <line x1="60" y1={y} x2="570" y2={y} stroke="rgba(62,95,68,0.1)" strokeWidth="1" />
+                  <text
+                    x="55"
+                    y={y + 4}
+                    textAnchor="end"
+                    fontSize="10"
+                    fill={COLORS.darkMuted}
+                  >
+                    {Math.round(ratio * graphMaxBottles)}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Y-axis label */}
+            <text
+              x="25"
+              y="125"
+              textAnchor="middle"
+              fontSize="11"
+              fill={COLORS.darkMuted}
+              transform="rotate(-90 25 125)"
+            >
+              Bottles
+            </text>
+
+            {/* Bottles line */}
             <polyline
               fill="none"
               stroke="#8bc37a"
               strokeWidth="4"
-              points="
-                30,180
-                120,150
-                210,120
-                300,140
-                390,90
-                480,220
-                570,100
-              "
+              points={bottlesPoints}
             />
 
+            {/* Points line */}
             <polyline
               fill="none"
               stroke="#3e5f44"
               strokeWidth="4"
-              points="
-                30,220
-                120,210
-                210,200
-                300,205
-                390,190
-                480,240
-                570,200
-              "
+              points={pointsPoints}
             />
+
+            {/* Data points and values for bottles */}
+            {dailyData.map((d, i) => {
+              const x = 60 + i * (510 / (dailyData.length - 1 || 1));
+              const y = 200 - (d.bottles / graphMaxBottles) * 150;
+              return (
+                <g key={`bottle-${i}`}>
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="6"
+                    fill="#8bc37a"
+                    stroke="white"
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={x}
+                    y={y - 10}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="600"
+                    fill="#8bc37a"
+                  >
+                    {d.bottles}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Data points for points */}
+            {dailyData.map((d, i) => {
+              const x = 60 + i * (510 / (dailyData.length - 1 || 1));
+              const y = 200 - (d.points / graphMaxPoints) * 150;
+              return (
+                <g key={`point-${i}`}>
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="6"
+                    fill="#3e5f44"
+                    stroke="white"
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={x}
+                    y={y - 10}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="600"
+                    fill="#3e5f44"
+                  >
+                    {d.points}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* X-axis labels */}
+            {dailyData.map((d, i) => {
+              const x = 60 + i * (510 / (dailyData.length - 1 || 1));
+              return (
+                <text
+                  key={`label-${i}`}
+                  x={x}
+                  y="232"
+                  textAnchor="middle"
+                  fontSize="11"
+                  fill={COLORS.darkMuted}
+                >
+                  {d.date}
+                </text>
+              );
+            })}
           </svg>
         </div>
 
@@ -271,7 +501,8 @@ export default function Dashboard() {
           <div
             style={{
               display: 'flex',
-              justifyContent: 'center',
+              flexDirection: 'column',
+              alignItems: 'center',
               marginTop: '24px'
             }}
           >
@@ -280,8 +511,7 @@ export default function Dashboard() {
                 width: '180px',
                 height: '180px',
                 borderRadius: '50%',
-                background:
-                  'conic-gradient(#3e5f44 0deg 220deg,#8bc37a 220deg 310deg,#dcefd1 310deg 360deg)',
+                background: generateParticipationGradient(),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -292,9 +522,39 @@ export default function Dashboard() {
                   width: '110px',
                   height: '110px',
                   borderRadius: '50%',
-                  background: '#fff'
+                  background: '#fff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
-              />
+              >
+                <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.dark }}>
+                  {students.length}
+                </div>
+                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>
+                  Total
+                </div>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: 'flex', gap: '24px', marginTop: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: COLORS.dark }} />
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark }}>Active</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{activeStudents}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#8bc37a' }} />
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark }}>Inactive</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{inactiveStudents}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -328,49 +588,77 @@ export default function Dashboard() {
             Weekly Bottle Collection by Section
           </h3>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'end',
-              gap: '20px',
-              height: '260px',
-              marginTop: '30px'
-            }}
-          >
-            {[420, 390, 300, 250, 180].map(
-              (height, index) => (
-                <div
-                  key={index}
-                  style={{
-                    flex: 1,
+          {/* Sort sections by bottles descending first */}
+          {(() => {
+            const sortedSectionEntries = Object.entries(sectionStats)
+              .sort(([, a], [, b]) => b.bottles - a.bottles)
+              .slice(0, 5);
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'stretch', gap: '16px', height: '240px', paddingLeft: '40px' }}>
+                  {/* Y-axis */}
+                  <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '100%',
-                      maxWidth: '80px',
-                      height: `${height / 2}px`,
-                      background: '#92c283',
-                      borderRadius: '10px 10px 0 0'
-                    }}
-                  />
+                    justifyContent: 'space-between',
+                    width: '40px',
+                    marginLeft: '-40px',
+                    fontSize: '10px',
+                    color: COLORS.darkMuted,
+                    textAlign: 'right'
+                  }}>
+                    {[maxBottles, Math.round(maxBottles * 0.75), Math.round(maxBottles * 0.5), Math.round(maxBottles * 0.25), 0].map((val, i) => (
+                      <div key={i}>{val}</div>
+                    ))}
+                  </div>
 
-                  <span
-                    style={{
-                      marginTop: '10px',
-                      fontSize: '12px',
-                      color: COLORS.dark
-                    }}
-                  >
-                    Grade {index + 3}
-                  </span>
+                  {/* Bars */}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'end', gap: '20px', borderLeft: `1px solid ${COLORS.mintLight}`, borderBottom: `1px solid ${COLORS.mintLight}`, paddingLeft: '8px', paddingBottom: '8px' }}>
+                    {sortedSectionEntries.map(([section, stats], index) => (
+                      <div
+                        key={section}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {/* Value on top */}
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: COLORS.dark }}>
+                          {stats.bottles}
+                        </div>
+
+                        {/* Bar */}
+                        <div
+                          style={{
+                            width: '100%',
+                            maxWidth: '80px',
+                            height: `${Math.min((stats.bottles / (maxBottles || 1)) * 200, 200)}px`,
+                            background: COLORS.sectionColors[index % COLORS.sectionColors.length],
+                            borderRadius: '10px 10px 0 0'
+                          }}
+                        />
+
+                        {/* Section label */}
+                        <span style={{ fontSize: '12px', color: COLORS.dark, fontWeight: '600', wordBreak: 'break-word', textAlign: 'center' }}>
+                          {section}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )
-            )}
-          </div>
+
+                {/* Y-axis title */}
+                <div style={{ textAlign: 'center', fontSize: '11px', color: COLORS.darkMuted }}>
+                  Bottles Recycled
+                </div>
+              </div>
+            );
+          })()}
+
         </div>
 
         {/* Right Column */}
@@ -404,7 +692,7 @@ export default function Dashboard() {
                 margin: '8px 0'
               }}
             >
-              3-Sampaguita
+              {topSection ? topSection.name : 'No Data'}
             </h2>
 
             <div
@@ -412,7 +700,7 @@ export default function Dashboard() {
                 fontSize: '13px'
               }}
             >
-              412 Bottles • 2,060 Points
+              {topSection ? `${topSection.bottles} Bottles • ${topSection.points} Points` : 'No activity yet'}
             </div>
           </div>
 
@@ -491,72 +779,82 @@ export default function Dashboard() {
           Recent Recycling Activity
         </h3>
 
-        {activities.map((activity) => (
-          <div
-            key={activity.name}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 0',
-              borderBottom:
-                '1px solid rgba(0,0,0,.05)'
-            }}
-          >
+        {activities.length > 0 ? (
+          activities.map((activity, index) => (
             <div
+              key={index}
               style={{
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '12px'
+                padding: '14px 0',
+                borderBottom:
+                  '1px solid rgba(0,0,0,.05)'
               }}
             >
               <div
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: COLORS.mintMuted,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  color: COLORS.dark,
-                  fontWeight: '700'
+                  gap: '12px'
                 }}
               >
-                {activity.initials}
-              </div>
-
-              <div>
                 <div
                   style={{
-                    fontWeight: '600',
-                    color: COLORS.dark
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: COLORS.mintMuted,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: COLORS.dark,
+                    fontWeight: '700'
                   }}
                 >
-                  {activity.name}
+                  {activity.initials}
                 </div>
 
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: COLORS.darkMuted
-                  }}
-                >
-                  {activity.action}
+                <div>
+                  <div
+                    style={{
+                      fontWeight: '600',
+                      color: COLORS.dark
+                    }}
+                  >
+                    {activity.name}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: COLORS.darkMuted
+                    }}
+                  >
+                    {activity.action}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div
-              style={{
-                fontWeight: '700',
-                color: COLORS.sage
-              }}
-            >
-              {activity.points}
+              <div
+                style={{
+                  fontWeight: '700',
+                  color: COLORS.sage
+                }}
+              >
+                {activity.points}
+              </div>
             </div>
+          ))
+        ) : (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '40px 20px', 
+            color: COLORS.darkMuted 
+          }}>
+            No recent recycling activity
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

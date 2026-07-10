@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api';
+import { useData } from '../context/DataContext.jsx';
 import {
   SchoolIcon,
   SparklesIcon,
@@ -17,6 +19,17 @@ import {
 } from 'lucide-react';
 
 export function Settings() {
+  // Use settings from our data context!
+  const { 
+    settings, 
+    refreshSettings,
+    refreshSections,
+    updateSettings: updateSettingsInContext,
+    addSection: addSectionToContext,
+    updateSection: updateSectionInContext,
+    removeSection: removeSectionFromContext
+  } = useData();
+  
   // Safe default matching your exact database records layout
   const [schoolInfo, setSchoolInfo] = useState({
     name: 'PLP',
@@ -50,45 +63,32 @@ export function Settings() {
     if (done) setTimeout(() => setToast(null), 3000);
   };
 
-  // CONTROLLER 1: System Settings Loader
+  // CONTROLLER 1: System Settings Loader - Initialize from context
   useEffect(() => {
-    const fetchSystemSettings = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/api/settings');
-        if (!response.ok) throw new Error('Backend offline');
-        const data = await response.json();
-        
-        const settings = Array.isArray(data) ? data[0] : data;
-        if (settings) {
-          setSchoolInfo({
-            name: settings.school_name || '',
-            address: settings.school_address || '',
-            year: settings.school_year || '',
-            email: settings.school_email || '',
-          });
-          setConversion(Number(settings.point_conversion) || 5);
-          setPenalties({
-            rejected: Number(settings.penalty_rejected) || -1,
-            invalid: Number(settings.penalty_invalid) || -2,
-            nonPet: Number(settings.penalty_non_pet) || -1,
-            custom: Number(settings.penalty_custom) || -3,
-          });
-          setNotifications({
-            machineFull: settings.notify_machine_full == 1,
-            scannerErrors: settings.notify_scanner_errors == 1,
-            machineOffline: settings.notify_machine_offline == 1,
-            maintenance: settings.notify_maintenance == 1,
-            weeklySummary: settings.notify_weekly_summary == 1,
-            milestones: settings.notify_milestones == 1,
-          });
-        }
-      } catch (error) {
-        console.warn('Backend server on port 8000 is offline. Using default local layout views.');
-      }
-    };
-
-    fetchSystemSettings();
-  }, []);
+    if (settings) {
+      setSchoolInfo({
+        name: settings.school_name || '',
+        address: settings.school_address || '',
+        year: settings.school_year || '',
+        email: settings.school_email || '',
+      });
+      setConversion(Number(settings.point_conversion) || 5);
+      setPenalties({
+        rejected: Number(settings.penalty_rejected) || -1,
+        invalid: Number(settings.penalty_invalid) || -2,
+        nonPet: Number(settings.penalty_non_pet) || -1,
+        custom: Number(settings.penalty_custom) || -3,
+      });
+      setNotifications({
+        machineFull: settings.notify_machine_full == 1,
+        scannerErrors: settings.notify_scanner_errors == 1,
+        machineOffline: settings.notify_machine_offline == 1,
+        maintenance: settings.notify_maintenance == 1,
+        weeklySummary: settings.notify_weekly_summary == 1,
+        milestones: settings.notify_milestones == 1,
+      });
+    }
+  }, [settings]);
 
   // CONTROLLER 1: System Settings Updater
   const handleSaveAll = async () => {
@@ -113,16 +113,9 @@ export function Settings() {
     };
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/settings', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error('Save error');
+      await api.updateSettings(payload);
+      // Update the context directly so we don't refresh everything
+      updateSettingsInContext(payload);
       showToast('Settings saved successfully!');
     } catch (error) {
       console.error(error);
@@ -170,7 +163,13 @@ export function Settings() {
 
         {/* CONTROLLER 2: Sections Component Embedded Inside Section Management Card */}
         <SettingsCard icon={UsersIcon} title="Section Management" desc="Add, edit, and remove student sections">
-          <SectionsManager onToast={(msg) => showToast(msg)} />
+          <SectionsManager 
+            onToast={(msg) => showToast(msg)} 
+            refreshSections={refreshSections}
+            addSectionToContext={addSectionToContext}
+            updateSectionInContext={updateSectionInContext}
+            removeSectionFromContext={removeSectionFromContext}
+          />
         </SettingsCard>
 
         {/* Backup & Data */}
@@ -274,33 +273,24 @@ function PointRule({ label, desc, value, onChange, min, max }) {
 }
 
 // CONTROLLER 2: Section Table Manager Component
-function SectionsManager({ onToast }) {
-  const [sections, setSections] = useState([]);
+function SectionsManager({ 
+  onToast, 
+  refreshSections, 
+  addSectionToContext, 
+  updateSectionInContext, 
+  removeSectionFromContext 
+}) {
+  const { sections: sectionsFromContext } = useData();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '' });
 
-  // 1. Independent data fetching that won't touch top-level states
-  const fetchSectionsOnly = async () => {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/sections');
-      if (response.ok) {
-        const data = await response.json();
-        const normalized = (Array.isArray(data) ? data : []).map(s => ({
-          ...s,
-          name: s.section_name || s.name || ''
-        }));
-        setSections(normalized);
-      }
-    } catch (error) {
-      console.warn('Sections backend offline.');
-    }
-  };
-
-  useEffect(() => {
-    fetchSectionsOnly();
-  }, []);
+  // 1. Use sections from context
+  const sections = (sectionsFromContext || []).map(s => ({
+    ...s,
+    name: s.section_name || s.name || ''
+  }));
 
   const filtered = sections.filter(
     (s) => s && s.name && s.name.toLowerCase().includes(search.toLowerCase())
@@ -318,25 +308,22 @@ function SectionsManager({ onToast }) {
     try {
       if (editing) {
         const targetIdentifier = editing.id || editing.name;
-        await fetch(`http://127.0.0.1:8000/api/sections/${encodeURIComponent(targetIdentifier)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const res = await api.updateSection(targetIdentifier, payload);
+        if (res.data) {
+          updateSectionInContext(targetIdentifier, res.data);
+        } else {
+          await refreshSections();
+        }
         onToast('Section updated successfully');
       } else {
-        const response = await fetch('http://127.0.0.1:8000/api/sections', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) throw new Error('Failed to create row');
+        const res = await api.addSection(payload);
+        if (res.data) {
+          addSectionToContext(res.data);
+        } else {
+          await refreshSections();
+        }
         onToast('Section added successfully');
       }
-      
-      // ONLY re-fetch the local table data, leaving school information untouched
-      await fetchSectionsOnly();
     } catch (e) {
       console.error(e);
       onToast('Error handling section request');
@@ -348,14 +335,12 @@ function SectionsManager({ onToast }) {
   const handleDelete = async (sectionItem) => {
     try {
       const targetIdentifier = sectionItem.id || sectionItem.name;
-      await fetch(`http://127.0.0.1:8000/api/sections/${encodeURIComponent(targetIdentifier)}`, {
-        method: 'DELETE',
-        headers: { 'Accept': 'application/json' }
-      });
+      await api.deleteSection(targetIdentifier);
+      removeSectionFromContext(targetIdentifier);
       onToast('Section removed successfully');
-      await fetchSectionsOnly();
     } catch (error) {
       console.error(error);
+      onToast('Error deleting section');
     }
   };
 

@@ -1,49 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import api from '../api';
+import { useData } from '../context/DataContext.jsx';
 
-/* ===================== DASHBOARD DATA ===================== */
-const stats = [
-  {
-    title: 'Total Incentives Distributed',
-    value: '1,248',
-    sub: 'vs. last month',
-    icon: 'fa-gift',
-    badge: '+15%',
-  },
-  {
-    title: 'Active Rewards',
-    value: '12',
-    sub: '',
-    icon: 'fa-star',
-  },
-  {
-    title: 'Pending Redemptions',
-    value: '2',
-    sub: '',
-    icon: 'fa-ticket',
-  },
-  {
-    title: 'Points Redeemed (MTD)',
-    value: '45,200',
-    sub: 'vs. last month',
-    icon: 'fa-arrow-trend-up',
-    badge: '+8%',
-  },
-];
-
-const popularRewards = [
-    { name: 'Extra Recess Time', count: 92 },
-    { name: 'Eco-Warrior Badge', count: 60 },
-    { name: 'Homework Pass', count: 42 },
-    { name: 'Cafeteria Voucher', count: 28 },
-];
-
-const trendData = [12, 18, 15, 22, 30, 5, 8];
+const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
 /* ===================== REWARDS TAB ===================== */
 function RewardsTab() {
-  const [rewards, setRewards] = useState([]);
-  const [error, setError] = useState(null);
+  const { rewards, refreshRewards } = useData();
   const [showModal, setShowModal] = useState(false);
   const [newReward, setNewReward] = useState({
     reward_name: '',
@@ -52,34 +15,6 @@ function RewardsTab() {
   });
   const [modalError, setModalError] = useState(null);
   const [modalSuccess, setModalSuccess] = useState(null);
-
-  const fetchRewards = async () => {
-    try {
-      setError(null);
-      const res = await api.getRewards();
-      
-      // Try to get data from common response structures
-      let rawRewards = res.data?.rewards || res.data?.data || res.data || [];
-      
-      // Make sure it's an array
-      if (!Array.isArray(rawRewards)) {
-        rawRewards = [];
-      }
-      
-      // Map the API fields to the UI fields
-      const rewardsData = rawRewards.map(r => ({
-        id: r.reward_id || r.id,
-        name: r.reward_name || r.name,
-        points: r.points_cost || r.points || r.points_required,
-        stock: r.stock_quantity || r.stock,
-        status: r.status || 'Active' // Default to Active if no status
-      }));
-      
-      setRewards(rewardsData);
-    } catch (error) {
-      setError(error.response?.data?.message || error.message || 'Failed to load rewards');
-    }
-  };
 
   const handleCreateReward = async (e) => {
     e.preventDefault();
@@ -116,17 +51,13 @@ function RewardsTab() {
         setShowModal(false);
         setNewReward({ reward_name: '', points_cost: '', stock_quantity: '' });
         setModalSuccess(null);
-        fetchRewards(); // Refresh the list
+        refreshRewards();
       }, 1500);
     } catch (error) {
       console.error('❌ Error creating reward:', error);
       setModalError(error.response?.data?.message || error.message || 'Failed to create reward');
     }
   };
-
-  useEffect(() => {
-    fetchRewards();
-  }, []);
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
@@ -231,12 +162,6 @@ function RewardsTab() {
         </div>
       )}
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-xl">
-          ❌ {error}
-        </div>
-      )}
-
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[#6f876f] border-b">
@@ -249,7 +174,7 @@ function RewardsTab() {
         </thead>
 
         <tbody>
-          {rewards.length === 0 && !error && (
+          {rewards.length === 0 && (
             <tr>
               <td colSpan="5" className="py-6 text-center text-[#6f876f]">
                 No rewards found
@@ -295,115 +220,15 @@ function RewardsTab() {
   );
 }
 
-/* ===================== PROGRAMS TAB ===================== */
-function ProgramsTab() {
-  const programs = [
-    {
-      name: 'Perfect Attendance Challenge',
-      status: 'Active',
-      criteria: 'No absences for 30 days',
-      reward: 'Extra Recess Time',
-      end: 'July 30, 2026',
-    },
-    {
-      name: 'Reading Mastery Program',
-      status: 'Inactive',
-      criteria: 'Read 10 books per month',
-      reward: 'Homework Pass',
-      end: 'August 15, 2026',
-    },
-    {
-      name: 'Eco Warriors Campaign',
-      status: 'Active',
-      criteria: 'Bring recyclable materials weekly',
-      reward: 'Eco-Warrior Badge',
-      end: 'September 10, 2026',
-    },
-  ];
-
-  return (
-    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
-
-      <div className="flex justify-end mb-6">
-        <button className="bg-[#3e5f44] text-white px-5 py-2 rounded-xl text-sm font-semibold">
-          + Create Program
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-5">
-        {programs.map((p, idx) => (
-          <div
-            key={idx}
-            className="relative bg-[#f7f8f3] border border-[#dbe6db] rounded-3xl p-5 shadow-sm"
-          >
-            <div className="absolute top-4 right-4 flex gap-2">
-              <button className="text-xs px-2 py-1 rounded-lg bg-blue-100 text-blue-700">
-                Edit
-              </button>
-              <button className="text-xs px-2 py-1 rounded-lg bg-red-100 text-red-700">
-                Delete
-              </button>
-            </div>
-
-            <h3 className="text-lg font-bold text-[#3e5f44] pr-16">
-              {p.name}
-            </h3>
-
-            <div className="mt-2 mb-4">
-              <span
-                className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                  p.status === 'Active'
-                    ? 'bg-[#e8f5bd] text-[#3e5f44]'
-                    : 'bg-gray-200 text-gray-600'
-                }`}
-              >
-                {p.status}
-              </span>
-            </div>
-
-            <div className="space-y-2 text-sm text-[#6f876f]">
-              <p><b className="text-[#3e5f44]">Criteria:</b> {p.criteria}</p>
-              <p><b className="text-[#3e5f44]">Reward:</b> {p.reward}</p>
-              <p><b className="text-[#3e5f44]">Ends:</b> {p.end}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ===================== REDEMPTIONS TAB ===================== */
 function RedemptionsTab() {
-  const requests = [
-    {
-      student: 'Juan Dela Cruz',
-      reward: 'Extra Recess Time',
-      points: 50,
-      date: '2026-06-10',
-      status: 'Pending',
-    },
-    {
-      student: 'Maria Santos',
-      reward: 'Homework Pass',
-      points: 100,
-      date: '2026-06-12',
-      status: 'Approved',
-    },
-    {
-      student: 'Miguel Reyes',
-      reward: 'Cafeteria Voucher',
-      points: 75,
-      date: '2026-06-13',
-      status: 'Rejected',
-    },
-  ];
+  const { redemptions } = useData();
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
 
       <h2 className="text-xl font-bold text-[#3e5f44] mb-6">
-        Redemption Requests
+        Redemption Logs
       </h2>
 
       <table className="w-full text-sm">
@@ -413,14 +238,19 @@ function RedemptionsTab() {
             <th>Reward</th>
             <th>Points</th>
             <th>Date</th>
-            <th>Status</th>
-            <th>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          {requests.map((r, idx) => (
-            <tr key={idx} className="border-b">
+          {redemptions.length === 0 ? (
+            <tr>
+              <td colSpan="6" className="py-6 text-center text-[#6f876f]">
+                No redemptions found
+              </td>
+            </tr>
+          ) : (
+            redemptions.map((r, idx) => (
+            <tr key={r.id || idx} className="border-b">
 
               <td className="py-3 text-[#3e5f44] font-medium">
                 {r.student}
@@ -428,41 +258,10 @@ function RedemptionsTab() {
 
               <td>{r.reward}</td>
               <td>{r.points}</td>
-              <td>{r.date}</td>
-
-              <td>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    r.status === 'Approved'
-                      ? 'bg-[#e8f5bd] text-[#3e5f44]'
-                      : r.status === 'Rejected'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                  }`}
-                >
-                  {r.status}
-                </span>
-              </td>
-
-              <td className="space-x-2">
-                {r.status === 'Pending' ? (
-                  <>
-                    <button className="text-xs px-3 py-1 rounded-lg bg-green-100 text-green-700">
-                      Approve
-                    </button>
-                    <button className="text-xs px-3 py-1 rounded-lg bg-red-100 text-red-700">
-                      Reject
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-xs px-3 py-1 rounded-full bg-gray-200 text-gray-600 font-semibold">
-                    Processed
-                  </span>
-                )}
-              </td>
-
+              <td>{r.redemption_date}</td>
             </tr>
-          ))}
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -587,17 +386,394 @@ function ReportsTab() {
   );
 }
 
+/* ===================== REDEMPTION FLOW ===================== */
+function RedemptionFlow() {
+  const { students, rewards, addRedemption, refreshStudents, refreshRewards } = useData();
+  const [step, setStep] = useState(1); // 1: Scan student, 2: Select reward, 3: Confirm
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedReward, setSelectedReward] = useState(null);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('info');
+  const [scanning, setScanning] = useState(false);
+
+  // Calculate total points for a student
+  const calculateStudentPoints = (student) => {
+    return student.points_balance || student.points || 0;
+  };
+
+  // Simulate RFID scan - in real setup, this would receive data from ESP32
+  const simulateScan = () => {
+    setScanning(true);
+    setMessage('Scanning RFID card...');
+    setMessageType('info');
+    
+    setTimeout(() => {
+      const randomStudent = students.length > 0 
+        ? students[Math.floor(Math.random() * students.length)] 
+        : null;
+      
+      if (randomStudent) {
+        setSelectedStudent(randomStudent);
+        setStep(2);
+        setMessage(`Student found: ${randomStudent.first_name || ''} ${randomStudent.last_name || ''}`);
+        setMessageType('success');
+      } else {
+        setMessage('No students found. Please add students first.');
+        setMessageType('error');
+      }
+      setScanning(false);
+    }, 1500);
+  };
+
+  // Simulate confirmation scan
+  const confirmRedemption = () => {
+    setScanning(true);
+    setMessage('Confirming redemption...');
+    
+    setTimeout(async () => {
+      try {
+        // Submit redemption to API
+        await addRedemption({
+          student_id: selectedStudent.id || selectedStudent.student_id,
+          reward_id: selectedReward.id || selectedReward.reward_id,
+          points: selectedReward.points || selectedReward.points_cost || selectedReward.points_required
+        });
+        
+        // Refresh data
+        await refreshStudents();
+        await refreshRewards();
+        
+        setStep(4);
+        setMessage('Redemption successful!');
+        setMessageType('success');
+      } catch (error) {
+        console.error('Redemption error:', error);
+        setMessage('Redemption failed. Please try again.');
+        setMessageType('error');
+      }
+      setScanning(false);
+    }, 1500);
+  };
+
+  // Reset flow
+  const resetFlow = () => {
+    setStep(1);
+    setSelectedStudent(null);
+    setSelectedReward(null);
+    setMessage('');
+  };
+
+  return (
+    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-2xl font-bold text-[#3e5f44]">
+          Redemption Terminal
+        </h2>
+        {step !== 1 && (
+          <button
+            onClick={resetFlow}
+            className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold"
+          >
+            ← Back to Start
+          </button>
+        )}
+      </div>
+
+      {/* Status Message */}
+      {message && (
+        <div className={`mb-6 p-4 rounded-xl ${
+          messageType === 'success' ? 'bg-green-100 text-green-700' :
+          messageType === 'error' ? 'bg-red-100 text-red-700' :
+          'bg-blue-100 text-blue-700'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      {/* Step 1: Scan Student */}
+      {step === 1 && (
+        <div className="text-center py-12">
+          <div className="w-32 h-32 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
+            <i className="fa-solid fa-id-card-clip text-5xl text-[#3e5f44]" />
+          </div>
+          <h3 className="text-xl font-bold text-[#3e5f44] mb-3">
+            Scan Student RFID Card
+          </h3>
+          <p className="text-[#6f876f] mb-8 max-w-md mx-auto">
+            Hold the student's RFID card near the scanner to begin
+          </p>
+          <button
+            onClick={simulateScan}
+            disabled={scanning}
+            className={`px-8 py-4 rounded-2xl text-white font-semibold text-lg ${
+              scanning 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-[#3e5f44] hover:bg-[#4a6e50]'
+            }`}
+          >
+            {scanning ? (
+              <span><i className="fa-solid fa-spinner fa-spin mr-2" /> Scanning...</span>
+            ) : (
+              <span><i className="fa-solid fa-walkie-talkie mr-2" /> Start Scan</span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Step 2: Select Reward */}
+      {step === 2 && selectedStudent && (
+        <div>
+          {/* Student Info Card */}
+          <div className="bg-[#e8f5bd] rounded-2xl p-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#3e5f44]">
+                {(selectedStudent.first_name?.[0] || 'S') + (selectedStudent.last_name?.[0] || '')}
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-[#3e5f44]">
+                  {selectedStudent.first_name || ''} {selectedStudent.last_name || ''}
+                </h4>
+                <p className="text-sm text-[#6f876f]">
+                  Grade {selectedStudent.grade_level || '3'} • {selectedStudent.section || 'N/A'}
+                </p>
+              </div>
+              <div className="ml-auto text-right">
+                <div className="text-2xl font-bold text-[#3e5f44]">
+                  {calculateStudentPoints(selectedStudent)} points
+                </div>
+                <div className="text-xs text-[#6f876f]">Available Balance</div>
+              </div>
+            </div>
+          </div>
+
+          <h3 className="text-xl font-bold text-[#3e5f44] mb-4">Select a Reward</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {rewards
+              .filter(r => r.status === 'Active' && r.stock > 0)
+              .map((reward) => {
+                const studentPoints = calculateStudentPoints(selectedStudent);
+                const rewardPoints = reward.points || reward.points_cost || reward.points_required;
+                const canAfford = studentPoints >= rewardPoints;
+                
+                return (
+                  <div
+                    key={reward.id || reward.reward_id}
+                    onClick={() => canAfford && setSelectedReward(reward)}
+                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                      selectedReward?.id === reward.id || selectedReward?.reward_id === reward.reward_id
+                        ? 'border-[#3e5f44] bg-[#e8f5bd]'
+                        : canAfford
+                          ? 'border-[#dbe6db] hover:border-[#3e5f44]'
+                          : 'border-[#e0e0e0] bg-gray-50 opacity-60 cursor-not-allowed'
+                    }`}
+                  >
+                    <h4 className="font-bold text-[#3e5f44] mb-1">{reward.name}</h4>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#6f876f]">
+                        <i className="fa-solid fa-coins mr-1" /> {rewardPoints} points
+                      </span>
+                      <span className="text-xs text-[#6f876f]">
+                        Stock: {reward.stock}
+                      </span>
+                    </div>
+                    {!canAfford && (
+                      <div className="mt-2 text-xs text-red-600">
+                        Insufficient points
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+
+          {selectedReward && (
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={() => setStep(3)}
+                className="bg-[#3e5f44] text-white px-8 py-3 rounded-xl font-semibold"
+              >
+                Continue →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 3: Confirm Redemption */}
+      {step === 3 && selectedStudent && selectedReward && (
+        <div className="text-center py-8">
+          <div className="bg-[#e8f5bd] rounded-2xl p-8 max-w-lg mx-auto mb-8">
+            <h4 className="text-lg font-bold text-[#3e5f44] mb-4">Confirm Redemption</h4>
+            <div className="space-y-3 text-left">
+              <div className="flex justify-between">
+                <span className="text-[#6f876f]">Student:</span>
+                <span className="font-semibold text-[#3e5f44]">
+                  {selectedStudent.first_name || ''} {selectedStudent.last_name || ''}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6f876f]">Reward:</span>
+                <span className="font-semibold text-[#3e5f44]">{selectedReward.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6f876f]">Points to deduct:</span>
+                <span className="font-semibold text-[#3e5f44]">
+                  {selectedReward.points || selectedReward.points_cost || selectedReward.points_required}
+                </span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[#3e5f44]/20">
+                <span className="text-[#6f876f]">Remaining balance:</span>
+                <span className="font-bold text-[#3e5f44]">
+                  {(calculateStudentPoints(selectedStudent) - (selectedReward.points || selectedReward.points_cost || selectedReward.points_required))} points
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-[#6f876f] mb-6">
+            Scan the card again to confirm redemption
+          </p>
+          
+          <button
+            onClick={confirmRedemption}
+            disabled={scanning}
+            className={`px-8 py-4 rounded-2xl text-white font-semibold text-lg ${
+              scanning 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-[#3e5f44] hover:bg-[#4a6e50]'
+            }`}
+          >
+            {scanning ? (
+              <span><i className="fa-solid fa-spinner fa-spin mr-2" /> Processing...</span>
+            ) : (
+              <span><i className="fa-solid fa-check mr-2" /> Confirm & Redeem</span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Step 4: Success */}
+      {step === 4 && (
+        <div className="text-center py-12">
+          <div className="w-32 h-32 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
+            <i className="fa-solid fa-check text-5xl text-green-700" />
+          </div>
+          <h3 className="text-2xl font-bold text-[#3e5f44] mb-3">
+            Redemption Complete!
+          </h3>
+          <p className="text-[#6f876f] mb-8">
+            {selectedStudent?.first_name || 'Student'} has redeemed {selectedReward?.name}
+          </p>
+          <button
+            onClick={resetFlow}
+            className="bg-[#3e5f44] text-white px-8 py-4 rounded-2xl font-semibold text-lg"
+          >
+            Start New Redemption
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ===================== MAIN COMPONENT ===================== */
 export default function IncentivesRewards() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const max = Math.max(...trendData);
+  const { rewards: dashboardRewards } = useData();
+
+  const totalRewards = dashboardRewards.length;
+  const totalStock = dashboardRewards.reduce((sum, reward) => sum + reward.stock, 0);
+  const averagePoints =
+    totalRewards > 0
+      ? Math.round(
+          dashboardRewards.reduce((sum, reward) => sum + reward.points, 0) /
+            totalRewards
+        )
+      : 0;
+  const highestPointReward = dashboardRewards.reduce(
+    (highest, reward) => (reward.points > highest.points ? reward : highest),
+    { name: 'None', points: 0 }
+  );
+
+  const dashboardStats = [
+    {
+      title: 'Total Rewards',
+      value: totalRewards.toLocaleString(),
+      sub: 'Preloaded from data context',
+      icon: 'fa-gift',
+    },
+    {
+      title: 'Active Rewards',
+      value: dashboardRewards
+        .filter((reward) => reward.status === 'Active')
+        .length.toLocaleString(),
+      sub: 'Currently available',
+      icon: 'fa-star',
+    },
+    {
+      title: 'Total Stock',
+      value: totalStock.toLocaleString(),
+      sub: 'Units in inventory',
+      icon: 'fa-box-open',
+    },
+    {
+      title: 'Average Points Cost',
+      value: averagePoints.toLocaleString(),
+      sub: 'Points per reward',
+      icon: 'fa-arrow-trend-up',
+    },
+  ];
+
+  const inventoryData = [...dashboardRewards]
+    .sort((a, b) => b.stock - a.stock)
+    .slice(0, 4)
+    .map((reward) => ({
+      name: reward.name,
+      count: reward.stock,
+    }));
+
+  const rewardCreationTrend = (() => {
+    const now = new Date();
+    const months = [];
+
+    for (let index = 5; index >= 0; index -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      months.push({
+        key: `${date.getFullYear()}-${date.getMonth()}`,
+        label: monthLabels[date.getMonth()],
+        value: 0,
+      });
+    }
+
+    dashboardRewards.forEach((reward) => {
+      if (!reward.createdAt) {
+        return;
+      }
+
+      const createdDate = new Date(reward.createdAt);
+      if (Number.isNaN(createdDate.getTime())) {
+        return;
+      }
+
+      const monthKey = `${createdDate.getFullYear()}-${createdDate.getMonth()}`;
+      const matchedMonth = months.find((month) => month.key === monthKey);
+
+      if (matchedMonth) {
+        matchedMonth.value += 1;
+      }
+    });
+
+    return months;
+  })();
+
+  const trendMax = Math.max(...rewardCreationTrend.map((item) => item.value), 1);
 
   return (
     <div className="space-y-6">
 
       {/* Tabs */}
       <div className="bg-white rounded-2xl p-2 inline-flex gap-2 shadow-sm border border-[#dbe6db]">
-        {['dashboard', 'rewards', 'programs', 'redemptions', 'reports'].map(
+        {['dashboard', 'rewards', 'redeem', 'redemptions', 'reports'].map(
           (tab) => (
             <button
               key={tab}
@@ -617,7 +793,7 @@ export default function IncentivesRewards() {
       {activeTab === 'dashboard' && (
         <>
           <div className="grid grid-cols-4 gap-5">
-            {stats.map((card) => (
+            {dashboardStats.map((card) => (
               <div
                 key={card.title}
                 className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]"
@@ -626,12 +802,6 @@ export default function IncentivesRewards() {
                   <div className="w-11 h-11 rounded-2xl bg-[#e8f5bd] flex items-center justify-center">
                     <i className={`fa-solid ${card.icon} text-[#3e5f44]`} />
                   </div>
-
-                  {card.badge && (
-                    <div className="bg-[#e8f5bd] px-2 py-1 rounded-full text-xs font-bold text-[#3e5f44]">
-                      {card.badge}
-                    </div>
-                  )}
                 </div>
 
                 <p className="text-sm text-[#7a947e]">{card.title}</p>
@@ -648,61 +818,89 @@ export default function IncentivesRewards() {
           <div className="grid grid-cols-3 gap-5">
             <div className="col-span-2 bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
               <h3 className="text-2xl font-bold text-[#3e5f44]">
-                Redemption Trend
+                Reward Creation Trend
               </h3>
               <p className="text-sm text-[#8da28e] mb-8">
-                Daily reward redemptions this week
+                Rewards created over the last 6 months
               </p>
 
-              <div className="h-[280px] flex items-end justify-between gap-4">
-                {trendData.map((value, index) => (
-                  <div key={index} className="flex flex-col items-center flex-1">
-                    <div
-                      className="w-full bg-[#7faa72] rounded-t-xl"
-                      style={{ height: `${(value / max) * 220}px` }}
-                    />
-                    <span className="mt-3 text-xs text-[#6f876f]">
-                      {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][index]}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {totalRewards === 0 ? (
+                <div className="h-[280px] flex items-center justify-center text-sm text-[#8da28e]">
+                  No rewards found
+                </div>
+              ) : (
+                <div className="h-[280px] flex items-end justify-between gap-4">
+                  {rewardCreationTrend.map((item) => (
+                    <div key={item.key} className="flex flex-col items-center flex-1">
+                      <div
+                        className="w-full bg-[#7faa72] rounded-t-xl"
+                        style={{
+                          height: `${item.value === 0 ? 12 : (item.value / trendMax) * 220}px`,
+                        }}
+                      />
+                      <span className="mt-3 text-xs text-[#6f876f]">
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
               <h3 className="text-xl font-bold text-[#3e5f44]">
-                Most Popular Rewards
+                Current Reward Inventory
               </h3>
               <p className="text-sm text-[#8da28e] mb-8">
-                Top redeemed items all-time
+                Rewards with the highest remaining stock
               </p>
 
-              <div className="space-y-6">
-                {popularRewards.map((reward) => (
-                  <div key={reward.name}>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-[#3e5f44]">{reward.name}</span>
-                      <span className="font-semibold text-[#3e5f44]">
-                        {reward.count}
-                      </span>
-                    </div>
+              {inventoryData.length === 0 ? (
+                <div className="text-sm text-[#8da28e]">No rewards found</div>
+              ) : (
+                <div className="space-y-6">
+                  {inventoryData.map((reward) => (
+                    <div key={reward.name}>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-[#3e5f44]">{reward.name}</span>
+                        <span className="font-semibold text-[#3e5f44]">
+                          {reward.count}
+                        </span>
+                      </div>
 
-                    <div className="h-4 bg-[#edf2ea] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#7faa72]"
-                        style={{ width: `${reward.count}%` }}
-                      />
+                      <div className="h-4 bg-[#edf2ea] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#7faa72]"
+                          style={{
+                            width: `${Math.max(
+                              (reward.count / Math.max(...inventoryData.map((item) => item.count), 1)) * 100,
+                              reward.count > 0 ? 8 : 0
+                            )}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
+          {totalRewards > 0 && (
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]">
+              <h3 className="text-lg font-bold text-[#3e5f44]">
+                Highest Points Reward
+              </h3>
+              <p className="text-sm text-[#8da28e] mt-2">
+                {highestPointReward.name} requires {highestPointReward.points.toLocaleString()} points.
+              </p>
+            </div>
+          )}
         </>
       )}
 
+      {activeTab === 'redeem' && <RedemptionFlow />}
       {activeTab === 'rewards' && <RewardsTab />}
-      {activeTab === 'programs' && <ProgramsTab />}
       {activeTab === 'redemptions' && <RedemptionsTab />}
       {activeTab === 'reports' && <ReportsTab />}
 

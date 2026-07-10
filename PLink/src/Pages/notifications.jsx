@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useData } from '../context/DataContext';
 
-const initialNotifications = [
+// Fallback notifications if API not implemented
+const fallbackNotifications = [
   {
     id: 1,
     severity: 'critical',
@@ -51,36 +53,6 @@ const initialNotifications = [
     read: true,
     type: 'info',
   },
-  {
-    id: 6,
-    severity: 'warning',
-    title: 'Maintenance Reminder: EcoBot-01',
-    message: 'Scheduled monthly maintenance due in 3 days.',
-    time: 'Yesterday, 4:32 PM',
-    group: 'yesterday',
-    read: true,
-    type: 'wrench',
-  },
-  {
-    id: 7,
-    severity: 'critical',
-    title: 'EcoBot-03 Sensor Misalignment',
-    message: 'Sensor was auto-recalibrated successfully.',
-    time: 'Yesterday, 1:15 PM',
-    group: 'yesterday',
-    read: true,
-    type: 'alert',
-  },
-  {
-    id: 8,
-    severity: 'info',
-    title: 'New student registered',
-    message: '12 new Grade 3 students added to the program.',
-    time: '3 days ago',
-    group: 'earlier',
-    read: true,
-    type: 'info',
-  },
 ];
 
 const SvgIcon = ({ type }) => {
@@ -108,7 +80,7 @@ const SvgIcon = ({ type }) => {
   if (type === 'wrench') {
     return (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426-1.756-2.924-1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     );
@@ -147,7 +119,21 @@ const sevStyle = {
 const filters = ['All', 'Unread', 'Critical'];
 
 export function Notifications({ onNavigate }) {
-  const [items, setItems] = useState(initialNotifications);
+  const { 
+    notifications, 
+    markNotificationRead, 
+    markAllNotificationsRead, 
+    deleteNotification 
+  } = useData();
+  
+  // Use API notifications or fallback
+  const items = useMemo(() => {
+    if (notifications && notifications.length > 0) {
+      return notifications;
+    }
+    return fallbackNotifications;
+  }, [notifications]);
+  
   const [filter, setFilter] = useState('All');
   const [selectedNotif, setSelectedNotif] = useState(null);
 
@@ -213,11 +199,11 @@ export function Notifications({ onNavigate }) {
           ))}
         </div>
         <button
-          onClick={() => setItems(items.map((i) => ({ ...i, read: true })))}
+          onClick={markAllNotificationsRead}
           className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-semibold transition-colors self-start sm:self-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 0 012 2m-6 9l2 2 4-4" />
           </svg>
           Mark all as read
         </button>
@@ -236,9 +222,10 @@ export function Notifications({ onNavigate }) {
               <div className="space-y-3">
                 {groupItems.map((n) => {
                   const s = sevStyle[n.severity];
+                  const nid = n.id || n.notification_id;
                   return (
                     <div
-                      key={n.id}
+                      key={nid}
                       onClick={() => setSelectedNotif(n)}
                       className="w-full text-left relative flex gap-4 p-5 rounded-xl border border-gray-100 bg-white shadow-sm hover:bg-gray-50 transition-colors cursor-pointer overflow-hidden"
                     >
@@ -269,14 +256,14 @@ export function Notifications({ onNavigate }) {
                       <div className="flex flex-col justify-between items-end shrink-0" onClick={(e) => e.stopPropagation()}>
                         {!n.read ? (
                           <button
-                            onClick={() => setItems(items.map((it) => it.id === n.id ? { ...it, read: true } : it))}
+                            onClick={() => markNotificationRead(nid)}
                             className="text-xs font-semibold text-emerald-700 hover:text-emerald-950"
                           >
                             Mark read
                           </button>
                         ) : <div />}
                         <button
-                          onClick={() => setItems(items.filter((it) => it.id !== n.id))}
+                          onClick={() => deleteNotification(nid)}
                           className="w-8 h-8 rounded-lg bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -354,7 +341,7 @@ export function Notifications({ onNavigate }) {
               {!selectedNotif.read && (
                 <button
                   onClick={() => {
-                    setItems(items.map((it) => it.id === selectedNotif.id ? { ...it, read: true } : it));
+                    markNotificationRead(selectedNotif.id || selectedNotif.notification_id);
                     setSelectedNotif(null);
                   }}
                   className="w-full py-2.5 bg-emerald-100 text-emerald-900 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition-colors"

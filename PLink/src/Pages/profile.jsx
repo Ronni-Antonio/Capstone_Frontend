@@ -219,12 +219,6 @@ export default function Profile() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'sans-serif' }}>
-      <div>
-        <h1 style={{ margin: 0, color: COLORS.dark, fontSize: '28px' }}>User Management</h1>
-        <p style={{ marginTop: '6px', color: COLORS.darkMuted, fontSize: '14px' }}>
-          Manage profile information and account security.
-        </p>
-      </div>
 
       {message && (
         <div style={{

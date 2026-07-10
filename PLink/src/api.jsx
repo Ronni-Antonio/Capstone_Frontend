@@ -18,6 +18,7 @@ api.getStudents = () => api.get('/students');
 api.addStudent = (data) => api.post('/students', data);
 api.updateStudent = (id, data) => api.put(`/students/${id}`, data);
 api.deleteStudent = (id) => api.delete(`/students/${id}`);
+api.activateStudent = (id) => api.post(`/students/${id}/activate`);
 api.importStudentsCsv = (file) => {
   const formData = new FormData();
   formData.append('csv_file', file);
@@ -45,8 +46,21 @@ api.updateSettings = (data) => api.post('/settings', data);
 //Sections API Methods
 api.getSections = () => api.get('/sections');
 api.getSectionsList = () => api.get('/sections/list');
+api.getSectionsRanking = () => api.get('/sections/ranking');
 api.addSection = (data) => api.post('/sections', data);
 api.updateSection = (id, data) => api.put(`/sections/${id}`, data);
 api.deleteSection = (id) => api.delete(`/sections/${id}`);
+
+//Redemptions API Methods
+api.getRedemptions = () => api.get('/redemptions');
+api.addRedemption = (data) => api.post('/redemptions', data);
+api.updateRedemption = (id, data) => api.put(`/redemptions/${id}`, data);
+api.deleteRedemption = (id) => api.delete(`/redemptions/${id}`);
+
+//Notifications API Methods
+api.getNotifications = () => api.get('/notifications');
+api.markNotificationRead = (id) => api.put(`/notifications/${id}/read`);
+api.markAllNotificationsRead = () => api.put('/notifications/mark-all-read');
+api.deleteNotification = (id) => api.delete(`/notifications/${id}`);
 
 export default api;

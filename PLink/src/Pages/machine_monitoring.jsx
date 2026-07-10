@@ -1,4 +1,5 @@
 import React from 'react';
+import { useData } from '../context/DataContext.jsx';
 
 // Theming variables to match your exact layout style colors
 const COLORS = {
@@ -16,27 +17,43 @@ const COLORS = {
   amberText: '#b45309'
 };
 
-const fullness = 62;
-const rejectedToday = 8;
-const acceptedToday = 216;
-
-const rejectedReasons = [
-  { reason: 'Non-PET', count: 4 },
-  { reason: 'Aluminum can', count: 2 },
-  { reason: 'Crushed bottle', count: 1 },
-  { reason: 'With liquid', count: 1 },
-];
-
-const rejectedByHour = [
-  { h: '7am', v: 0 }, { h: '8am', v: 1 }, { h: '9am', v: 0 },
-  { h: '10am', v: 1 }, { h: '11am', v: 0 }, { h: '12pm', v: 3 },
-  { h: '1pm', v: 2 }, { h: '2pm', v: 0 }, { h: '3pm', v: 1 },
-  { h: '4pm', v: 0 }, { h: '5pm', v: 0 }
-];
-
-const status = fullness >= 85 ? 'critical' : fullness >= 65 ? 'warning' : 'normal';
-
 export function MachineMonitoring() {
+  const { transactions } = useData();
+
+  // Calculate stats from transactions
+  const totalBottles = transactions.reduce((sum, t) => {
+    const bottles = t.bottles_deposited || t.bottles || t.bottle_qty || t.bottles_qty || 0;
+    return sum + bottles;
+  }, 0);
+
+  // For fullness: simulate based on total bottles (since we don't have actual bin level)
+  // Max out at 100%
+  const maxCapacityBottles = 300; // Adjust this to your needs
+  const fullness = Math.min(Math.round((totalBottles / maxCapacityBottles) * 100), 100);
+
+  // Calculate accepted/rejected (simulate rejection rate if not in data)
+  const rejectionRate = 0.05; // 5% rejection rate if not specified in data
+  const acceptedToday = totalBottles; // All are accepted for now
+  const rejectedToday = Math.round(acceptedToday * rejectionRate);
+  
+  // Rejected reasons - simulated
+  const rejectedReasons = [
+    { reason: 'Non-PET', count: Math.round(rejectedToday * 0.5) },
+    { reason: 'Aluminum can', count: Math.round(rejectedToday * 0.25) },
+    { reason: 'Crushed bottle', count: Math.round(rejectedToday * 0.15) },
+    { reason: 'With liquid', count: Math.max(0, rejectedToday - Math.round(rejectedToday * 0.5) - Math.round(rejectedToday * 0.25) - Math.round(rejectedToday * 0.15)) },
+  ].filter(r => r.count > 0);
+
+  // Rejected by hour - simulated
+  const rejectedByHour = [
+    { h: '7am', v: 0 }, { h: '8am', v: Math.floor(rejectedToday * 0.1) }, { h: '9am', v: 0 },
+    { h: '10am', v: Math.floor(rejectedToday * 0.1) }, { h: '11am', v: 0 }, { h: '12pm', v: Math.floor(rejectedToday * 0.3) },
+    { h: '1pm', v: Math.floor(rejectedToday * 0.25) }, { h: '2pm', v: 0 }, { h: '3pm', v: Math.floor(rejectedToday * 0.15) },
+    { h: '4pm', v: 0 }, { h: '5pm', v: 0 }
+  ];
+
+  const status = fullness >= 85 ? 'critical' : fullness >= 65 ? 'warning' : 'normal';
+  
   // Max value calculation for bar chart styling height scaling
   const maxRejectedValue = Math.max(...rejectedByHour.map(d => d.v), 1);
 
@@ -103,7 +120,7 @@ export function MachineMonitoring() {
               <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: COLORS.dark }}>Main Lobby Unit</h2>
               <div style={{ fontSize: '12px', color: COLORS.darkMuted, display: 'flex', gap: '12px', marginTop: '4px' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📍 Grade 3 Hallway</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>🕒 Last scan 2 min ago</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>🕒 Last scan {transactions.length > 0 ? 'just now' : 'never'}</span>
               </div>
             </div>
           </div>
@@ -208,7 +225,7 @@ export function MachineMonitoring() {
               <div style={{ backgroundColor: COLORS.limeLight, borderRadius: '16px', padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>Acceptance Rate</div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.dark, marginTop: '4px' }}>
-                  {Math.round((acceptedToday / (acceptedToday + rejectedToday)) * 100)}%
+                  {acceptedToday + rejectedToday > 0 ? Math.round((acceptedToday / (acceptedToday + rejectedToday)) * 100) : 100}%
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(62,95,68,0.7)', fontWeight: '600', marginTop: '4px' }}>PET accuracy</div>
               </div>
@@ -235,14 +252,16 @@ export function MachineMonitoring() {
               </div>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              {rejectedReasons.map((r) => (
-                <div key={r.reason} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: COLORS.ivory, borderRadius: '12px' }}>
-                  <span style={{ fontSize: '14px', color: 'rgba(62,95,68,0.8)' }}>{r.reason}</span>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{r.count}</span>
-                </div>
-              ))}
-            </div>
+            {rejectedReasons.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                {rejectedReasons.map((r) => (
+                  <div key={r.reason} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: COLORS.ivory, borderRadius: '12px' }}>
+                    <span style={{ fontSize: '14px', color: 'rgba(62,95,68,0.8)' }}>{r.reason}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{r.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
