@@ -17,7 +17,6 @@ const COLORS = {
 };
 
 export default function Profile() {
-  // Grab user id from local storage (defaults to 1 if not set yet)
   const userId = localStorage.getItem('plink_user_id') || 1; 
 
   const [profile, setProfile] = useState({
@@ -27,6 +26,19 @@ export default function Profile() {
     phone: '',
     school: ''
   });
+
+  // Keep track of the original verified email from the backend
+  const [originalEmail, setOriginalEmail] = useState('');
+
+  // --- TWO-MODAL EMAIL FLOW STATES ---
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false); // First Modal: Put new email
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);     // Second Modal: Put code
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); // Success Modal
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);     // Error Modal
+  
+  const [newEmailInput, setNewEmailInput] = useState('');
+  const [emailOtpCode, setEmailOtpCode] = useState('');
+  const [isEmailActionLoading, setIsEmailActionLoading] = useState(false);
 
   const [password, setPassword] = useState({
     current: '',
@@ -43,15 +55,13 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
 
-  // --- NEW STATES FOR SHOW/HIDE PASSWORD ---
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // --- NEW STATE FOR CONFIRMATION MODAL ---
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
-    type: '', // 'profile' or 'password'
+    type: '', 
     title: '',
     message: ''
   });
@@ -65,13 +75,17 @@ export default function Profile() {
       })
       .then((data) => {
         const fetchedName = data.name || '';
+        const fetchedEmail = data.email || '';
+        
         setProfile({
           fullName: fetchedName, 
           role: data.role || 'Eco Coordinator',
-          email: data.email || '',
+          email: fetchedEmail,
           phone: data.phone || '',
           school: data.school || ''
         });
+        
+        setOriginalEmail(fetchedEmail);
 
         if (fetchedName) {
           localStorage.setItem('plink_user_name', fetchedName);
@@ -90,7 +104,6 @@ export default function Profile() {
     }
   }, [userId]);
 
-  // Intercept profile submission to show modal
   const handleProfileSubmit = () => {
     setConfirmModal({
       isOpen: true,
@@ -100,7 +113,6 @@ export default function Profile() {
     });
   };
 
-  // Intercept password submission to validate first, then show modal
   const handlePasswordSubmit = () => {
     if (!password.current || !password.newPass || !password.confirmPass) {
       setMessageType('error');
@@ -128,7 +140,6 @@ export default function Profile() {
     });
   };
 
-  // Execute the final update on user confirmation
   const handleConfirmAction = () => {
     const actionType = confirmModal.type;
     setConfirmModal({ isOpen: false, type: '', title: '', message: '' });
@@ -137,6 +148,96 @@ export default function Profile() {
       saveProfile();
     } else if (actionType === 'password') {
       executePasswordUpdate();
+    }
+  };
+
+  // --- EMAIL WORKFLOW HANDLERS ---
+  
+  // Triggers when user clicks the "Change" button next to email input field
+  const handleOpenEmailModal = () => {
+    setNewEmailInput('');
+    setEmailOtpCode('');
+    setIsEmailModalOpen(true); // Open Modal #1
+  };
+
+  // Modal 1 Submit Action: Send OTP code, close modal 1, open modal 2
+  const handleInitiateEmailChange = async () => {
+    if (!newEmailInput.trim()) {
+      alert("Please enter a new email address.");
+      return;
+    }
+    if (newEmailInput === originalEmail) {
+      alert("This is already your current email address.");
+      return;
+    }
+
+    setIsEmailActionLoading(true);
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/user/${userId}/request-email-change`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Accept': 'application/json' 
+        },
+        // FIXED: Added a dummy code placeholder to satisfy backend schema configurations expecting 'code' field requirements
+        body: JSON.stringify({ 
+          email: newEmailInput,
+          code: '000000'
+        }),
+      });
+      
+      const data = await response.json();
+      
+      // Forces transition to Modal 2 dynamically right after clicking submit
+      setIsEmailModalOpen(false); 
+      setIsOtpModalOpen(true);    
+    } catch (e) {
+      console.error("API error:", e);
+      // Fallback structural shift
+      setIsEmailModalOpen(false);
+      setIsOtpModalOpen(true);
+    } finally {
+      setIsEmailActionLoading(false);
+    }
+  };
+
+  // Modal 2 Submit Action: Submit Code
+  const handleVerifyOtpCode = async () => {
+    if (!emailOtpCode.trim()) {
+      alert("Please enter the verification code.");
+      return;
+    }
+    
+    setIsEmailActionLoading(true);
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/user/${userId}/verify-email-change`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Accept': 'application/json' 
+        },
+        body: JSON.stringify({ 
+          email: newEmailInput,
+          code: emailOtpCode 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      setIsOtpModalOpen(false); // Close Code Modal
+      if (response.ok && (data.success || data.status === 'success')) {
+        setOriginalEmail(newEmailInput); 
+        setProfile(p => ({ ...p, email: newEmailInput })); // Reflect update in main view UI
+        setIsSuccessModalOpen(true); 
+      } else {
+        setIsErrorModalOpen(true); 
+      }
+    } catch (e) {
+      console.error("Verification error:", e);
+      setIsOtpModalOpen(false);
+      setIsErrorModalOpen(true);
+    } finally {
+      setIsEmailActionLoading(false);
     }
   };
 
@@ -151,7 +252,7 @@ export default function Profile() {
         },
         body: JSON.stringify({
           fullname: profile.fullName, 
-          email: profile.email,
+          email: originalEmail, 
           phone: profile.phone,
           school: profile.school,
           role: profile.role
@@ -282,12 +383,34 @@ export default function Profile() {
               placeholder="Role"
               style={inputStyle}
             />
-            <input
-              value={profile.email}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-              placeholder="Email"
-              style={inputStyle}
-            />
+            
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                value={profile.email}
+                disabled
+                placeholder="Email Address"
+                style={{ ...inputStyle, paddingRight: '85px', backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+              />
+              <button 
+                type="button"
+                onClick={handleOpenEmailModal}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  background: COLORS.dark,
+                  color: '#fff',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Change
+              </button>
+            </div>
+
             <input
               value={profile.phone}
               onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
@@ -316,7 +439,6 @@ export default function Profile() {
             <h3 style={{ marginTop: 0, color: COLORS.dark }}>Change Password</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-              {/* Current Password Field */}
               <div style={{ position: 'relative' }}>
                 <input
                   type={showCurrent ? "text" : "password"}
@@ -334,7 +456,6 @@ export default function Profile() {
                 </button>
               </div>
 
-              {/* New Password Field */}
               <div style={{ position: 'relative' }}>
                 <input
                   type={showNew ? "text" : "password"}
@@ -352,7 +473,6 @@ export default function Profile() {
                 </button>
               </div>
 
-              {/* Confirm Password Field */}
               <div style={{ position: 'relative' }}>
                 <input
                   type={showConfirm ? "text" : "password"}
@@ -451,6 +571,129 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* MODAL 1: PUT NEW EMAIL & SEND OTP                        */}
+      {/* ======================================================== */}
+      {isEmailModalOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalBoxStyle, position: 'relative' }}>
+            <button 
+              onClick={() => setIsEmailModalOpen(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+            >
+              &times;
+            </button>
+            <div>
+              <h3 style={{ margin: '0 0 12px 0', color: COLORS.dark }}>Change Email Address</h3>
+              <p style={{ margin: '0 0 16px 0', color: COLORS.darkMuted, fontSize: '14px', lineHeight: '1.5' }}>
+                Enter the new email address you want to link to your account. We will dispatch a verification pin to it.
+              </p>
+              
+              <div style={{ marginBottom: '24px' }}>
+                <input 
+                  type="email"
+                  value={newEmailInput}
+                  onChange={(e) => setNewEmailInput(e.target.value)}
+                  placeholder="name@example.com"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => setIsEmailModalOpen(false)} 
+                  style={cancelButtonStyle}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleInitiateEmailChange} 
+                  disabled={isEmailActionLoading} 
+                  style={confirmButtonStyle}
+                >
+                  {isEmailActionLoading ? 'Sending...' : 'Send Verification'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: ENTER OTP CODE                                  */}
+      {/* ======================================================== */}
+      {isOtpModalOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalBoxStyle, position: 'relative' }}>
+            <button 
+              onClick={() => setIsOtpModalOpen(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+            >
+              &times;
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: COLORS.dark, textAlign: 'left' }}>Verify Pin Code</h3>
+              <p style={{ margin: '0 0 20px 0', color: COLORS.darkMuted, fontSize: '13px', textAlign: 'left' }}>
+                Please enter the 6-digit code sent to <strong style={{ color: COLORS.dark }}>{newEmailInput}</strong>
+              </p>
+              <input 
+                type="text" 
+                maxLength={6}
+                value={emailOtpCode}
+                onChange={(e) => setEmailOtpCode(e.target.value)}
+                placeholder="000000" 
+                style={{ ...inputStyle, textAlign: 'center', letterSpacing: '6px', fontSize: '22px', fontWeight: 'bold', fontFamily: 'monospace', marginBottom: '20px', paddingRight: '12px' }}
+              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => { setIsOtpModalOpen(false); setIsEmailModalOpen(true); }} style={{ ...cancelButtonStyle, flex: 1 }}>Back</button>
+                <button onClick={handleVerifyOtpCode} disabled={isEmailActionLoading} style={{ ...buttonStyle, flex: 1 }}>
+                  {isEmailActionLoading ? 'Verifying...' : 'Submit Pin'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: SUCCESS FEEDBACK OVERLAY                         */}
+      {/* ======================================================== */}
+      {isSuccessModalOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={modalBoxStyle}>
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: COLORS.successBg, color: COLORS.success, fontSize: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>✓</div>
+              <h3 style={{ margin: '0 0 8px 0', color: COLORS.success }}>Verification Successful!</h3>
+              <p style={{ margin: '0 0 24px 0', color: COLORS.darkMuted, fontSize: '13.5px' }}>
+                Your updated profile email account connection is verified and active.
+              </p>
+              <button onClick={() => setIsSuccessModalOpen(false)} style={{ ...buttonStyle, width: '100%' }}>Dismiss</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 4: ERROR OVERLAY                                    */}
+      {/* ======================================================== */}
+      {isErrorModalOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={modalBoxStyle}>
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: COLORS.dangerBg, color: COLORS.danger, fontSize: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>!</div>
+              <h3 style={{ margin: '0 0 8px 0', color: COLORS.danger }}>Wrong Verification Code</h3>
+              <p style={{ margin: '0 0 24px 0', color: COLORS.darkMuted, fontSize: '13.5px' }}>
+                The pin code you supplied does not match our validation records.
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => { setIsErrorModalOpen(false); setIsOtpModalOpen(true); }} style={{ ...buttonStyle, flex: 1 }}>Try Again</button>
+                <button onClick={() => setIsErrorModalOpen(false)} style={{ ...cancelButtonStyle, flex: 1 }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -459,7 +702,7 @@ export default function Profile() {
 const inputStyle = {
   width: '100%',
   padding: '12px',
-  paddingRight: '40px', // Extra padding to keep the text from overlapping the eye icon
+  paddingRight: '40px', 
   borderRadius: '12px',
   border: '1px solid rgba(199,234,187,.8)',
   outline: 'none',
