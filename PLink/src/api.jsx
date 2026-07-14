@@ -38,5 +38,11 @@ api.addReward = (data) => api.post('/rewards', data);
 api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
 
+// Email Change API Methods
+api.requestEmailChange = (id, email) => api.post(`/user/${id}/request-email-change`, { email });
+api.verifyEmailChange = (id, data) => api.post(`/user/${id}/verify-email-change`, data); // data will look like: { email, code }
+
+// Change Password API Method
+api.changePassword = (id, data) => api.put(`/users/${id}/password`, data);
 
 export default api;
