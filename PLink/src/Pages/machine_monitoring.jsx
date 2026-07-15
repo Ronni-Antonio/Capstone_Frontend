@@ -26,6 +26,7 @@ export function MachineMonitoring() {
     return sum + bottles;
   }, 0);
 
+  
   // For fullness: simulate based on total bottles (since we don't have actual bin level)
   // Max out at 100%
   const maxCapacityBottles = 300; // Adjust this to your needs

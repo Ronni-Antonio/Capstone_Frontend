@@ -20,6 +20,8 @@ export default function StudentPoints() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
+  const [activationError, setActivationError] = useState(null);
+  const [pollingInterval, setPollingInterval] = useState(null);
   const { 
     students, 
     transactions, 
@@ -27,7 +29,9 @@ export default function StudentPoints() {
     refreshStudents,
     addStudent: addStudentToContext,
     updateStudent,
-    activateStudent
+    activateStudent,
+    getActivationStatus,
+    cancelActivation
   } = useData();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -277,35 +281,88 @@ export default function StudentPoints() {
     }
   };
 
+  // Clean up polling interval on unmount
+  React.useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
   // Handle Activate Card button click
   const handleActivateCard = (student) => {
     setSelectedStudent(student);
     setScanning(false);
     setScanSuccess(false);
+    setActivationError(null);
     setShowRfidModal(true);
   };
 
-  // Handle simulated RFID scan
-  const handleScanRfid = async () => {
+  // Handle Cancel Activation
+  const handleCancelActivation = async () => {
+    if (selectedStudent) {
+      try {
+        await cancelActivation(selectedStudent.actual_student_id);
+      } catch (err) {
+        console.error('Cancel error:', err);
+      }
+    }
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+    setShowRfidModal(false);
+    setSelectedStudent(null);
+    setScanning(false);
+    setScanSuccess(false);
+    setActivationError(null);
+  };
+
+  // Handle Start RFID Scan (waiting for ESP32)
+  const handleStartScan = async () => {
     if (!selectedStudent) return;
     setScanning(true);
-
-    // Simulate scanning delay
-    setTimeout(async () => {
-      setScanSuccess(true);
-      
-      // Update student status to active
+    setActivationError(null);
+    
+    try {
+      // 1. Start activation session on backend
       await activateStudent(selectedStudent.actual_student_id);
       
-      // Refresh students from API to get latest data
-      await refreshStudents();
-
-      // Close modal after delay
-      setTimeout(() => {
-        setShowRfidModal(false);
-        setSelectedStudent(null);
-      }, 1500);
-    }, 1500);
+      // 2. Poll for activation status from backend
+      const interval = setInterval(async () => {
+        try {
+          const statusData = await getActivationStatus(selectedStudent.actual_student_id);
+          console.log('Activation status:', statusData);
+          
+          if (statusData.status === 'success') {
+            clearInterval(interval);
+            setPollingInterval(null);
+            setScanSuccess(true);
+            await refreshStudents();
+            
+            setTimeout(() => {
+              setShowRfidModal(false);
+              setSelectedStudent(null);
+            }, 1500);
+          } else if (statusData.status === 'error') {
+            clearInterval(interval);
+            setPollingInterval(null);
+            setScanning(false);
+            setActivationError(statusData.message || 'Activation failed');
+          }
+        } catch (pollErr) {
+          console.error('Polling error:', pollErr);
+        }
+      }, 2000); // Poll every 2 seconds
+      
+      setPollingInterval(interval);
+      
+    } catch (err) {
+      console.error('Start activation error:', err);
+      setScanning(false);
+      setActivationError(err.response?.data?.message || err.message || 'Failed to start activation');
+    }
   };
 
   return (
@@ -1139,7 +1196,7 @@ export default function StudentPoints() {
               {scanSuccess 
                 ? 'Card Activated!' 
                 : scanning 
-                  ? 'Scanning RFID Card...' 
+                  ? 'Waiting for RFID Scan...' 
                   : 'Activate Student Card'}
             </h2>
 
@@ -1154,8 +1211,8 @@ export default function StudentPoints() {
               {scanSuccess 
                 ? `${selectedStudent.name}'s card has been activated successfully!` 
                 : scanning 
-                  ? 'Please hold the RFID card near the scanner...' 
-                  : `Click "Scan RFID Card" to write ${selectedStudent.name}'s information to an RFID card.`}
+                  ? 'The system is waiting for the ESP32 to scan an RFID card...' 
+                  : `Click "Start Scan" to activate ${selectedStudent.name}'s RFID card.`}
             </p>
 
             {selectedStudent && (
@@ -1200,41 +1257,61 @@ export default function StudentPoints() {
               </div>
             )}
 
-            {!scanning && !scanSuccess && (
-              <button
-                onClick={handleScanRfid}
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  background: COLORS.dark,
-                  color: '#fff',
-                  padding: '16px 24px',
-                  borderRadius: '16px',
-                  cursor: 'pointer',
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <i className="fa-solid fa-wand-magic-sparkles"></i>
-                Scan RFID Card
-              </button>
-            )}
-
-            {scanning && (
+            {/* Activation Error Display */}
+            {activationError && (
               <div
                 style={{
-                  fontSize: '16px',
-                  color: COLORS.dark,
-                  fontWeight: '600'
+                  marginBottom: '16px',
+                  padding: '12px',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  textAlign: 'left'
                 }}
               >
-                Processing...
+                ❌ {activationError}
               </div>
             )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {/* Cancel Button */}
+              <button
+                onClick={handleCancelActivation}
+                style={{
+                  flex: 1,
+                  padding: '14px 20px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  borderRadius: '16px',
+                  border: `2px solid ${COLORS.dark}`,
+                  background: 'transparent',
+                  color: COLORS.dark,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+
+              {!scanning && !scanSuccess && (
+                <button
+                  onClick={handleStartScan}
+                  style={{
+                    flex: 2,
+                    padding: '14px 20px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: COLORS.dark,
+                    color: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Start Scan
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

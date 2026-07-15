@@ -19,6 +19,11 @@ api.addStudent = (data) => api.post('/students', data);
 api.updateStudent = (id, data) => api.put(`/students/${id}`, data);
 api.deleteStudent = (id) => api.delete(`/students/${id}`);
 api.activateStudent = (id) => api.post(`/students/${id}/activate`);
+api.getActivationStatus = (id) => api.get(`/students/${id}/activate/status`);
+api.cancelActivation = (id) => api.post(`/students/${id}/activate/cancel`);
+api.identifyCard = () => api.post('/students/identify-card');
+api.getActiveScanSession = () => api.get('/students/active-scan-session');
+api.clearScanSession = () => api.post('/students/clear-scan-session');
 api.importStudentsCsv = (file) => {
   const formData = new FormData();
   formData.append('csv_file', file);
@@ -53,6 +58,9 @@ api.deleteSection = (id) => api.delete(`/sections/${id}`);
 
 //Redemptions API Methods
 api.getRedemptions = () => api.get('/redemptions');
+api.initiateRedemption = (studentId, rewardId) => api.post(`/redemptions/initiate/${studentId}/${rewardId}`);
+api.getRedemptionStatus = (studentId, rewardId) => api.get(`/redemptions/initiate/${studentId}/${rewardId}/status`); // Assuming you add this status endpoint
+api.cancelRedemption = (studentId, rewardId) => api.post(`/redemptions/initiate/${studentId}/${rewardId}/cancel`); // Optional cancel endpoint
 api.addRedemption = (data) => api.post('/redemptions', data);
 api.updateRedemption = (id, data) => api.put(`/redemptions/${id}`, data);
 api.deleteRedemption = (id) => api.delete(`/redemptions/${id}`);

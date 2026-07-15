@@ -124,6 +124,50 @@ export const DataProvider = ({ children }) => {
       throw error;
     }
   };
+  
+  // Initiate redemption process
+  const initiateRedemption = async (studentId, rewardId) => {
+    try {
+      const response = await api.initiateRedemption(studentId, rewardId);
+      return response;
+    } catch (error) {
+      console.error('Error initiating redemption:', error);
+      throw error;
+    }
+  };
+  
+  // Get redemption status (polling)
+  const getRedemptionStatus = async (studentId, rewardId) => {
+    try {
+      const response = await api.getRedemptionStatus(studentId, rewardId);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting redemption status:', error);
+      throw error;
+    }
+  };
+  
+  // Identify student by card
+  const identifyCard = async () => {
+    try {
+      const response = await api.identifyCard();
+      return response.data;
+    } catch (error) {
+      console.error('Error identifying card:', error);
+      throw error;
+    }
+  };
+
+  // Cancel redemption
+  const cancelRedemption = async (studentId, rewardId) => {
+    try {
+      const response = await api.cancelRedemption(studentId, rewardId);
+      return response;
+    } catch (error) {
+      console.error('Error canceling redemption:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -349,7 +393,6 @@ export const DataProvider = ({ children }) => {
     try {
       await api.markNotificationRead(notificationId);
     } catch (err) {
-      console.error('Error marking notification as read:', err);
       // Rollback if API call fails
       refreshNotifications();
       throw err;
@@ -365,7 +408,6 @@ export const DataProvider = ({ children }) => {
     try {
       await api.markAllNotificationsRead();
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
       // Rollback if API call fails
       refreshNotifications();
       throw err;
@@ -383,7 +425,6 @@ export const DataProvider = ({ children }) => {
     try {
       await api.deleteNotification(notificationId);
     } catch (err) {
-      console.error('Error deleting notification:', err);
       // Rollback if API call fails
       refreshNotifications();
       throw err;
@@ -399,50 +440,48 @@ export const DataProvider = ({ children }) => {
   };
 
   const updateStudent = async (studentId, updatedData) => {
-    console.log('[updateStudent] Starting update:', { studentId, updatedData });
     
     // Optimistic update
     setData(prev => {
-      console.log('[updateStudent] Current students in prev:', prev.students);
       return {
         ...prev,
         students: prev.students.map(s => {
           const currentId = s.id || s.student_id;
-          console.log('[updateStudent] Checking student:', { studentId, currentId, matches: currentId === studentId });
           return currentId === studentId ? { ...s, ...updatedData } : s;
         })
       };
     });
     try {
-      console.log('[updateStudent] Calling API updateStudent with:', { id: studentId, data: updatedData });
       const response = await api.updateStudent(studentId, updatedData);
-      console.log('[updateStudent] API response:', response);
     } catch (err) {
-      console.error('[updateStudent] Error updating student:', err);
-      // Rollback if API call fails
       refreshStudents();
       throw err;
     }
   };
 
   const activateStudent = async (studentId) => {
-    console.log('[activateStudent] Starting activation for studentId:', studentId);
-    
-    // Optimistic update
-    setData(prev => ({
-      ...prev,
-      students: prev.students.map(s =>
-        (s.id || s.student_id) === studentId ? { ...s, status: 'Active' } : s
-      )
-    }));
     try {
-      console.log('[activateStudent] Calling API activateStudent with id:', studentId);
       const response = await api.activateStudent(studentId);
-      console.log('[activateStudent] API response:', response);
+      return response; // Return the session status to the frontend
     } catch (err) {
-      console.error('[activateStudent] Error activating student:', err);
-      // Rollback if API call fails
-      refreshStudents();
+      throw err;
+    }
+  };
+
+  const getActivationStatus = async (studentId) => {
+    try {
+      const response = await api.getActivationStatus(studentId);
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const cancelActivation = async (studentId) => {
+    try {
+      const response = await api.cancelActivation(studentId);
+      return response;
+    } catch (err) {
       throw err;
     }
   };
@@ -491,6 +530,26 @@ export const DataProvider = ({ children }) => {
     }));
   };
 
+    const startStudentIdentify = async () => {
+    try {
+      // Call your polling check endpoint instead of the old broken empty POST
+      const response = await api.get('/students/active-scan-session');
+      console.log('🟢 DataContext: active-scan-session API response:', response.data);
+      return response.data; // Passes the API response payload
+    } catch (error) {
+      console.error('Error tracking active scan session:', error);
+      throw error;
+    }
+  };
+
+  const clearStudentIdentify = async () => {
+    try {
+      await api.post('/students/clear-scan-session');
+    } catch (error) {
+      console.error('Error clearing scan session:', error);
+    }
+  };
+
   return (
     <DataContext.Provider value={{
       ...data,
@@ -502,16 +561,24 @@ export const DataProvider = ({ children }) => {
       refreshSections,
       refreshSectionsRanking,
       refreshNotifications,
+      startStudentIdentify,
+      clearStudentIdentify,
       refreshSettings,
       addStudent,
       updateStudent,
       activateStudent,
+      getActivationStatus,
+      cancelActivation,
       removeStudent,
       addSection,
       updateSection,
       removeSection,
       addTransaction,
       addRedemption,
+      initiateRedemption,
+      getRedemptionStatus,
+      cancelRedemption,
+      identifyCard,
       updateSettings,
       markNotificationRead,
       markAllNotificationsRead,

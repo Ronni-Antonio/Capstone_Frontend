@@ -83,6 +83,7 @@ export default function Reports() {
   };
   const conicGradient = generateConicGradient();
 
+  
   // Prepare weekly data for line chart
   const weeklyData = [
     { week: 'Week 1', bottles: Math.round(totalBottles * 0.1) },

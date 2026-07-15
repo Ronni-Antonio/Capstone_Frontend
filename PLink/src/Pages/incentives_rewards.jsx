@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
 
@@ -224,6 +224,23 @@ function RewardsTab() {
 function RedemptionsTab() {
   const { redemptions } = useData();
 
+  // Helper to format date nicely
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
 
@@ -244,7 +261,7 @@ function RedemptionsTab() {
         <tbody>
           {redemptions.length === 0 ? (
             <tr>
-              <td colSpan="6" className="py-6 text-center text-[#6f876f]">
+              <td colSpan="4" className="py-6 text-center text-[#6f876f]">
                 No redemptions found
               </td>
             </tr>
@@ -258,7 +275,7 @@ function RedemptionsTab() {
 
               <td>{r.reward}</td>
               <td>{r.points}</td>
-              <td>{r.redemption_date}</td>
+              <td>{formatDate(r.date)}</td>
             </tr>
             ))
           )}
@@ -270,18 +287,53 @@ function RedemptionsTab() {
 
 /* ===================== REPORTS TAB (MATCH YOUR IMAGE) ===================== */
 function ReportsTab() {
-  const distribution = [
-    { name: 'Extra Recess Time', value: 145 },
-    { name: 'Eco-Warrior Badge', value: 89 },
-    { name: 'Homework Pass', value: 64 },
-    { name: 'Cafeteria Voucher', value: 42 },
-    { name: 'Plant-a-Tree Cert.', value: 28 },
-  ];
+  const { rewards, redemptions } = useData();
 
-  const maxDist = Math.max(...distribution.map(d => d.value));
+  // 1. Reward Distribution: Count how many times each reward has been redeemed
+  const getRewardDistribution = () => {
+    const counts = {};
+    rewards.forEach(reward => {
+      counts[reward.id] = { name: reward.name, count: 0, reward };
+    });
+    redemptions.forEach(redemption => {
+      if (counts[redemption.rewardId]) {
+        counts[redemption.rewardId].count += 1;
+      }
+    });
+    return Object.values(counts).filter(item => item.count > 0 || item.reward.status === 'Active');
+  };
+  const distribution = getRewardDistribution();
+  const maxDist = Math.max(...distribution.map(d => d.count), 1);
 
-  const monthlyTrend = [15000, 18000, 22000, 26000, 32000, 40000];
-  const maxTrend = Math.max(...monthlyTrend);
+  // 2. Monthly Redemption Trend
+  const getMonthlyTrend = () => {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${date.getFullYear()}-${date.getMonth()}`,
+        label: monthLabels[date.getMonth()],
+        count: 0,
+        points: 0
+      });
+    }
+    redemptions.forEach(redemption => {
+      if (redemption.date) {
+        const date = new Date(redemption.date);
+        const key = `${date.getFullYear()}-${date.getMonth()}`;
+        const month = months.find(m => m.key === key);
+        if (month) {
+          month.count += 1;
+          month.points += redemption.points;
+        }
+      }
+    });
+    return months;
+  };
+  const monthlyTrend = getMonthlyTrend();
+  const maxTrendCount = Math.max(...monthlyTrend.map(m => m.count), 1);
+  const maxTrendPoints = Math.max(...monthlyTrend.map(m => m.points), 1);
 
   return (
     <div className="space-y-6">
@@ -312,46 +364,51 @@ function ReportsTab() {
           </h3>
 
           <div className="space-y-3">
-            {distribution.map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center">
-                <span className="text-sm text-[#3e5f44]">
-                  {item.name}
-                </span>
-
-                <div className="flex items-center gap-3 w-1/2">
-                  <div className="flex-1 h-3 bg-[#edf2ea] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#7faa72]"
-                      style={{ width: `${(item.value / maxDist) * 100}%` }}
-                    />
-                  </div>
-
-                  <span className="text-xs font-semibold text-[#3e5f44] w-10 text-right">
-                    {item.value}
+            {distribution.length === 0 ? (
+              <p className="text-[#6f876f] text-sm">No redemption data yet</p>
+            ) : (
+              distribution.slice(0, 5).map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center">
+                  <span className="text-sm text-[#3e5f44]">
+                    {item.name}
                   </span>
+
+                  <div className="flex items-center gap-3 w-1/2">
+                    <div className="flex-1 h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#7faa72]"
+                        style={{ width: `${(item.count / maxDist) * 100}%` }}
+                      />
+                    </div>
+
+                    <span className="text-xs font-semibold text-[#3e5f44] w-10 text-right">
+                      {item.count}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Trend */}
+        {/* Trend (Redemption Count) */}
         <div className="bg-white p-6 rounded-3xl border border-[#dbe6db] shadow-sm">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
-            Redemption Statistics
+            Redemption Count (Monthly)
           </h3>
 
           <div className="h-[220px] flex items-end justify-between gap-3">
-            {monthlyTrend.map((value, idx) => (
+            {monthlyTrend.map((month, idx) => (
               <div key={idx} className="flex flex-col items-center flex-1">
                 <div
                   className="w-full bg-[#7faa72] rounded-t-xl"
                   style={{
-                    height: `${(value / maxTrend) * 200}px`,
+                    height: `${(month.count / maxTrendCount) * 200}px`,
+                    minHeight: '4px'
                   }}
                 />
                 <span className="text-xs text-[#6f876f] mt-2">
-                  {['Jan','Feb','Mar','Apr','May','Jun'][idx]}
+                  {month.label}
                 </span>
               </div>
             ))}
@@ -359,23 +416,24 @@ function ReportsTab() {
         </div>
       </div>
 
-      {/* Bottom Chart */}
+      {/* Bottom Chart (Points Redeemed Monthly) */}
       <div className="bg-white p-6 rounded-3xl border border-[#dbe6db] shadow-sm">
         <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
-          Incentive Performance Metrics
+          Points Redeemed (Monthly)
         </h3>
 
         <div className="h-[260px] flex items-end justify-between gap-4">
-          {monthlyTrend.map((value, idx) => (
+          {monthlyTrend.map((month, idx) => (
             <div key={idx} className="flex flex-col items-center flex-1">
               <div
                 className="w-full bg-[#3e5f44] rounded-t-xl"
                 style={{
-                  height: `${(value / maxTrend) * 240}px`,
+                  height: `${(month.points / maxTrendPoints) * 240}px`,
+                  minHeight: '4px'
                 }}
               />
               <span className="text-xs text-[#6f876f] mt-2">
-                {['Jan','Feb','Mar','Apr','May','Jun'][idx]}
+                {month.label}
               </span>
             </div>
           ))}
@@ -388,80 +446,217 @@ function ReportsTab() {
 
 /* ===================== REDEMPTION FLOW ===================== */
 function RedemptionFlow() {
-  const { students, rewards, addRedemption, refreshStudents, refreshRewards } = useData();
-  const [step, setStep] = useState(1); // 1: Scan student, 2: Select reward, 3: Confirm
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const { 
+    students,
+    rewards, 
+    startStudentIdentify,
+    clearStudentIdentify,
+    initiateRedemption, 
+    getRedemptionStatus,
+    cancelRedemption,
+    refreshStudents, 
+    refreshRewards, 
+    refreshRedemptions 
+  } = useData();
+
+  // State variables
+  const [isScanning, setIsScanning] = useState(false); // Step 1: Identify
+  const [isConfirmingRedeem, setIsConfirmingRedeem] = useState(false); // Step 2: Confirm
+  const [activeStudent, setActiveStudent] = useState(null);
   const [selectedReward, setSelectedReward] = useState(null);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('info');
-  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState(null);
+  const [successToast, setSuccessToast] = useState(false);
+
+  // Refs to hold interval IDs
+  const identifyIntervalRef = useRef(null);
+  const confirmIntervalRef = useRef(null);
+
+  // Helper to get student's full name
+  const getStudentFullName = (student) => {
+    if (!student) return 'Unknown Student';
+    if (student.name) return student.name;
+    return `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student';
+  };
+
+  // Helper to get student's initials
+  const getStudentInitials = (student) => {
+    if (!student) return 'S';
+    if (student.initials) return student.initials;
+    const fullName = getStudentFullName(student);
+    if (fullName && fullName !== 'Unknown Student') {
+      const nameParts = fullName.split(' ');
+      if (nameParts.length >= 2) {
+        return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+      }
+      return fullName[0].toUpperCase();
+    }
+    return 'S';
+  };
 
   // Calculate total points for a student
   const calculateStudentPoints = (student) => {
+    if (!student) return 0;
     return student.points_balance || student.points || 0;
   };
 
-  // Simulate RFID scan - in real setup, this would receive data from ESP32
-  const simulateScan = () => {
-    setScanning(true);
-    setMessage('Scanning RFID card...');
-    setMessageType('info');
-    
-    setTimeout(() => {
-      const randomStudent = students.length > 0 
-        ? students[Math.floor(Math.random() * students.length)] 
-        : null;
-      
-      if (randomStudent) {
-        setSelectedStudent(randomStudent);
-        setStep(2);
-        setMessage(`Student found: ${randomStudent.first_name || ''} ${randomStudent.last_name || ''}`);
-        setMessageType('success');
-      } else {
-        setMessage('No students found. Please add students first.');
-        setMessageType('error');
-      }
-      setScanning(false);
-    }, 1500);
+  // Helper to get actual student ID
+  const getStudentId = (student) => {
+    if (!student) return null;
+    return student.student_id || student.id;
   };
 
-  // Simulate confirmation scan
-  const confirmRedemption = () => {
-    setScanning(true);
-    setMessage('Confirming redemption...');
+  // Helper to get actual reward ID
+  const getRewardId = (reward) => {
+    if (!reward) return null;
+    return reward.reward_id || reward.id;
+  };
+
+  // Step 1: Start scanning for student identification
+  const startIdentifyScan = async () => {
+    setError(null);
+    setIsScanning(true);
+    setActiveStudent(null);
+    try {
+      await clearStudentIdentify(); // Clear old cache
+    } catch (err) {
+      console.error('Error clearing scan session:', err);
+    }
     
-    setTimeout(async () => {
+    // Start polling every 2 seconds
+    identifyIntervalRef.current = setInterval(async () => {
       try {
-        // Submit redemption to API
-        await addRedemption({
-          student_id: selectedStudent.id || selectedStudent.student_id,
-          reward_id: selectedReward.id || selectedReward.reward_id,
-          points: selectedReward.points || selectedReward.points_cost || selectedReward.points_required
-        });
+        const result = await startStudentIdentify();
+        console.log('🔍 Scan session check result:', result);
         
-        // Refresh data
-        await refreshStudents();
-        await refreshRewards();
+        let foundStudent = null;
         
-        setStep(4);
-        setMessage('Redemption successful!');
-        setMessageType('success');
-      } catch (error) {
-        console.error('Redemption error:', error);
-        setMessage('Redemption failed. Please try again.');
-        setMessageType('error');
+        // Handle both possible API response formats:
+        // 1. { student_found: true, student: { ... } }
+        if (result.student_found === true && result.student) {
+          foundStudent = result.student;
+        }
+        // 2. { success: true, student_id: 1, ... }
+        else if (result.success === true && result.student_id) {
+          const studentFromContext = students.find(s => 
+            getStudentId(s) === result.student_id
+          );
+          foundStudent = studentFromContext || {
+            student_id: result.student_id,
+            name: result.name,
+            points_balance: result.points_balance
+          };
+        }
+        
+        if (foundStudent) {
+          // Stop polling
+          clearInterval(identifyIntervalRef.current);
+          identifyIntervalRef.current = null;
+          
+          setActiveStudent(foundStudent);
+          setIsScanning(false);
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+        // Don't show error for polling failures
       }
-      setScanning(false);
-    }, 1500);
+    }, 2000);
   };
 
-  // Reset flow
-  const resetFlow = () => {
-    setStep(1);
-    setSelectedStudent(null);
-    setSelectedReward(null);
-    setMessage('');
+  // Step 2: Handle reward selection and start confirmation
+  const handleSelectReward = async (reward) => {
+    const studentId = getStudentId(activeStudent);
+    const rewardId = getRewardId(reward);
+    const studentPoints = calculateStudentPoints(activeStudent);
+    const rewardPoints = reward.points || reward.points_cost || reward.points_required;
+    
+    console.log('🎁 handleSelectReward called:', { studentId, rewardId, activeStudent, reward });
+
+    if (studentPoints < rewardPoints) {
+      setError('Insufficient points');
+      return;
+    }
+
+    setSelectedReward(reward);
+    setError(null);
+    setIsConfirmingRedeem(true);
+
+    try {
+      await initiateRedemption(studentId, rewardId);
+      
+      // Start polling for redemption completion using getRedemptionStatus
+      confirmIntervalRef.current = setInterval(async () => {
+        try {
+          const redemptionStatus = await getRedemptionStatus(studentId, rewardId);
+          console.log('🔄 Redemption status check:', redemptionStatus);
+          
+          if (redemptionStatus.completed === true || redemptionStatus.success === true) {
+            clearInterval(confirmIntervalRef.current);
+            confirmIntervalRef.current = null;
+            
+            setIsConfirmingRedeem(false);
+            setSuccessToast(true);
+            
+            await refreshRedemptions();
+            await refreshStudents();
+            await refreshRewards();
+            
+            setTimeout(() => {
+              setSuccessToast(false);
+              resetFlow();
+            }, 3000);
+          }
+        } catch (err) {
+          console.error('Redemption polling error:', err);
+        }
+      }, 2000);
+    } catch (err) {
+      console.error('❌ Error initiating redemption:', err);
+      setError(err.response?.data?.message || 'Failed to initiate redemption');
+      setIsConfirmingRedeem(false);
+    }
   };
+
+  // Cancel the redemption process
+  const handleCancelRedemption = async () => {
+    if (confirmIntervalRef.current) {
+      clearInterval(confirmIntervalRef.current);
+      confirmIntervalRef.current = null;
+    }
+    if (selectedReward && activeStudent) {
+      try {
+        await cancelRedemption(getStudentId(activeStudent), getRewardId(selectedReward));
+      } catch (err) {
+        console.error('Error canceling redemption:', err);
+      }
+    }
+    setIsConfirmingRedeem(false);
+    setSelectedReward(null);
+  };
+
+  // Reset flow completely
+  const resetFlow = () => {
+    if (identifyIntervalRef.current) {
+      clearInterval(identifyIntervalRef.current);
+      identifyIntervalRef.current = null;
+    }
+    if (confirmIntervalRef.current) {
+      clearInterval(confirmIntervalRef.current);
+      confirmIntervalRef.current = null;
+    }
+    setIsScanning(false);
+    setIsConfirmingRedeem(false);
+    setActiveStudent(null);
+    setSelectedReward(null);
+    setError(null);
+  };
+
+  // Cleanup intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (identifyIntervalRef.current) clearInterval(identifyIntervalRef.current);
+      if (confirmIntervalRef.current) clearInterval(confirmIntervalRef.current);
+    };
+  }, []);
 
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
@@ -469,77 +664,84 @@ function RedemptionFlow() {
         <h2 className="text-2xl font-bold text-[#3e5f44]">
           Redemption Terminal
         </h2>
-        {step !== 1 && (
+        {(isScanning || activeStudent || isConfirmingRedeem) && !successToast && (
           <button
-            onClick={resetFlow}
+            onClick={isConfirmingRedeem ? handleCancelRedemption : resetFlow}
             className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold"
           >
-            ← Back to Start
+            ← Cancel
           </button>
         )}
       </div>
 
-      {/* Status Message */}
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl ${
-          messageType === 'success' ? 'bg-green-100 text-green-700' :
-          messageType === 'error' ? 'bg-red-100 text-red-700' :
-          'bg-blue-100 text-blue-700'
-        }`}>
-          {message}
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-xl">
+          ❌ {error}
         </div>
       )}
 
-      {/* Step 1: Scan Student */}
-      {step === 1 && (
+      {/* Success Toast */}
+      {successToast && (
+        <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-xl">
+          ✅ Redemption processed successfully!
+        </div>
+      )}
+
+      {/* Step 1: Idle / Tap to Identify */}
+      {!isScanning && !activeStudent && !isConfirmingRedeem && !successToast && (
         <div className="text-center py-12">
-          <div className="w-32 h-32 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
-            <i className="fa-solid fa-id-card-clip text-5xl text-[#3e5f44]" />
+          <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-8">
+            <i className="fa-solid fa-credit-card text-7xl text-[#3e5f44]" />
           </div>
-          <h3 className="text-xl font-bold text-[#3e5f44] mb-3">
-            Scan Student RFID Card
+          <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
+            Tap Student Card to Begin
           </h3>
           <p className="text-[#6f876f] mb-8 max-w-md mx-auto">
-            Hold the student's RFID card near the scanner to begin
+            Have the student tap their RFID card on the reader to start the redemption process
           </p>
           <button
-            onClick={simulateScan}
-            disabled={scanning}
-            className={`px-8 py-4 rounded-2xl text-white font-semibold text-lg ${
-              scanning 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-[#3e5f44] hover:bg-[#4a6e50]'
-            }`}
+            onClick={startIdentifyScan}
+            className="bg-[#3e5f44] text-white px-12 py-6 rounded-2xl font-semibold text-xl"
           >
-            {scanning ? (
-              <span><i className="fa-solid fa-spinner fa-spin mr-2" /> Scanning...</span>
-            ) : (
-              <span><i className="fa-solid fa-walkie-talkie mr-2" /> Start Scan</span>
-            )}
+            <i className="fa-solid fa-credit-card mr-2" />
+            Tap Card
           </button>
         </div>
       )}
 
+      {/* Step 1: Identifying (Scanning) */}
+      {isScanning && !activeStudent && (
+        <div className="text-center py-12">
+          <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-8">
+            <i className="fa-solid fa-spinner fa-spin text-7xl text-[#3e5f44]" />
+          </div>
+          <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
+            Waiting for student card tap on reader...
+          </h3>
+        </div>
+      )}
+
       {/* Step 2: Select Reward */}
-      {step === 2 && selectedStudent && (
+      {activeStudent && !isConfirmingRedeem && !successToast && (
         <div>
           {/* Student Info Card */}
           <div className="bg-[#e8f5bd] rounded-2xl p-6 mb-8">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#3e5f44]">
-                {(selectedStudent.first_name?.[0] || 'S') + (selectedStudent.last_name?.[0] || '')}
+                {getStudentInitials(activeStudent)}
               </div>
               <div>
                 <h4 className="text-lg font-bold text-[#3e5f44]">
-                  {selectedStudent.first_name || ''} {selectedStudent.last_name || ''}
+                  {getStudentFullName(activeStudent)}
                 </h4>
                 <p className="text-sm text-[#6f876f]">
-                  Grade {selectedStudent.grade_level || '3'} • {selectedStudent.section || 'N/A'}
+                  Grade {activeStudent.grade_level || '3'} • {activeStudent.section || 'N/A'}
                 </p>
               </div>
               <div className="ml-auto text-right">
                 <div className="text-2xl font-bold text-[#3e5f44]">
-                  {calculateStudentPoints(selectedStudent)} points
+                  {calculateStudentPoints(activeStudent)} points
                 </div>
                 <div className="text-xs text-[#6f876f]">Available Balance</div>
               </div>
@@ -551,20 +753,18 @@ function RedemptionFlow() {
             {rewards
               .filter(r => r.status === 'Active' && r.stock > 0)
               .map((reward) => {
-                const studentPoints = calculateStudentPoints(selectedStudent);
+                const studentPoints = calculateStudentPoints(activeStudent);
                 const rewardPoints = reward.points || reward.points_cost || reward.points_required;
                 const canAfford = studentPoints >= rewardPoints;
                 
                 return (
                   <div
                     key={reward.id || reward.reward_id}
-                    onClick={() => canAfford && setSelectedReward(reward)}
+                    onClick={() => canAfford && handleSelectReward(reward)}
                     className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                      selectedReward?.id === reward.id || selectedReward?.reward_id === reward.reward_id
-                        ? 'border-[#3e5f44] bg-[#e8f5bd]'
-                        : canAfford
-                          ? 'border-[#dbe6db] hover:border-[#3e5f44]'
-                          : 'border-[#e0e0e0] bg-gray-50 opacity-60 cursor-not-allowed'
+                      !canAfford
+                        ? 'border-[#e0e0e0] bg-gray-50 opacity-60 cursor-not-allowed'
+                        : 'border-[#dbe6db] hover:border-[#3e5f44]'
                     }`}
                   >
                     <h4 className="font-bold text-[#3e5f44] mb-1">{reward.name}</h4>
@@ -585,75 +785,36 @@ function RedemptionFlow() {
                 );
               })}
           </div>
+        </div>
+      )}
 
-          {selectedReward && (
-            <div className="mt-8 flex justify-center">
+      {/* Step 3: Confirming (Second Tap) Modal */}
+      {isConfirmingRedeem && activeStudent && selectedReward && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center py-4">
+              <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
+                <i className="fa-solid fa-spinner fa-spin text-7xl text-[#3e5f44]" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
+                Confirming transaction for {selectedReward.name}
+              </h3>
+              <p className="text-[#6f876f] mb-8">
+                Cost: {selectedReward.points || selectedReward.points_cost || selectedReward.points_required} Points. Please have the student tap their card a SECOND time on the reader to complete purchase.
+              </p>
               <button
-                onClick={() => setStep(3)}
-                className="bg-[#3e5f44] text-white px-8 py-3 rounded-xl font-semibold"
+                onClick={handleCancelRedemption}
+                className="w-full py-3 rounded-xl border border-[#3e5f44] text-[#3e5f44] font-semibold"
               >
-                Continue →
+                Cancel
               </button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 3: Confirm Redemption */}
-      {step === 3 && selectedStudent && selectedReward && (
-        <div className="text-center py-8">
-          <div className="bg-[#e8f5bd] rounded-2xl p-8 max-w-lg mx-auto mb-8">
-            <h4 className="text-lg font-bold text-[#3e5f44] mb-4">Confirm Redemption</h4>
-            <div className="space-y-3 text-left">
-              <div className="flex justify-between">
-                <span className="text-[#6f876f]">Student:</span>
-                <span className="font-semibold text-[#3e5f44]">
-                  {selectedStudent.first_name || ''} {selectedStudent.last_name || ''}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6f876f]">Reward:</span>
-                <span className="font-semibold text-[#3e5f44]">{selectedReward.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6f876f]">Points to deduct:</span>
-                <span className="font-semibold text-[#3e5f44]">
-                  {selectedReward.points || selectedReward.points_cost || selectedReward.points_required}
-                </span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-[#3e5f44]/20">
-                <span className="text-[#6f876f]">Remaining balance:</span>
-                <span className="font-bold text-[#3e5f44]">
-                  {(calculateStudentPoints(selectedStudent) - (selectedReward.points || selectedReward.points_cost || selectedReward.points_required))} points
-                </span>
-              </div>
-            </div>
           </div>
-          
-          <p className="text-[#6f876f] mb-6">
-            Scan the card again to confirm redemption
-          </p>
-          
-          <button
-            onClick={confirmRedemption}
-            disabled={scanning}
-            className={`px-8 py-4 rounded-2xl text-white font-semibold text-lg ${
-              scanning 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-[#3e5f44] hover:bg-[#4a6e50]'
-            }`}
-          >
-            {scanning ? (
-              <span><i className="fa-solid fa-spinner fa-spin mr-2" /> Processing...</span>
-            ) : (
-              <span><i className="fa-solid fa-check mr-2" /> Confirm & Redeem</span>
-            )}
-          </button>
         </div>
       )}
 
-      {/* Step 4: Success */}
-      {step === 4 && (
+      {/* Step 4: Success (Handled by success toast and auto-reset) */}
+      {successToast && (
         <div className="text-center py-12">
           <div className="w-32 h-32 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
             <i className="fa-solid fa-check text-5xl text-green-700" />
@@ -662,14 +823,8 @@ function RedemptionFlow() {
             Redemption Complete!
           </h3>
           <p className="text-[#6f876f] mb-8">
-            {selectedStudent?.first_name || 'Student'} has redeemed {selectedReward?.name}
+            {getStudentFullName(activeStudent)} has redeemed {selectedReward?.name}
           </p>
-          <button
-            onClick={resetFlow}
-            className="bg-[#3e5f44] text-white px-8 py-4 rounded-2xl font-semibold text-lg"
-          >
-            Start New Redemption
-          </button>
         </div>
       )}
     </div>

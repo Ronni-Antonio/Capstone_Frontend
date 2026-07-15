@@ -73,6 +73,7 @@ export default function SectionsRanking() {
         width: `${100 - (index * 15)}%`,
       }));
 
+      
     return sortedSections;
   }, [students, transactions, sectionsRanking, settings]);
 
