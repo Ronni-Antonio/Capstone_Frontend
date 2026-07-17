@@ -44,31 +44,5 @@ api.addReward = (data) => api.post('/rewards', data);
 api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
 
-//Settings API Methods
-api.getSettings = () => api.get('/settings');
-api.updateSettings = (data) => api.post('/settings', data);
-
-//Sections API Methods
-api.getSections = () => api.get('/sections');
-api.getSectionsList = () => api.get('/sections/list');
-api.getSectionsRanking = () => api.get('/sections/ranking');
-api.addSection = (data) => api.post('/sections', data);
-api.updateSection = (id, data) => api.put(`/sections/${id}`, data);
-api.deleteSection = (id) => api.delete(`/sections/${id}`);
-
-//Redemptions API Methods
-api.getRedemptions = () => api.get('/redemptions');
-api.initiateRedemption = (studentId, rewardId) => api.post(`/redemptions/initiate/${studentId}/${rewardId}`);
-api.getRedemptionStatus = (studentId, rewardId) => api.get(`/redemptions/initiate/${studentId}/${rewardId}/status`); // Assuming you add this status endpoint
-api.cancelRedemption = (studentId, rewardId) => api.post(`/redemptions/initiate/${studentId}/${rewardId}/cancel`); // Optional cancel endpoint
-api.addRedemption = (data) => api.post('/redemptions', data);
-api.updateRedemption = (id, data) => api.put(`/redemptions/${id}`, data);
-api.deleteRedemption = (id) => api.delete(`/redemptions/${id}`);
-
-//Notifications API Methods
-api.getNotifications = () => api.get('/notifications');
-api.markNotificationRead = (id) => api.put(`/notifications/${id}/read`);
-api.markAllNotificationsRead = () => api.put('/notifications/mark-all-read');
-api.deleteNotification = (id) => api.delete(`/notifications/${id}`);
 
 export default api;

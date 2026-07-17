@@ -414,8 +414,13 @@ export default function Login({ onLogin }) {
     try {
       const response = await api.post('auth/login', { email, password });
       
-      // Save the token to persist the session
+      // Save the token and user data to persist the session
       localStorage.setItem('ACCESS_TOKEN', response.data.access_token);
+      if (response.data.user) {
+        localStorage.setItem('plink_user_id', response.data.user.id);
+        localStorage.setItem('plink_user_name', response.data.user.name || response.data.user.full_name);
+        localStorage.setItem('plink_user_email', response.data.user.email);
+      }
       
       if (onLogin) {
         onLogin();
