@@ -19,11 +19,12 @@ import {
 } from 'lucide-react';
 
 export function Settings() {
-  // Use settings from our data context!
+  // Use settings and plastic types from our data context!
   const { 
     settings, 
-    refreshSettings,
+    plasticTypes,
     refreshSections,
+    refreshPlasticTypes,
     updateSettings: updateSettingsInContext,
     addSection: addSectionToContext,
     updateSection: updateSectionInContext,
@@ -40,10 +41,13 @@ export function Settings() {
 
   const [conversion, setConversion] = useState(5);
   const [penalties, setPenalties] = useState({
-    rejected: -1,
-    invalid: -2,
-    nonPet: -1,
-    custom: -3,
+    rejected: 1, // contaminated PET points
+    nonPet: 0, // invalid/non-accepted items earn 0 points
+  });
+  const [plasticTypeConfig, setPlasticTypeConfig] = useState({
+    pet: null,
+    contaminated: null,
+    nonPet: null,
   });
 
   const [notifications, setNotifications] = useState({
@@ -63,6 +67,20 @@ export function Settings() {
     if (done) setTimeout(() => setToast(null), 3000);
   };
 
+  const mapPlasticTypesToConfig = (plasticTypes) => {
+    const findByKeywords = (keywords) =>
+      plasticTypes.find((item) => {
+        const name = item.name.toLowerCase();
+        return keywords.some((keyword) => name.includes(keyword));
+      }) || null;
+
+    return {
+      pet: findByKeywords(['pet bottle', 'pet']),
+      contaminated: findByKeywords(['contaminated']),
+      nonPet: findByKeywords(['invalid', 'non-pet', 'non pet', 'other plastics', 'aluminum']),
+    };
+  };
+
   // CONTROLLER 1: System Settings Loader - Initialize from context
   useEffect(() => {
     if (settings) {
@@ -71,13 +89,6 @@ export function Settings() {
         address: settings.school_address || '',
         year: settings.school_year || '',
         email: settings.school_email || '',
-      });
-      setConversion(Number(settings.point_conversion) || 5);
-      setPenalties({
-        rejected: Number(settings.penalty_rejected) || -1,
-        invalid: Number(settings.penalty_invalid) || -2,
-        nonPet: Number(settings.penalty_non_pet) || -1,
-        custom: Number(settings.penalty_custom) || -3,
       });
       setNotifications({
         machineFull: settings.notify_machine_full == 1,
@@ -90,6 +101,22 @@ export function Settings() {
     }
   }, [settings]);
 
+  // Update plastic type config when plasticTypes from context changes!
+  useEffect(() => {
+    if (plasticTypes && plasticTypes.length > 0) {
+      const mappedConfig = mapPlasticTypesToConfig(plasticTypes);
+
+      setPlasticTypeConfig(mappedConfig);
+      if (mappedConfig.pet) {
+        setConversion(mappedConfig.pet.points);
+      }
+      setPenalties({
+        rejected: mappedConfig.contaminated?.points ?? 1,
+        nonPet: mappedConfig.nonPet?.points ?? 0,
+      });
+    }
+  }, [plasticTypes]);
+
   // CONTROLLER 1: System Settings Updater
   const handleSaveAll = async () => {
     showToast('Saving configurations...', false);
@@ -99,11 +126,6 @@ export function Settings() {
       school_address: schoolInfo.address,
       school_year: schoolInfo.year,
       school_email: schoolInfo.email,
-      point_conversion: Number(conversion),
-      penalty_rejected: Number(penalties.rejected),
-      penalty_invalid: Number(penalties.invalid),
-      penalty_non_pet: Number(penalties.nonPet),
-      penalty_custom: Number(penalties.custom),
       notify_machine_full: notifications.machineFull ? 1 : 0,
       notify_scanner_errors: notifications.scannerErrors ? 1 : 0,
       notify_machine_offline: notifications.machineOffline ? 1 : 0,
@@ -113,9 +135,43 @@ export function Settings() {
     };
 
     try {
-      await api.updateSettings(payload);
+      const plasticTypeUpdates = [];
+
+      if (plasticTypeConfig.pet?.id) {
+        plasticTypeUpdates.push(
+          api.updatePlasticType(plasticTypeConfig.pet.id, {
+            ...plasticTypeConfig.pet.raw,
+            points_value: Number(conversion),
+          })
+        );
+      }
+
+      if (plasticTypeConfig.contaminated?.id) {
+        plasticTypeUpdates.push(
+          api.updatePlasticType(plasticTypeConfig.contaminated.id, {
+            ...plasticTypeConfig.contaminated.raw,
+            points_value: Number(penalties.rejected),
+          })
+        );
+      }
+
+      if (plasticTypeConfig.nonPet?.id) {
+        plasticTypeUpdates.push(
+          api.updatePlasticType(plasticTypeConfig.nonPet.id, {
+            ...plasticTypeConfig.nonPet.raw,
+            points_value: Number(penalties.nonPet),
+          })
+        );
+      }
+
+      await Promise.all([
+        api.updateSettings(payload),
+        ...plasticTypeUpdates,
+      ]);
+
       // Update the context directly so we don't refresh everything
       updateSettingsInContext(payload);
+      await refreshPlasticTypes(); // Refresh plastic types in context after saving!
       showToast('Settings saved successfully!');
     } catch (error) {
       console.error(error);
@@ -139,13 +195,11 @@ export function Settings() {
         </SettingsCard>
 
         {/* Point Conversion & Penalties */}
-        <SettingsCard icon={SparklesIcon} title="Point Conversion & Penalties" desc="Configure points for accepted bottles and penalties for rejected items">
+        <SettingsCard icon={SparklesIcon} title="Point Conversion & Rules" desc="Configure points awarded for accepted and non-accepted items">
           <div className="space-y-3">
             <PointRule label="Accepted PET Bottle" desc="Points awarded for a valid, accepted bottle" value={conversion} onChange={setConversion} min={1} />
-            <PointRule label="Rejected Bottle Penalty" desc="Deduction for a bottle rejected after validation" value={penalties.rejected} onChange={(v) => setPenalties({ ...penalties, rejected: v })} max={0} />
-            <PointRule label="Invalid Bottle Penalty" desc="Deduction for crushed or liquid-filled bottles" value={penalties.invalid} onChange={(v) => setPenalties({ ...penalties, invalid: v })} max={0} />
-            <PointRule label="Non-PET Bottle Penalty" desc="Deduction for aluminum cans or other plastics" value={penalties.nonPet} onChange={(v) => setPenalties({ ...penalties, nonPet: v })} max={0} />
-            <PointRule label="Custom Rejection Penalty" desc="Configurable deduction for other rejection reasons" value={penalties.custom} onChange={(v) => setPenalties({ ...penalties, custom: v })} max={0} />
+            <PointRule label="Contaminated Bottle Points" desc="Points awarded for a contaminated PET bottle" value={penalties.rejected} onChange={(v) => setPenalties({ ...penalties, rejected: v })} min={0} />
+            <PointRule label="Invalid Item Points" desc="Points awarded for invalid or non-accepted items" value={penalties.nonPet} onChange={(v) => setPenalties({ ...penalties, nonPet: v })} min={0} />
           </div>
         </SettingsCard>
 
@@ -302,7 +356,6 @@ function SectionsManager({
     
     const payload = {
       name: form.name,
-      section_name: form.name
     };
 
     try {

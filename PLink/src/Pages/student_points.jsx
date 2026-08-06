@@ -28,7 +28,6 @@ export default function StudentPoints() {
     sections: sectionsList,
     refreshStudents,
     addStudent: addStudentToContext,
-    updateStudent,
     activateStudent,
     getActivationStatus,
     cancelActivation
@@ -43,15 +42,15 @@ export default function StudentPoints() {
   const [newStudent, setNewStudent] = useState({
     first_name: '',
     last_name: '',
-    grade_level: '',
-    section: '',
+    grade_level_id: 1,
+    section_id: '',
     bottles: 0,
     points: 0
   });
   
   useEffect(() => {
     if (sectionsList.length > 0) {
-      setNewStudent(prev => ({ ...prev, section: sectionsList[0] }));
+      setNewStudent(prev => ({ ...prev, section_id: sectionsList[0].section_id }));
     }
   }, [sectionsList]);
   
@@ -163,7 +162,14 @@ export default function StudentPoints() {
     setAddStudentSuccess(null);
     
     try {
-      const res = await api.addStudent(newStudent);
+      const res = await api.addStudent({
+        student_number: newStudent.student_number,
+        first_name: newStudent.first_name,
+        last_name: newStudent.last_name,
+        grade_level_id: Number(newStudent.grade_level_id),
+        section_id: Number(newStudent.section_id),
+        status: 'inactive',
+      });
       // If the API returns the created student, add it directly to context (optimistic update)
       if (res.data) {
         addStudentToContext(res.data);
@@ -181,9 +187,9 @@ export default function StudentPoints() {
           student_number: '',
           first_name: '',
           last_name: '',
-          grade_level: '',
+          grade_level_id: 1,
           initials: '',
-          section: sectionsList.length > 0 ? sectionsList[0] : '',
+          section_id: sectionsList.length > 0 ? sectionsList[0].section_id : '',
           bottles: 0,
           points: 0
         });
@@ -704,7 +710,7 @@ export default function StudentPoints() {
                     </div>
                   </td>
 
-                  <td style={td}>Grade {student.grade_level}</td>
+                  <td style={td}>{student.grade_level}</td>
 
                   <td style={td}>
                     <span
@@ -1069,8 +1075,8 @@ export default function StudentPoints() {
                 />
 
                 <select
-                  value={newStudent.grade_level || ''}
-                  onChange={(e) => setNewStudent({ ...newStudent, grade_level: e.target.value })}
+                  value={newStudent.grade_level_id || ''}
+                  onChange={(e) => setNewStudent({ ...newStudent, grade_level_id: e.target.value })}
                   style={modalInput}
                   required
                 >
@@ -1103,13 +1109,13 @@ export default function StudentPoints() {
                 />
 
                 <select
-                  value={newStudent.section}
-                  onChange={(e) => setNewStudent({ ...newStudent, section: e.target.value })}
+                  value={newStudent.section_id}
+                  onChange={(e) => setNewStudent({ ...newStudent, section_id: e.target.value })}
                   style={modalInput}
                   required
                 >
                   {sectionsList.map((section) => (
-                    <option key={section} value={section}>{section}</option>
+                    <option key={section.section_id} value={section.section_id}>{section.name}</option>
                   ))}
                 </select>
               </div>
@@ -1247,7 +1253,7 @@ export default function StudentPoints() {
                       {selectedStudent.name}
                     </div>
                     <div style={{ fontSize: '14px', color: COLORS.darkMuted }}>
-                      {selectedStudent.section} • Grade {selectedStudent.grade_level}
+                      {selectedStudent.section} • {selectedStudent.grade_level}
                     </div>
                     <div style={{ fontSize: '14px', color: COLORS.darkMuted }}>
                       ID: {selectedStudent.id}

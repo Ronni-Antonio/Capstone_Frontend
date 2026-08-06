@@ -1,4 +1,3 @@
-import React from 'react';
 import { useData } from '../context/DataContext.jsx';
 
 // Theming variables to match your exact layout style colors
@@ -18,49 +17,73 @@ const COLORS = {
 };
 
 export function MachineMonitoring() {
-  const { transactions } = useData();
+  const { transactions, smartBins } = useData();
 
-  // Calculate stats from transactions
-  const totalBottles = transactions.reduce((sum, t) => {
-    const bottles = t.bottles_deposited || t.bottles || t.bottle_qty || t.bottles_qty || 0;
-    return sum + bottles;
-  }, 0);
+  const smartBin = smartBins[0] || null;
+  // Aggregate today's transactions for quick real-time bottle counts
+  const todayTransactions = transactions.filter((tx) => {
+    if (!tx.transaction_date) return false;
+    const date = new Date(tx.transaction_date);
+    const now = new Date();
+    return date.toDateString() === now.toDateString();
+  });
 
-  
-  // For fullness: simulate based on total bottles (since we don't have actual bin level)
-  // Max out at 100%
-  const maxCapacityBottles = 300; // Adjust this to your needs
-  const fullness = Math.min(Math.round((totalBottles / maxCapacityBottles) * 100), 100);
+  // Basic accepted / rejected counters (used elsewhere in the UI)
 
-  // Calculate accepted/rejected (simulate rejection rate if not in data)
-  const rejectionRate = 0.05; // 5% rejection rate if not specified in data
-  const acceptedToday = totalBottles; // All are accepted for now
-  const rejectedToday = Math.round(acceptedToday * rejectionRate);
-  
-  // Rejected reasons - simulated
+  const acceptedToday = todayTransactions.reduce((sum, tx) => sum + Number(tx.valid_qty || 0), 0);
+  const rejectedToday = todayTransactions.reduce((sum, tx) => sum + Number(tx.rejected_qty || 0), 0);
+
+  // Compute fullness both from weight sensor and from bottles-count estimate.
+  // This creates a temporary fallback/full-number based on how many bottles
+  // students have deposited today so the UI reflects real-time activity.
+  const currentWeight = Number(smartBin?.current_weight_kg ?? 0);
+  const maxCapacity = Number(smartBin?.max_capacity_kg ?? 20);
+  const avgBottleWeightKg = Number(smartBin?.avg_bottle_weight_kg ?? 0.02); // default 20g per bottle
+
+  const fullnessFromWeight = maxCapacity > 0
+    ? Math.min(Math.round((currentWeight / maxCapacity) * 100), 100)
+    : 0;
+
+  // Estimate fullness from the number of accepted bottles today.
+  // This is a temporary/approximate measure to show real-time changes.
+  const estimatedWeightFromTodayBottles = acceptedToday * avgBottleWeightKg;
+  const fullnessFromBottles = maxCapacity > 0
+    ? Math.min(Math.round((estimatedWeightFromTodayBottles / maxCapacity) * 100), 100)
+    : 0;
+
+  // Combined fullness uses the higher of the two estimates so the UI shows
+  // a conservative "full" state if either sensor or bottle activity suggests it.
+  const fullness = Math.min(100, Math.round(Math.max(fullnessFromWeight, fullnessFromBottles)));
+  const estimatedBottleCapacity = Math.max(1, Math.round(maxCapacity / (avgBottleWeightKg || 0.02)));
+  const estimatedBottlesFromWeight = Math.round(currentWeight / (avgBottleWeightKg || 0.02));
+
   const rejectedReasons = [
-    { reason: 'Non-PET', count: Math.round(rejectedToday * 0.5) },
-    { reason: 'Aluminum can', count: Math.round(rejectedToday * 0.25) },
-    { reason: 'Crushed bottle', count: Math.round(rejectedToday * 0.15) },
-    { reason: 'With liquid', count: Math.max(0, rejectedToday - Math.round(rejectedToday * 0.5) - Math.round(rejectedToday * 0.25) - Math.round(rejectedToday * 0.15)) },
-  ].filter(r => r.count > 0);
+    { reason: 'Rejected by CNN', count: rejectedToday },
+  ].filter((r) => r.count > 0);
 
-  // Rejected by hour - simulated
-  const rejectedByHour = [
-    { h: '7am', v: 0 }, { h: '8am', v: Math.floor(rejectedToday * 0.1) }, { h: '9am', v: 0 },
-    { h: '10am', v: Math.floor(rejectedToday * 0.1) }, { h: '11am', v: 0 }, { h: '12pm', v: Math.floor(rejectedToday * 0.3) },
-    { h: '1pm', v: Math.floor(rejectedToday * 0.25) }, { h: '2pm', v: 0 }, { h: '3pm', v: Math.floor(rejectedToday * 0.15) },
-    { h: '4pm', v: 0 }, { h: '5pm', v: 0 }
-  ];
+  const rejectedByHour = Array.from({ length: 11 }, (_, index) => {
+    const hour = index + 7;
+    const count = todayTransactions.reduce((sum, tx) => {
+      const date = tx.transaction_date ? new Date(tx.transaction_date) : null;
+      if (!date || date.getHours() !== hour) return sum;
+      return sum + Number(tx.rejected_qty || 0);
+    }, 0);
+    const suffix = hour >= 12 ? 'pm' : 'am';
+    const displayHour = hour > 12 ? hour - 12 : hour;
+    return { h: `${displayHour}${suffix}`, v: count };
+  });
 
-  const status = fullness >= 85 ? 'critical' : fullness >= 65 ? 'warning' : 'normal';
-  
-  // Max value calculation for bar chart styling height scaling
-  const maxRejectedValue = Math.max(...rejectedByHour.map(d => d.v), 1);
+  const status = smartBin?.status === 'offline'
+    ? 'offline'
+    : fullness >= 85 || smartBin?.status === 'full'
+      ? 'critical'
+      : fullness >= 65
+        ? 'warning'
+        : 'normal';
+
+  const maxRejectedValue = Math.max(...rejectedByHour.map((d) => d.v), 1);
 
   // SVG Circumference for circular dial track calculation
-  const radius = 15.9155;
-  const circumference = 2 * Math.PI * radius; // Approx 100
   const strokeDashoffset = 100 - fullness;
 
   return (
@@ -118,10 +141,10 @@ export function MachineMonitoring() {
             </div>
             <div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.darkMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plink Recycling Bin</div>
-              <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: COLORS.dark }}>Main Lobby Unit</h2>
+              <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: COLORS.dark }}>{smartBin?.name || 'Smart Recycling Bin'}</h2>
               <div style={{ fontSize: '12px', color: COLORS.darkMuted, display: 'flex', gap: '12px', marginTop: '4px' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📍 Grade 3 Hallway</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>🕒 Last scan {transactions.length > 0 ? 'just now' : 'never'}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📍 {smartBin?.location || 'Unknown location'}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>🕒 Last active {smartBin?.last_active_at ? new Date(smartBin.last_active_at).toLocaleString() : 'never'}</span>
               </div>
             </div>
           </div>
@@ -138,7 +161,7 @@ export function MachineMonitoring() {
               color: status === 'critical' ? COLORS.redText : status === 'warning' ? COLORS.amberText : COLORS.dark
             }}>{status}</span>
             <span style={{ padding: '4px 10px', backgroundColor: COLORS.limeLight, color: COLORS.dark, borderRadius: '9999px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              🟢 Connected
+              {smartBin?.status === 'online' ? '🟢 Connected' : smartBin?.status === 'offline' ? '🔴 Offline' : '🟡 ' + (smartBin?.status || 'Unknown')}
             </span>
           </div>
         </div>
@@ -172,12 +195,17 @@ export function MachineMonitoring() {
               </div>
             </div>
 
+            <div style={{ marginTop: '12px', fontSize: '12px', color: COLORS.darkMuted, textAlign: 'center' }}>
+              {acceptedToday} bottles added today • Est. {estimatedBottlesFromWeight} / {estimatedBottleCapacity} bottles
+            </div>
+
             <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : COLORS.sage }} />
               <span style={{ fontWeight: '600', color: status === 'critical' ? COLORS.redText : status === 'warning' ? COLORS.amberText : COLORS.dark }}>
                 {status === 'normal' && 'Normal — accepting bottles'}
                 {status === 'warning' && 'Warning — please prepare to empty'}
                 {status === 'critical' && 'Full — empty bin immediately'}
+                {status === 'offline' && 'Offline — check the smart bin connection'}
               </span>
             </div>
           </div>

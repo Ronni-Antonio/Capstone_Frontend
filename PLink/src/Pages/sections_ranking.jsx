@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 const badges = ['Eco Champion', 'Rising Star', 'Green Warriors', 'Steady Recyclers', 'On the Rise'];
 
 export default function SectionsRanking() {
-  const { students, transactions, sectionsRanking, settings } = useData();
+  const { students, transactions, sectionsRanking } = useData();
   
   // Calculate ranking from students/transactions if API ranking is empty
   const sectionsData = useMemo(() => {
@@ -45,9 +45,7 @@ export default function SectionsRanking() {
     });
 
     // Get point conversion rate from settings
-    const pointConversion = settings?.point_conversion || 1;
-
-    // Add bottles and points from transactions
+      // Add bottles and points from transactions
     safeTransactions.forEach(tx => {
       if (!tx) return;
       const studentId = tx.student_id;
@@ -57,7 +55,7 @@ export default function SectionsRanking() {
         if (sectionsMap[sectionName]) {
           const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
           sectionsMap[sectionName].bottles += Number(bottles) || 0;
-          sectionsMap[sectionName].points += (Number(bottles) || 0) * (pointConversion || 1);
+          sectionsMap[sectionName].points += Number(tx.total_points || tx.points_earned || 0);
         }
       }
     });
@@ -68,14 +66,14 @@ export default function SectionsRanking() {
       .map((section, index) => ({
         ...section,
         rank: index + 1,
-        growth: index % 2 === 0 ? `+${Math.floor(Math.random() * 20) + 1}%` : `-${Math.floor(Math.random() * 5) + 1}%`, // Random growth for demo
+        growth: '+0%',
         badge: badges[index % badges.length],
         width: `${100 - (index * 15)}%`,
       }));
 
       
     return sortedSections;
-  }, [students, transactions, sectionsRanking, settings]);
+  }, [students, transactions, sectionsRanking]);
 
   const topSection = sectionsData && sectionsData[0];
   const podiumSections = sectionsData ? sectionsData.slice(0, 3) : [];

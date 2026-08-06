@@ -1,4 +1,3 @@
-import React from 'react';
 import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
@@ -21,7 +20,7 @@ const COLORS = {
 };
 
 export default function Dashboard() {
-  const { students, transactions } = useData();
+  const { students, transactions, smartBins } = useData();
 
   // Process transactions to get daily bottle counts
   const getDailyData = () => {
@@ -44,7 +43,7 @@ export default function Dashboard() {
       
       const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
       dailyStats[dateStr].bottles += bottles;
-      dailyStats[dateStr].points += bottles * 5; // 5 points per bottle
+      dailyStats[dateStr].points += Number(tx.total_points || tx.points_earned || 0);
     });
     
     // Convert to array and sort by date
@@ -53,20 +52,9 @@ export default function Dashboard() {
       ...data
     }));
     
-    // If no data, use sample 7-day period
-    if (sortedDates.length === 0) {
-      const today = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        sortedDates.push({
-          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          bottles: Math.floor(Math.random() * 50) + 10,
-          points: Math.floor(Math.random() * 250) + 50
-        });
-      }
-    }
-    
+    // Keep the chart honest: no synthetic activity when there is no data.
+    if (sortedDates.length === 0) return [];
+
     // Limit to last 7 days
     return sortedDates.slice(-7);
   };
@@ -96,9 +84,11 @@ export default function Dashboard() {
     return sum + bottles;
   }, 0);
 
-  // Calculate bin fullness same way as machine_monitoring
-  const maxCapacityBottles = 300; // Adjust this to your needs
-  const binFullness = Math.min(Math.round((totalBottles / maxCapacityBottles) * 100), 100);
+  // Use the actual smart-bin weight/capacity reported by Laravel.
+  const primaryBin = smartBins[0];
+  const binFullness = primaryBin?.max_capacity_kg > 0
+    ? Math.min(Math.round((Number(primaryBin.current_weight_kg || 0) / Number(primaryBin.max_capacity_kg)) * 100), 100)
+    : 0;
 
   // Calculate total points earned
   const totalPoints = students.reduce((sum, student) => {
@@ -106,8 +96,8 @@ export default function Dashboard() {
   }, 0);
 
   // Calculate grade 3 participants
-  const grade3Participants = students.filter(student => 
-    (student.grade_level || '').toString() 
+  const grade3Participants = students.filter((student) =>
+    String(student.grade_level || '').toLowerCase() === 'grade 3'
   ).length;
 
   // Calculate active vs inactive students

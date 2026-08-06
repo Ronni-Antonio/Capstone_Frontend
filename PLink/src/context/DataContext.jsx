@@ -1,97 +1,177 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import api from '../api';
 
-const DataContext = createContext();
+const DataContext = createContext(null);
 
-const normalizeRewards = (rawRewards) => {
-  if (!Array.isArray(rawRewards)) {
-    return [];
-  }
-
-  return rawRewards.map((reward) => ({
-    id: reward.reward_id || reward.id,
-    name: reward.reward_name || reward.name || 'Unnamed Reward',
-    points:
-      Number(
-        reward.points_cost ?? reward.points ?? reward.points_required ?? 0
-      ) || 0,
-    stock: Number(reward.stock_quantity ?? reward.stock ?? 0) || 0,
-    status: reward.status || 'Active',
-    createdAt: reward.created_at || reward.createdAt || null,
-  }));
+const arrayFrom = (value) => {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.ranking)) return value.ranking;
+  if (Array.isArray(value?.notifications)) return value.notifications;
+  if (Array.isArray(value?.redemptions)) return value.redemptions;
+  if (value && typeof value === 'object') return Object.values(value);
+  return [];
 };
 
-const buildStudentName = (student) => {
-  if (!student) {
-    return null;
-  }
+const buildStudentName = (student) =>
+  student?.name || [student?.first_name, student?.last_name].filter(Boolean).join(' ').trim() || 'Unknown Student';
 
-  if (student.name) {
-    return student.name;
-  }
-
-  const fullName = [student.first_name, student.last_name]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-
-  return fullName || null;
+const gradeLabel = (grade) => {
+  if (!grade) return 'N/A';
+  if (typeof grade === 'object') return grade.name || 'N/A';
+  const text = String(grade);
+  return /^grade\s/i.test(text) ? text : `Grade ${text}`;
 };
 
-const normalizeRedemptions = (rawRedemptions, students = [], rewards = []) => {
-  if (!Array.isArray(rawRedemptions)) {
-    return [];
-  }
+const normalizeStudent = (student) => {
+  const grade = student.gradeLevel || student.grade_level_relation || student.grade_level;
+  const section = student.section || student.section_relation;
+  const rfidCards = student.rfidCards || student.rfid_cards || [];
+  const activeCard = rfidCards.find((card) => card.status === 'active') || rfidCards[0] || null;
+  const id = student.student_id ?? student.id;
+  const gradeName = gradeLabel(grade);
+  const sectionName = typeof section === 'object' ? section?.name : section;
 
-  return rawRedemptions.map((redemption) => {
-    const studentId =
-      redemption.student_id ??
-      redemption.student?.id ??
-      redemption.student?.student_id ??
-      null;
-    const rewardId =
-      redemption.reward_id ??
-      redemption.reward?.reward_id ??
-      redemption.reward?.id ??
-      null;
-
-    const matchedStudent = students.find(
-      (student) => (student.id || student.student_id) === studentId
-    );
-    const matchedReward = rewards.find((reward) => reward.id === rewardId);
-
-    return {
-      id: redemption.redemption_id || redemption.id,
-      studentId,
-      rewardId,
-      student:
-        redemption.student_name ||
-        buildStudentName(redemption.student) ||
-        buildStudentName(matchedStudent) ||
-        'Unknown Student',
-      reward:
-        redemption.reward_name ||
-        redemption.reward?.reward_name ||
-        redemption.reward?.name ||
-        matchedReward?.name ||
-        'Unknown Reward',
-      points:
-        Number(
-          redemption.points_cost ??
-            redemption.points ??
-            redemption.reward_points ??
-            redemption.reward?.points_cost ??
-            matchedReward?.points ??
-            0
-        ) || 0,
-      date:
-        redemption.redeemed_at ||
-        redemption.created_at ||
-        redemption.redemption_date ||
-        null,
-    };
-  });
+  return {
+    ...student,
+    id,
+    student_id: id,
+    name: buildStudentName(student),
+    grade_level: gradeName,
+    grade_level_id: student.grade_level_id ?? grade?.grade_level_id ?? null,
+    section: sectionName || 'No Section',
+    section_id: student.section_id ?? section?.section_id ?? null,
+    points_balance: Number(student.points_balance ?? 0),
+    points: Number(student.points_balance ?? 0),
+    status: student.status || 'inactive',
+    rfid_cards: rfidCards,
+    active_rfid_card: activeCard,
+  };
 };
+
+const normalizeTransaction = (tx) => {
+  const items = tx.items || tx.recycling_items || [];
+  const accepted = items.filter((item) => ['accepted', 'valid'].includes(item.status)).length;
+  const rejected = items.filter((item) => ['rejected', 'failed'].includes(item.status)).length;
+
+  return {
+    ...tx,
+    id: tx.transaction_id ?? tx.id,
+    transaction_id: tx.transaction_id ?? tx.id,
+    transaction_code: tx.transaction_code || null,
+    student_id: tx.student_id ?? tx.student?.student_id ?? null,
+    student: tx.student || null,
+    smart_bin_id: tx.smart_bin_id ?? tx.smartBin?.smart_bin_id ?? null,
+    smart_bin: tx.smartBin || tx.smart_bin || null,
+    rfid_card_id: tx.rfid_card_id ?? tx.rfidCard?.rfid_card_id ?? null,
+    status: tx.status || 'pending',
+    total_items: Number(tx.total_items ?? items.length ?? 0),
+    total_points: Number(tx.total_points ?? 0),
+    total_weight_kg: Number(tx.total_weight_kg ?? 0),
+    items,
+    // UI aliases kept at the presentation boundary so existing cards/charts remain readable.
+    bottles_deposited: Number(tx.total_items ?? items.length ?? 0),
+    bottle_qty: Number(tx.total_items ?? items.length ?? 0),
+    points_earned: Number(tx.total_points ?? 0),
+    valid_qty: Number(tx.valid_qty ?? accepted),
+    rejected_qty: Number(tx.rejected_qty ?? rejected),
+    transaction_date: tx.started_at || tx.created_at || null,
+  };
+};
+
+const normalizeReward = (reward) => ({
+  ...reward,
+  id: reward.reward_id ?? reward.id,
+  reward_id: reward.reward_id ?? reward.id,
+  name: reward.reward_name || reward.name || 'Unnamed Reward',
+  points: Number(reward.points_cost ?? 0),
+  stock: Number(reward.stock_quantity ?? 0),
+  status: reward.is_active === false ? 'Inactive' : 'Active',
+});
+
+const normalizePlasticType = (item) => ({
+  ...item,
+  id: item.plastic_type_id ?? item.id,
+  plastic_type_id: item.plastic_type_id ?? item.id,
+  name: item.name || item.plastic_type || 'Unnamed Type',
+  code: item.code || '',
+  points: Number(item.points_value ?? 0),
+  points_value: Number(item.points_value ?? 0),
+  is_accepted: Boolean(item.is_accepted),
+  is_active: item.is_active !== false,
+  raw: item,
+});
+
+const normalizeSection = (section) => ({
+  ...section,
+  id: section.section_id ?? section.id,
+  section_id: section.section_id ?? section.id,
+  name: section.name || section.section_name || 'Unnamed Section',
+});
+
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return 'Just now';
+  const date = new Date(dateString);
+  const diffMins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hr ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return diffDays === 1 ? 'Yesterday' : `${diffDays} days ago`;
+};
+
+const notificationGroup = (dateString) => {
+  if (!dateString) return 'today';
+  const date = new Date(dateString);
+  const today = new Date();
+  const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+  if (startDate === startToday) return 'today';
+  if (startDate === startToday - oneDay) return 'yesterday';
+  return 'earlier';
+};
+
+const normalizeNotification = (item) => {
+  const type = item.notification_type || item.type || 'info';
+  const title = item.title || 'Notification';
+  const lower = `${type} ${title}`.toLowerCase();
+  const severity = lower.includes('full') || lower.includes('offline') ? 'warning' : lower.includes('error') ? 'critical' : 'info';
+  return {
+    ...item,
+    id: item.notification_id ?? item.id,
+    notification_id: item.notification_id ?? item.id,
+    smart_bin_id: item.smart_bin_id ?? item.smartBin?.smart_bin_id ?? null,
+    severity,
+    title,
+    message: item.message || '',
+    time: formatRelativeTime(item.created_at),
+    group: notificationGroup(item.created_at),
+    read: Boolean(item.is_read || item.read_at),
+    type,
+  };
+};
+
+const normalizeRedemption = (redemption, students, rewards) => {
+  const studentId = redemption.student_id ?? redemption.student?.student_id;
+  const rewardId = redemption.reward_id ?? redemption.reward?.reward_id;
+  const student = students.find((s) => s.student_id === studentId);
+  const reward = rewards.find((r) => r.reward_id === rewardId);
+  return {
+    ...redemption,
+    id: redemption.redemption_id ?? redemption.id,
+    redemption_id: redemption.redemption_id ?? redemption.id,
+    studentId,
+    rewardId,
+    student: buildStudentName(redemption.student || student),
+    reward: redemption.reward?.reward_name || reward?.reward_name || reward?.name || 'Unknown Reward',
+    points: Number(redemption.points_spent ?? redemption.points_cost ?? reward?.points_cost ?? 0),
+    date: redemption.redeemed_at || redemption.created_at || null,
+  };
+};
+
+const normalizeSettings = (payload) => payload?.data || payload || {};
 
 export const DataProvider = ({ children }) => {
   const [data, setData] = useState({
@@ -103,451 +183,180 @@ export const DataProvider = ({ children }) => {
     sectionsRanking: [],
     notifications: [],
     settings: {},
+    plasticTypes: [],
+    smartBins: [],
     isLoading: true,
-    error: null
+    error: null,
   });
-  
-  // Add redemption function
-  const addRedemption = async (redemptionData) => {
-    try {
-      // Call API to add redemption
-      const response = await api.addRedemption(redemptionData);
-      
-      // Refresh data
-      await refreshRedemptions();
-      await refreshStudents();
-      await refreshRewards();
-      
-      return response;
-    } catch (error) {
-      console.error('Error adding redemption:', error);
-      throw error;
-    }
-  };
-  
-  // Initiate redemption process
-  const initiateRedemption = async (studentId, rewardId) => {
-    try {
-      const response = await api.initiateRedemption(studentId, rewardId);
-      return response;
-    } catch (error) {
-      console.error('Error initiating redemption:', error);
-      throw error;
-    }
-  };
-  
-  // Get redemption status (polling)
-  const getRedemptionStatus = async (studentId, rewardId) => {
-    try {
-      const response = await api.getRedemptionStatus(studentId, rewardId);
-      return response.data;
-    } catch (error) {
-      console.error('Error getting redemption status:', error);
-      throw error;
-    }
-  };
-  
-  // Identify student by card
-  const identifyCard = async () => {
-    try {
-      const response = await api.identifyCard();
-      return response.data;
-    } catch (error) {
-      console.error('Error identifying card:', error);
-      throw error;
-    }
+
+  const refreshStudents = async () => {
+    const res = await api.getStudents();
+    setData((prev) => ({ ...prev, students: arrayFrom(res.data).map(normalizeStudent) }));
+    return res;
   };
 
-  // Cancel redemption
-  const cancelRedemption = async (studentId, rewardId) => {
-    try {
-      const response = await api.cancelRedemption(studentId, rewardId);
-      return response;
-    } catch (error) {
-      console.error('Error canceling redemption:', error);
-      throw error;
-    }
+  const refreshTransactions = async () => {
+    const res = await api.getTransactions();
+    setData((prev) => ({ ...prev, transactions: arrayFrom(res.data).map(normalizeTransaction) }));
+    return res;
   };
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        // Fetch core data first that's critical
-        const [studentsRes, transactionsRes, rewardsRes, redemptionsRes, sectionsRes, settingsRes] = await Promise.all([
-          api.getStudents().catch(() => ({ data: [] })),
-          api.getTransactions().catch(() => ({ data: [] })),
-          api.getRewards().catch(() => ({ data: [] })),
-          api.getRedemptions().catch(() => ({ data: [] })),
-          api.getSectionsList().catch(() => ({ data: [] })),
-          api.getSettings().catch(() => ({ data: {} }))
-        ]);
+  const refreshRewards = async () => {
+    const res = await api.getRewards();
+    setData((prev) => ({ ...prev, rewards: arrayFrom(res.data).map(normalizeReward) }));
+    return res;
+  };
 
-        const studentsData = Array.isArray(studentsRes.data) ? studentsRes.data : [];
-        const rewardsData = normalizeRewards(
-          rewardsRes.data?.rewards || rewardsRes.data?.data || rewardsRes.data || []
-        );
+  const refreshRedemptions = async () => {
+    const res = await api.getRedemptions();
+    setData((prev) => ({
+      ...prev,
+      redemptions: arrayFrom(res.data).map((r) => normalizeRedemption(r, prev.students, prev.rewards)),
+    }));
+    return res;
+  };
 
-        // Fetch optional data (with fallbacks)
-        let rankingData = [];
-        let notificationsData = [];
-        try {
-          const rankingRes = await api.getSectionsRanking();
-          rankingData = Array.isArray(rankingRes.data) ? rankingRes.data : [];
-        } catch (err) {
-          console.log('Sections ranking API not available, using calculated ranking');
-        }
-        try {
-          const notificationsRes = await api.getNotifications();
-          notificationsData = Array.isArray(notificationsRes.data) ? notificationsRes.data : [];
-        } catch (err) {
-          console.log('Notifications API not available, using fallback data');
-        }
+  const refreshSections = async () => {
+    const res = await api.getSectionsList();
+    setData((prev) => ({ ...prev, sections: arrayFrom(res.data).map(normalizeSection) }));
+    return res;
+  };
 
-        setData({
-          students: studentsData,
-          transactions: Array.isArray(transactionsRes.data) ? transactionsRes.data : [],
-          rewards: rewardsData,
-          redemptions: normalizeRedemptions(
-            redemptionsRes.data?.redemptions || redemptionsRes.data?.data || redemptionsRes.data || [],
-            studentsData,
-            rewardsData
-          ),
-          sections: Array.isArray(sectionsRes.data) ? sectionsRes.data : (typeof sectionsRes.data === 'object' ? Object.values(sectionsRes.data) : []),
-          sectionsRanking: rankingData,
-          notifications: notificationsData,
-          settings: Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data,
-          isLoading: false,
-          error: null
-        });
-      } catch (err) {
-        console.error('Error fetching app data:', err);
-        setData(prev => ({
-          ...prev,
-          isLoading: false,
-          error: err.message || 'Failed to load data'
-        }));
-      }
-    };
+  const refreshSectionsRanking = async () => {
+    const res = await api.getSectionsRanking();
+    setData((prev) => ({ ...prev, sectionsRanking: arrayFrom(res.data).map((s) => ({
+      ...s,
+      name: s.section_name || s.name,
+      students: Number(s.student_count ?? s.students ?? 0),
+      bottles: Number(s.total_bottles ?? s.bottles ?? 0),
+      points: Number(s.total_points ?? s.points ?? 0),
+      rank: s.points_rank || s.rank,
+    })) }));
+    return res;
+  };
 
-    fetchAllData();
-  }, []);
+  const refreshNotifications = async () => {
+    const res = await api.getNotifications();
+    setData((prev) => ({ ...prev, notifications: arrayFrom(res.data).map(normalizeNotification) }));
+    return res;
+  };
 
-  // Refresh all data (use sparingly)
+  const refreshSettings = async () => {
+    const res = await api.getSettings();
+    setData((prev) => ({ ...prev, settings: normalizeSettings(res.data) }));
+    return res;
+  };
+
+  const refreshPlasticTypes = async () => {
+    const res = await api.getPlasticTypes();
+    setData((prev) => ({ ...prev, plasticTypes: arrayFrom(res.data).map(normalizePlasticType) }));
+    return res;
+  };
+
+  const refreshSmartBins = async () => {
+    const res = await api.getSmartBins();
+    setData((prev) => ({ ...prev, smartBins: arrayFrom(res.data) }));
+    return res;
+  };
+
   const refreshData = async () => {
+    setData((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const [studentsRes, transactionsRes, rewardsRes, redemptionsRes, sectionsRes, rankingRes, notificationsRes, settingsRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.getStudents(),
         api.getTransactions(),
         api.getRewards(),
         api.getRedemptions(),
         api.getSectionsList(),
-        api.getSectionsRanking().catch(() => ({ data: [] })),
-        api.getNotifications().catch(() => ({ data: [] })),
-        api.getSettings()
+        api.getSectionsRanking(),
+        api.getNotifications(),
+        api.getSettings(),
+        api.getPlasticTypes(),
+        api.getSmartBins(),
       ]);
 
-      const studentsData = Array.isArray(studentsRes.data) ? studentsRes.data : [];
-      const rewardsData = normalizeRewards(
-        rewardsRes.data?.rewards || rewardsRes.data?.data || rewardsRes.data || []
-      );
-
-      setData(prev => ({
-        ...prev,
-        students: studentsData,
-        transactions: Array.isArray(transactionsRes.data) ? transactionsRes.data : [],
-        rewards: rewardsData,
-        redemptions: normalizeRedemptions(
-          redemptionsRes.data?.redemptions || redemptionsRes.data?.data || redemptionsRes.data || [],
-          studentsData,
-          rewardsData
-        ),
-        sections: Array.isArray(sectionsRes.data) ? sectionsRes.data : (typeof sectionsRes.data === 'object' ? Object.values(sectionsRes.data) : []),
-        sectionsRanking: Array.isArray(rankingRes.data) ? rankingRes.data : [],
-        notifications: Array.isArray(notificationsRes.data) ? notificationsRes.data : [],
-        settings: Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data
+      const get = (i, fallback) => results[i].status === 'fulfilled' ? results[i].value.data : fallback;
+      const students = arrayFrom(get(0, [])).map(normalizeStudent);
+      const rewards = arrayFrom(get(2, [])).map(normalizeReward);
+      const sections = arrayFrom(get(4, [])).map(normalizeSection);
+      const transactions = arrayFrom(get(1, [])).map(normalizeTransaction);
+      const redemptions = arrayFrom(get(3, [])).map((r) => normalizeRedemption(r, students, rewards));
+      const rankingRaw = get(5, []);
+      const sectionsRanking = arrayFrom(rankingRaw).map((s) => ({
+        ...s,
+        name: s.section_name || s.name,
+        students: Number(s.student_count ?? s.students ?? 0),
+        bottles: Number(s.total_bottles ?? s.bottles ?? 0),
+        points: Number(s.total_points ?? s.points ?? 0),
+        rank: s.points_rank || s.rank,
       }));
-    } catch (err) {
-      console.error('Error refreshing app data:', err);
-      throw err;
+
+      setData({
+        students,
+        transactions,
+        rewards,
+        redemptions,
+        sections,
+        sectionsRanking,
+        notifications: arrayFrom(get(6, [])).map(normalizeNotification),
+        settings: normalizeSettings(get(7, {})),
+        plasticTypes: arrayFrom(get(8, [])).map(normalizePlasticType),
+        smartBins: arrayFrom(get(9, [])),
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.error('Error loading application data:', error);
+      setData((prev) => ({ ...prev, isLoading: false, error }));
     }
   };
 
-  // Refresh specific data parts
-  const refreshStudents = async () => {
-    try {
-      const res = await api.getStudents();
-      setData(prev => ({
-        ...prev,
-        students: Array.isArray(res.data) ? res.data : []
-      }));
-    } catch (err) {
-      console.error('Error refreshing students:', err);
-      throw err;
-    }
+  useEffect(() => { refreshData(); }, []);
+
+  const addStudent = (student) => setData((prev) => ({ ...prev, students: [...prev.students, normalizeStudent(student)] }));
+  const removeStudent = (id) => setData((prev) => ({ ...prev, students: prev.students.filter((s) => s.student_id !== id) }));
+
+  const updateStudent = async (id, payload) => {
+    const res = await api.updateStudent(id, payload);
+    const updated = normalizeStudent(res.data);
+    setData((prev) => ({ ...prev, students: prev.students.map((s) => s.student_id === id ? updated : s) }));
+    return res;
   };
 
-  const refreshTransactions = async () => {
-    try {
-      const res = await api.getTransactions();
-      setData(prev => ({
-        ...prev,
-        transactions: Array.isArray(res.data) ? res.data : []
-      }));
-    } catch (err) {
-      console.error('Error refreshing transactions:', err);
-      throw err;
-    }
-  };
+  const activateStudent = (id) => api.activateStudent(id);
+  const getActivationStatus = async (id) => (await api.getActivationStatus(id)).data;
+  const cancelActivation = (id) => api.cancelActivation(id);
 
-  const refreshRewards = async () => {
-    try {
-      const res = await api.getRewards();
-      setData(prev => ({
-        ...prev,
-        rewards: normalizeRewards(res.data?.rewards || res.data?.data || res.data || [])
-      }));
-    } catch (err) {
-      console.error('Error refreshing rewards:', err);
-      throw err;
-    }
-  };
+  const identifyCard = async (cardUid) => (await api.identifyCard(cardUid)).data;
+  const startStudentIdentify = async () => (await api.getActiveScanSession()).data;
+  const clearStudentIdentify = () => api.clearScanSession();
 
-  const refreshRedemptions = async () => {
-    try {
-      const res = await api.getRedemptions();
-      setData(prev => ({
-        ...prev,
-        redemptions: normalizeRedemptions(
-          res.data?.redemptions || res.data?.data || res.data || [],
-          prev.students,
-          prev.rewards
-        )
-      }));
-    } catch (err) {
-      console.error('Error refreshing redemptions:', err);
-      throw err;
-    }
-  };
+  const addSection = (section) => setData((prev) => ({ ...prev, sections: [...prev.sections, normalizeSection(section)] }));
+  const updateSection = (id, section) => setData((prev) => ({ ...prev, sections: prev.sections.map((s) => s.section_id === id ? normalizeSection({ ...s, ...section }) : s) }));
+  const removeSection = (id) => setData((prev) => ({ ...prev, sections: prev.sections.filter((s) => s.section_id !== id) }));
+  const addTransaction = (tx) => setData((prev) => ({ ...prev, transactions: [normalizeTransaction(tx), ...prev.transactions] }));
+  const updateSettings = (settings) => setData((prev) => ({ ...prev, settings: { ...prev.settings, ...settings } }));
 
-  const refreshSections = async () => {
-    try {
-      const res = await api.getSectionsList();
-      setData(prev => ({
-        ...prev,
-        sections: Array.isArray(res.data) ? res.data : (typeof res.data === 'object' ? Object.values(res.data) : [])
-      }));
-    } catch (err) {
-      console.error('Error refreshing sections:', err);
-      throw err;
-    }
+  const addRedemption = async (payload) => {
+    const res = await api.addRedemption(payload);
+    await Promise.all([refreshRedemptions(), refreshStudents(), refreshRewards()]);
+    return res;
   };
+  const initiateRedemption = (studentId, rewardId) => api.initiateRedemption(studentId, rewardId);
+  const getRedemptionStatus = async (studentId, rewardId) => (await api.getRedemptionStatus(studentId, rewardId)).data;
+  const cancelRedemption = (studentId, rewardId) => api.cancelRedemption(studentId, rewardId);
 
-  const refreshSectionsRanking = async () => {
-    try {
-      const res = await api.getSectionsRanking();
-      setData(prev => ({
-        ...prev,
-        sectionsRanking: Array.isArray(res.data) ? res.data : []
-      }));
-    } catch (err) {
-      console.error('Error refreshing sections ranking:', err);
-      throw err;
-    }
+  const markNotificationRead = async (id) => {
+    await api.markNotificationRead(id);
+    setData((prev) => ({ ...prev, notifications: prev.notifications.map((n) => n.notification_id === id ? { ...n, read: true } : n) }));
   };
-
-  const refreshNotifications = async () => {
-    try {
-      const res = await api.getNotifications();
-      setData(prev => ({
-        ...prev,
-        notifications: Array.isArray(res.data) ? res.data : []
-      }));
-    } catch (err) {
-      console.error('Error refreshing notifications:', err);
-      throw err;
-    }
-  };
-
-  const refreshSettings = async () => {
-    try {
-      const res = await api.getSettings();
-      setData(prev => ({
-        ...prev,
-        settings: Array.isArray(res.data) ? res.data[0] : res.data
-      }));
-    } catch (err) {
-      console.error('Error refreshing settings:', err);
-      throw err;
-    }
-  };
-
-  // Notification state modifiers with API calls
-  const markNotificationRead = async (notificationId) => {
-    // Optimistic update
-    setData(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n =>
-        (n.id || n.notification_id) === notificationId ? { ...n, read: true } : n
-      )
-    }));
-    try {
-      await api.markNotificationRead(notificationId);
-    } catch (err) {
-      // Rollback if API call fails
-      refreshNotifications();
-      throw err;
-    }
-  };
-
   const markAllNotificationsRead = async () => {
-    // Optimistic update
-    setData(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => ({ ...n, read: true }))
-    }));
-    try {
-      await api.markAllNotificationsRead();
-    } catch (err) {
-      // Rollback if API call fails
-      refreshNotifications();
-      throw err;
-    }
+    await api.markAllNotificationsRead(data.notifications);
+    setData((prev) => ({ ...prev, notifications: prev.notifications.map((n) => ({ ...n, read: true })) }));
   };
-
-  const deleteNotification = async (notificationId) => {
-    // Optimistic update
-    setData(prev => ({
-      ...prev,
-      notifications: prev.notifications.filter(n =>
-        (n.id || n.notification_id) !== notificationId
-      )
-    }));
-    try {
-      await api.deleteNotification(notificationId);
-    } catch (err) {
-      // Rollback if API call fails
-      refreshNotifications();
-      throw err;
-    }
-  };
-
-  // Direct state setters for optimistic updates
-  const addStudent = (newStudent) => {
-    setData(prev => ({
-      ...prev,
-      students: [...prev.students, newStudent]
-    }));
-  };
-
-  const updateStudent = async (studentId, updatedData) => {
-    
-    // Optimistic update
-    setData(prev => {
-      return {
-        ...prev,
-        students: prev.students.map(s => {
-          const currentId = s.id || s.student_id;
-          return currentId === studentId ? { ...s, ...updatedData } : s;
-        })
-      };
-    });
-    try {
-      const response = await api.updateStudent(studentId, updatedData);
-    } catch (err) {
-      refreshStudents();
-      throw err;
-    }
-  };
-
-  const activateStudent = async (studentId) => {
-    try {
-      const response = await api.activateStudent(studentId);
-      return response; // Return the session status to the frontend
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const getActivationStatus = async (studentId) => {
-    try {
-      const response = await api.getActivationStatus(studentId);
-      return response.data;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const cancelActivation = async (studentId) => {
-    try {
-      const response = await api.cancelActivation(studentId);
-      return response;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const removeStudent = (studentId) => {
-    setData(prev => ({
-      ...prev,
-      students: prev.students.filter(s => (s.id || s.student_id) !== studentId)
-    }));
-  };
-
-  const addSection = (newSection) => {
-    setData(prev => ({
-      ...prev,
-      sections: [...prev.sections, newSection]
-    }));
-  };
-
-  const updateSection = (sectionId, updatedData) => {
-    setData(prev => ({
-      ...prev,
-      sections: prev.sections.map(s =>
-        (s.id || s.section_id || s.name) === sectionId ? { ...s, ...updatedData } : s
-      )
-    }));
-  };
-
-  const removeSection = (sectionId) => {
-    setData(prev => ({
-      ...prev,
-      sections: prev.sections.filter(s => (s.id || s.section_id || s.name) !== sectionId)
-    }));
-  };
-
-  const addTransaction = (newTransaction) => {
-    setData(prev => ({
-      ...prev,
-      transactions: [...prev.transactions, newTransaction]
-    }));
-  };
-
-  const updateSettings = (newSettings) => {
-    setData(prev => ({
-      ...prev,
-      settings: { ...prev.settings, ...newSettings }
-    }));
-  };
-
-    const startStudentIdentify = async () => {
-    try {
-      // Call your polling check endpoint instead of the old broken empty POST
-      const response = await api.get('/students/active-scan-session');
-      console.log('🟢 DataContext: active-scan-session API response:', response.data);
-      return response.data; // Passes the API response payload
-    } catch (error) {
-      console.error('Error tracking active scan session:', error);
-      throw error;
-    }
-  };
-
-  const clearStudentIdentify = async () => {
-    try {
-      await api.post('/students/clear-scan-session');
-    } catch (error) {
-      console.error('Error clearing scan session:', error);
-    }
+  const deleteNotification = async (id) => {
+    await api.deleteNotification(id);
+    setData((prev) => ({ ...prev, notifications: prev.notifications.filter((n) => n.notification_id !== id) }));
   };
 
   return (
@@ -561,15 +370,18 @@ export const DataProvider = ({ children }) => {
       refreshSections,
       refreshSectionsRanking,
       refreshNotifications,
-      startStudentIdentify,
-      clearStudentIdentify,
       refreshSettings,
+      refreshPlasticTypes,
+      refreshSmartBins,
       addStudent,
       updateStudent,
+      removeStudent,
       activateStudent,
       getActivationStatus,
       cancelActivation,
-      removeStudent,
+      identifyCard,
+      startStudentIdentify,
+      clearStudentIdentify,
       addSection,
       updateSection,
       removeSection,
@@ -578,11 +390,10 @@ export const DataProvider = ({ children }) => {
       initiateRedemption,
       getRedemptionStatus,
       cancelRedemption,
-      identifyCard,
       updateSettings,
       markNotificationRead,
       markAllNotificationsRead,
-      deleteNotification
+      deleteNotification,
     }}>
       {children}
     </DataContext.Provider>
@@ -591,8 +402,6 @@ export const DataProvider = ({ children }) => {
 
 export const useData = () => {
   const context = useContext(DataContext);
-  if (!context) {
-    throw new Error('useData must be used within a DataProvider');
-  }
+  if (!context) throw new Error('useData must be used within a DataProvider');
   return context;
 };
