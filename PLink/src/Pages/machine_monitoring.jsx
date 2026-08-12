@@ -1,367 +1,959 @@
+import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../context/DataContext.jsx';
 
-// Theming variables to match your exact layout style colors
+// The Smart Bin now uses HC-SR04 distance as the source of truth.
+// empty_threshold_cm = distance when the bin is considered empty
+// full_threshold_cm  = distance when the bin is considered full
 const COLORS = {
   white: '#ffffff',
   dark: '#3e5f44',
-  darkMuted: 'rgba(62, 95, 68, 0.6)',
-  mintLight: 'rgba(199, 234, 187, 0.4)',
-  mintMuted: 'rgba(199, 234, 187, 0.6)',
-  limeLight: 'rgba(232, 245, 189, 0.6)',
+  darkMuted: 'rgba(62,95,68,0.6)',
+  mintLight: 'rgba(199,234,187,0.4)',
+  mintMuted: 'rgba(199,234,187,0.6)',
+  limeLight: 'rgba(232,245,189,0.6)',
   ivory: '#fcfcf7',
   sage: '#5a7c61',
   redBg: '#fef2f2',
   redText: '#b91c1c',
   amberBg: '#fffbeb',
-  amberText: '#b45309'
+  amberText: '#b45309',
+};
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const calculateFillFromDistance = (distance, emptyThreshold, fullThreshold) => {
+  const d = Number(distance);
+  const empty = Number(emptyThreshold);
+  const full = Number(fullThreshold);
+
+  if (!Number.isFinite(d) || !Number.isFinite(empty) || !Number.isFinite(full) || empty <= full) {
+    return null;
+  }
+
+  // HC-SR04: a smaller measured distance means the bin contains more material.
+  const percentage = ((empty - d) / (empty - full)) * 100;
+  return Math.round(clamp(percentage, 0, 100));
+};
+
+const getBinState = (smartBin, fullness, distance, fullThreshold) => {
+  if (!smartBin) {
+    return {
+      key: 'unknown',
+      label: 'No data',
+      message: 'No Smart Bin data is available.',
+    };
+  }
+
+  if (smartBin.status === 'offline') {
+    return {
+      key: 'offline',
+      label: 'Offline',
+      message: 'Offline — check the Smart Bin connection.',
+    };
+  }
+
+  const d = Number(distance);
+  const full = Number(fullThreshold);
+
+  if ((Number.isFinite(d) && Number.isFinite(full) && d <= full) || fullness >= 100) {
+    return {
+      key: 'full',
+      label: 'Full',
+      message: 'Full — empty the bin immediately.',
+    };
+  }
+
+  if (fullness >= 80) {
+    return {
+      key: 'almost_full',
+      label: 'Almost Full',
+      message: 'Warning — prepare to empty the bin.',
+    };
+  }
+
+  return {
+    key: 'normal',
+    label: 'Normal',
+    message: 'Normal — bin is accepting bottles.',
+  };
+};
+
+const stateStyles = {
+  normal: {
+    bg: COLORS.mintMuted,
+    text: COLORS.dark,
+    accent: COLORS.sage,
+  },
+  almost_full: {
+    bg: COLORS.amberBg,
+    text: COLORS.amberText,
+    accent: '#f59e0b',
+  },
+  full: {
+    bg: COLORS.redBg,
+    text: COLORS.redText,
+    accent: '#dc2626',
+  },
+  offline: {
+    bg: '#f1f5f9',
+    text: '#475569',
+    accent: '#64748b',
+  },
+  unknown: {
+    bg: '#f1f5f9',
+    text: '#475569',
+    accent: '#64748b',
+  },
 };
 
 export function MachineMonitoring() {
-  const { transactions, smartBins } = useData();
+  const {
+    transactions,
+    smartBins,
+    refreshSmartBins,
+  } = useData();
 
-  const smartBin = smartBins[0] || null;
-  // Aggregate today's transactions for quick real-time bottle counts
-  const todayTransactions = transactions.filter((tx) => {
-    if (!tx.transaction_date) return false;
-    const date = new Date(tx.transaction_date);
-    const now = new Date();
-    return date.toDateString() === now.toDateString();
-  });
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Basic accepted / rejected counters (used elsewhere in the UI)
+  // The API still supplies the Smart Bin through the existing /machines route,
+  // while the returned record uses the revised distance-based fields.
+  const smartBin = smartBins?.[0] || null;
 
-  const acceptedToday = todayTransactions.reduce((sum, tx) => sum + Number(tx.valid_qty || 0), 0);
-  const rejectedToday = todayTransactions.reduce((sum, tx) => sum + Number(tx.rejected_qty || 0), 0);
+  // Refresh the sensor data periodically so the dashboard can reflect new
+  // HC-SR04 readings without requiring a full page reload.
+  useEffect(() => {
+    let mounted = true;
 
-  // Compute fullness both from weight sensor and from bottles-count estimate.
-  // This creates a temporary fallback/full-number based on how many bottles
-  // students have deposited today so the UI reflects real-time activity.
-  const currentWeight = Number(smartBin?.current_weight_kg ?? 0);
-  const maxCapacity = Number(smartBin?.max_capacity_kg ?? 20);
-  const avgBottleWeightKg = Number(smartBin?.avg_bottle_weight_kg ?? 0.02); // default 20g per bottle
+    const load = async () => {
+      try {
+        setRefreshing(true);
+        await refreshSmartBins();
+        if (mounted) setLastUpdated(new Date());
+      } catch (error) {
+        console.error('Unable to refresh Smart Bin data:', error);
+      } finally {
+        if (mounted) setRefreshing(false);
+      }
+    };
 
-  const fullnessFromWeight = maxCapacity > 0
-    ? Math.min(Math.round((currentWeight / maxCapacity) * 100), 100)
-    : 0;
+    load();
+    const interval = window.setInterval(load, 5000);
 
-  // Estimate fullness from the number of accepted bottles today.
-  // This is a temporary/approximate measure to show real-time changes.
-  const estimatedWeightFromTodayBottles = acceptedToday * avgBottleWeightKg;
-  const fullnessFromBottles = maxCapacity > 0
-    ? Math.min(Math.round((estimatedWeightFromTodayBottles / maxCapacity) * 100), 100)
-    : 0;
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
-  // Combined fullness uses the higher of the two estimates so the UI shows
-  // a conservative "full" state if either sensor or bottle activity suggests it.
-  const fullness = Math.min(100, Math.round(Math.max(fullnessFromWeight, fullnessFromBottles)));
-  const estimatedBottleCapacity = Math.max(1, Math.round(maxCapacity / (avgBottleWeightKg || 0.02)));
-  const estimatedBottlesFromWeight = Math.round(currentWeight / (avgBottleWeightKg || 0.02));
+  const sensor = useMemo(() => {
+    if (!smartBin) {
+      return {
+        distance: null,
+        emptyThreshold: 80,
+        fullThreshold: 20,
+        fullness: 0,
+      };
+    }
 
-  const rejectedReasons = [
-    { reason: 'Rejected by CNN', count: rejectedToday },
-  ].filter((r) => r.count > 0);
+    // These are the revised backend fields.
+    // Fallbacks are only for compatibility with an older API response.
+    const distance = Number(
+      smartBin.current_distance_cm ??
+      smartBin.distance_cm ??
+      smartBin.currentDistanceCm
+    );
+
+    const emptyThreshold = Number(
+      smartBin.empty_threshold_cm ??
+      smartBin.emptyThresholdCm ??
+      80
+    );
+
+    const fullThreshold = Number(
+      smartBin.full_threshold_cm ??
+      smartBin.fullThresholdCm ??
+      20
+    );
+
+    const calculatedFullness = calculateFillFromDistance(
+      distance,
+      emptyThreshold,
+      fullThreshold
+    );
+
+    return {
+      distance: Number.isFinite(distance) ? distance : null,
+      emptyThreshold,
+      fullThreshold,
+      // Do not use current_fill_percentage as the source of truth.
+      // It may be returned by Laravel, but the UI derives fullness from
+      // the measured HC-SR04 distance.
+      fullness: calculatedFullness ?? 0,
+    };
+  }, [smartBin]);
+
+  const todayTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (!tx.transaction_date) return false;
+      const date = new Date(tx.transaction_date);
+      const now = new Date();
+      return date.toDateString() === now.toDateString();
+    });
+  }, [transactions]);
+
+  const acceptedToday = todayTransactions.reduce(
+    (sum, tx) => sum + Number(tx.valid_qty || 0),
+    0
+  );
+
+  const rejectedToday = todayTransactions.reduce(
+    (sum, tx) => sum + Number(tx.rejected_qty || 0),
+    0
+  );
+
+  const binState = getBinState(
+    smartBin,
+    sensor.fullness,
+    sensor.distance,
+    sensor.fullThreshold
+  );
+
+  const styles = stateStyles[binState.key] || stateStyles.unknown;
 
   const rejectedByHour = Array.from({ length: 11 }, (_, index) => {
     const hour = index + 7;
+
     const count = todayTransactions.reduce((sum, tx) => {
       const date = tx.transaction_date ? new Date(tx.transaction_date) : null;
       if (!date || date.getHours() !== hour) return sum;
       return sum + Number(tx.rejected_qty || 0);
     }, 0);
+
     const suffix = hour >= 12 ? 'pm' : 'am';
     const displayHour = hour > 12 ? hour - 12 : hour;
-    return { h: `${displayHour}${suffix}`, v: count };
+
+    return {
+      h: `${displayHour}${suffix}`,
+      v: count,
+    };
   });
 
-  const status = smartBin?.status === 'offline'
-    ? 'offline'
-    : fullness >= 85 || smartBin?.status === 'full'
-      ? 'critical'
-      : fullness >= 65
-        ? 'warning'
-        : 'normal';
+  const maxRejectedValue = Math.max(
+    ...rejectedByHour.map((item) => item.v),
+    1
+  );
 
-  const maxRejectedValue = Math.max(...rejectedByHour.map((d) => d.v), 1);
+  const acceptanceRate =
+    acceptedToday + rejectedToday > 0
+      ? Math.round(
+          (acceptedToday / (acceptedToday + rejectedToday)) * 100
+        )
+      : 100;
 
-  // SVG Circumference for circular dial track calculation
-  const strokeDashoffset = 100 - fullness;
+  const circleDashOffset = 100 - sensor.fullness;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'sans-serif' }}>
-      
-      {/* Pure CSS Keyframes injection - completely independent of packages */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+        fontFamily: 'sans-serif',
+      }}
+    >
       <style>{`
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes fillBar {
-          from { width: 0%; }
-          to { width: ${fullness}%; }
-        }
-        @keyframes fillCircle {
-          from { stroke-dashoffset: 100; }
-          to { stroke-dashoffset: ${strokeDashoffset}; }
-        }
-        @keyframes growBar {
-          from { height: 2px; }
-        }
+
         .animate-fade-in-up {
-          animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation: fadeInUp 0.5s ease-out forwards;
         }
-        .animate-circle-fill {
-          animation: fillCircle 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        .animate-bar-fill {
-          animation: fillBar 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        .animate-chart-grow {
-          animation-name: growBar;
-          animation-duration: 0.8s;
-          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-          transform-origin: bottom;
+
+        .distance-fill {
+          transition: width 0.5s ease, stroke-dashoffset 0.5s ease;
         }
       `}</style>
 
-      {/* Main monitoring card */}
-      <div className="animate-fade-in-up" style={{
-        backgroundColor: COLORS.white,
-        borderRadius: '24px',
-        padding: '28px',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
-        border: `1px solid ${COLORS.mintLight}`
-      }}>
-        
-        {/* Header section */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexGrow: 1 }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '16px', backgroundColor: COLORS.mintMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/* Simplified Recycle Icon */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={COLORS.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5M12 2v10M12 2l-4 4M12 2l4 4"/></svg>
+      <div
+        className="animate-fade-in-up"
+        style={{
+          backgroundColor: COLORS.white,
+          borderRadius: '24px',
+          padding: '28px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+          border: `1px solid ${COLORS.mintLight}`,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '24px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '16px',
+                backgroundColor: COLORS.mintMuted,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '26px',
+              }}
+            >
+              ♻️
             </div>
+
             <div>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.darkMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plink Recycling Bin</div>
-              <h2 style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: COLORS.dark }}>{smartBin?.name || 'Smart Recycling Bin'}</h2>
-              <div style={{ fontSize: '12px', color: COLORS.darkMuted, display: 'flex', gap: '12px', marginTop: '4px' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📍 {smartBin?.location || 'Unknown location'}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>🕒 Last active {smartBin?.last_active_at ? new Date(smartBin.last_active_at).toLocaleString() : 'never'}</span>
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: COLORS.darkMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                Plink Recycling Bin
+              </div>
+
+              <h2
+                style={{
+                  margin: '4px 0 0',
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: COLORS.dark,
+                }}
+              >
+                {smartBin?.name || 'Smart Recycling Bin'}
+              </h2>
+
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: COLORS.darkMuted,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                <span>📍 {smartBin?.location || 'Unknown location'}</span>
+                <span>
+                  🕒 Last active{' '}
+                  {smartBin?.last_active_at
+                    ? new Date(smartBin.last_active_at).toLocaleString()
+                    : 'never'}
+                </span>
               </div>
             </div>
           </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Native Status Badge */}
-            <span style={{
-              padding: '4px 12px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: '600',
-              textTransform: 'capitalize',
-              backgroundColor: status === 'critical' ? COLORS.redBg : status === 'warning' ? COLORS.amberBg : COLORS.mintMuted,
-              color: status === 'critical' ? COLORS.redText : status === 'warning' ? COLORS.amberText : COLORS.dark
-            }}>{status}</span>
-            <span style={{ padding: '4px 10px', backgroundColor: COLORS.limeLight, color: COLORS.dark, borderRadius: '9999px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              {smartBin?.status === 'online' ? '🟢 Connected' : smartBin?.status === 'offline' ? '🔴 Offline' : '🟡 ' + (smartBin?.status || 'Unknown')}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                padding: '5px 12px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: '700',
+                backgroundColor: styles.bg,
+                color: styles.text,
+              }}
+            >
+              {binState.label}
+            </span>
+
+            <span
+              style={{
+                padding: '5px 10px',
+                backgroundColor: COLORS.limeLight,
+                color: COLORS.dark,
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: '600',
+              }}
+            >
+              {smartBin?.status === 'online'
+                ? '🟢 Connected'
+                : smartBin?.status === 'offline'
+                  ? '🔴 Offline'
+                  : `🟡 ${smartBin?.status || 'Unknown'}`}
             </span>
           </div>
         </div>
 
-        {/* Content Layout Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-          
-          {/* Circular Fullness display */}
-          <div style={{ backgroundColor: COLORS.ivory, borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.darkMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Real-time Fullness</div>
-            
+        {/* Main monitoring area */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '24px',
+          }}
+        >
+          {/* Distance-derived fullness */}
+          <div
+            style={{
+              backgroundColor: COLORS.ivory,
+              borderRadius: '24px',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: COLORS.darkMuted,
+                textTransform: 'uppercase',
+                marginBottom: '8px',
+              }}
+            >
+              Real-time Bin Fullness
+            </div>
+
             <div style={{ position: 'relative', width: '224px', height: '224px' }}>
-              <svg width="100%" height="100%" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-                {/* Background circle track */}
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e8f5bd" strokeWidth="3" />
-                {/* Foreground active data track with SVG animation parameters */}
-                <path 
-                  className="animate-circle-fill"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                  fill="none" 
-                  stroke={fullness >= 85 ? COLORS.redText : fullness >= 65 ? '#f59e0b' : COLORS.dark} 
-                  strokeWidth="3" 
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 36 36"
+                style={{ transform: 'rotate(-90deg)' }}
+              >
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#e8f5bd"
+                  strokeWidth="3"
+                />
+
+                <path
+                  className="distance-fill"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke={styles.accent}
+                  strokeWidth="3"
                   strokeDasharray="100"
-                  strokeDashoffset="100"
+                  strokeDashoffset={circleDashOffset}
                   strokeLinecap="round"
                 />
               </svg>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontSize: '48px', fontWeight: '700', color: COLORS.dark }}>{fullness}%</div>
-                <div style={{ fontSize: '12px', color: COLORS.darkMuted, marginTop: '4px' }}>Bin capacity used</div>
+
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '48px',
+                    fontWeight: '700',
+                    color: COLORS.dark,
+                  }}
+                >
+                  {sensor.fullness}%
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: COLORS.darkMuted,
+                    marginTop: '4px',
+                  }}
+                >
+                  calculated from distance
+                </div>
               </div>
             </div>
 
-            <div style={{ marginTop: '12px', fontSize: '12px', color: COLORS.darkMuted, textAlign: 'center' }}>
-              {acceptedToday} bottles added today • Est. {estimatedBottlesFromWeight} / {estimatedBottleCapacity} bottles
+            {/* Actual HC-SR04 measurement */}
+            <div
+              style={{
+                width: '100%',
+                marginTop: '14px',
+                padding: '14px 16px',
+                borderRadius: '16px',
+                backgroundColor: COLORS.white,
+                border: `1px solid ${COLORS.mintLight}`,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: COLORS.darkMuted,
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                }}
+              >
+                HC-SR04 Distance
+              </div>
+
+              <div
+                style={{
+                  fontSize: '30px',
+                  fontWeight: '700',
+                  color: COLORS.dark,
+                  marginTop: '4px',
+                }}
+              >
+                {sensor.distance !== null
+                  ? `${sensor.distance.toFixed(1)} cm`
+                  : 'No reading'}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: COLORS.darkMuted,
+                  marginTop: '4px',
+                }}
+              >
+                Empty: {sensor.emptyThreshold} cm · Full: {sensor.fullThreshold} cm
+              </div>
             </div>
 
-            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : COLORS.sage }} />
-              <span style={{ fontWeight: '600', color: status === 'critical' ? COLORS.redText : status === 'warning' ? COLORS.amberText : COLORS.dark }}>
-                {status === 'normal' && 'Normal — accepting bottles'}
-                {status === 'warning' && 'Warning — please prepare to empty'}
-                {status === 'critical' && 'Full — empty bin immediately'}
-                {status === 'offline' && 'Offline — check the smart bin connection'}
+            <div
+              style={{
+                marginTop: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                textAlign: 'center',
+              }}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: styles.accent,
+                }}
+              />
+
+              <span style={{ fontWeight: '600', color: styles.text }}>
+                {binState.message}
               </span>
             </div>
           </div>
 
-          {/* Progress row metrics */}
-          <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
+          {/* Distance-to-fullness explanation + metrics */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '20px',
+            }}
+          >
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark }}>Fullness Progress</span>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{fullness} / 100%</span>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <span style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark }}>
+                  Distance-based Fullness
+                </span>
+
+                <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>
+                  {sensor.fullness}%
+                </span>
               </div>
-              <div style={{ width: '100%', height: '20px', backgroundColor: 'rgba(232,245,189,0.7)', borderRadius: '9999px', overflow: 'hidden', position: 'relative' }}>
-                <div 
-                  className="animate-bar-fill"
+
+              <div
+                style={{
+                  width: '100%',
+                  height: '20px',
+                  backgroundColor: 'rgba(232,245,189,0.7)',
+                  borderRadius: '9999px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                <div
                   style={{
                     height: '100%',
                     borderRadius: '9999px',
-                    width: '0%',
-                    backgroundColor: status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : COLORS.sage
-                  }} 
+                    width: `${sensor.fullness}%`,
+                    backgroundColor: styles.accent,
+                    transition: 'width 0.5s ease',
+                  }}
                 />
-                <span style={{ position: 'absolute', top: 0, bottom: 0, width: '1px', backgroundColor: 'rgba(62,95,68,0.3)', left: '65%' }} />
-                <span style={{ position: 'absolute', top: 0, bottom: 0, width: '1px', backgroundColor: 'rgba(62,95,68,0.3)', left: '85%' }} />
+
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    width: '1px',
+                    backgroundColor: 'rgba(62,95,68,0.35)',
+                    left: '80%',
+                  }}
+                />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(62,95,68,0.5)', marginTop: '6px' }}>
-                <span>0%</span>
-                <span style={{ color: COLORS.sage, fontWeight: '600' }}>Normal</span>
-                <span style={{ color: '#d97706', fontWeight: '600' }}>65% Warning</span>
-                <span style={{ color: '#dc2626', fontWeight: '600' }}>85% Full</span>
-                <span>100%</span>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '10px',
+                  color: COLORS.darkMuted,
+                  marginTop: '6px',
+                }}
+              >
+                <span>0% Empty</span>
+                <span>80% Almost Full</span>
+                <span>100% Full</span>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '14px',
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  backgroundColor: COLORS.ivory,
+                  border: `1px solid ${COLORS.mintLight}`,
+                  fontSize: '12px',
+                  lineHeight: 1.6,
+                  color: COLORS.darkMuted,
+                }}
+              >
+                <strong style={{ color: COLORS.dark }}>How it is calculated:</strong>{' '}
+                the HC-SR04 measures the empty space above the bottles. As the
+                bottles rise, the measured distance decreases, so the calculated
+                fullness increases.
               </div>
             </div>
 
-            {/* Micro grid counter metrics items */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              <div style={{ backgroundColor: COLORS.mintLight, borderRadius: '16px', padding: '16px' }}>
-                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>Bottles Today</div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.dark, marginTop: '4px' }}>{acceptedToday}</div>
-                <div style={{ fontSize: '11px', color: COLORS.sage, fontWeight: '600', marginTop: '4px' }}>Accepted ✓</div>
-              </div>
-              <div style={{ backgroundColor: COLORS.redBg, borderRadius: '16px', padding: '16px' }}>
-                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>Rejected Today</div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.redText, marginTop: '4px' }}>{rejectedToday}</div>
-                <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '600', marginTop: '4px' }}>Non-PET items</div>
-              </div>
-              <div style={{ backgroundColor: COLORS.limeLight, borderRadius: '16px', padding: '16px' }}>
-                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>Acceptance Rate</div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.dark, marginTop: '4px' }}>
-                  {acceptedToday + rejectedToday > 0 ? Math.round((acceptedToday / (acceptedToday + rejectedToday)) * 100) : 100}%
+            {/* Today's recycling metrics */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: COLORS.mintLight,
+                  borderRadius: '16px',
+                  padding: '16px',
+                }}
+              >
+                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>
+                  Accepted Today
                 </div>
-                <div style={{ fontSize: '11px', color: 'rgba(62,95,68,0.7)', fontWeight: '600', marginTop: '4px' }}>PET accuracy</div>
+                <div
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: COLORS.dark,
+                    marginTop: '4px',
+                  }}
+                >
+                  {acceptedToday}
+                </div>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: COLORS.sage,
+                    fontWeight: '600',
+                    marginTop: '4px',
+                  }}
+                >
+                  Bottles
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: COLORS.redBg,
+                  borderRadius: '16px',
+                  padding: '16px',
+                }}
+              >
+                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>
+                  Rejected Today
+                </div>
+                <div
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: COLORS.redText,
+                    marginTop: '4px',
+                  }}
+                >
+                  {rejectedToday}
+                </div>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: COLORS.redText,
+                    fontWeight: '600',
+                    marginTop: '4px',
+                  }}
+                >
+                  Non-PET
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: COLORS.limeLight,
+                  borderRadius: '16px',
+                  padding: '16px',
+                }}
+              >
+                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>
+                  Acceptance Rate
+                </div>
+                <div
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: COLORS.dark,
+                    marginTop: '4px',
+                  }}
+                >
+                  {acceptanceRate}%
+                </div>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: COLORS.darkMuted,
+                    fontWeight: '600',
+                    marginTop: '4px',
+                  }}
+                >
+                  Today
+                </div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* Analytics Breakdown Row */}
-      <div className="animate-fade-in-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', animationDelay: '0.15s', opacity: 0 }}>
-        
-        {/* Container 1 */}
-        <div style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}` }}>
-          <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>Rejected Items</h3>
-          <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: COLORS.darkMuted }}>Breakdown of items the machine rejected today</p>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ backgroundColor: COLORS.redBg, borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '16px', backgroundColor: COLORS.white, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626', fontWeight: 'bold' }}>✕</div>
-              <div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.redText }}>{rejectedToday}</div>
-                <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>items rejected today</div>
-              </div>
-            </div>
+      {/* Sensor status */}
+      <div
+        className="animate-fade-in-up"
+        style={{
+          backgroundColor: COLORS.white,
+          borderRadius: '24px',
+          padding: '24px',
+          border: `1px solid ${COLORS.mintLight}`,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+            marginBottom: '16px',
+          }}
+        >
+          <div>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '700',
+                color: COLORS.dark,
+              }}
+            >
+              HC-SR04 Sensor Status
+            </h3>
+
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: '13px',
+                color: COLORS.darkMuted,
+              }}
+            >
             
-            {rejectedReasons.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                {rejectedReasons.map((r) => (
-                  <div key={r.reason} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: COLORS.ivory, borderRadius: '12px' }}>
-                    <span style={{ fontSize: '14px', color: 'rgba(62,95,68,0.8)' }}>{r.reason}</span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.dark }}>{r.count}</span>
-                  </div>
-                ))}
+            </p>
+          </div>
+
+          <span
+            style={{
+              fontSize: '11px',
+              color: COLORS.darkMuted,
+            }}
+          >
+            {refreshing
+              ? 'Updating…'
+              : lastUpdated
+                ? `Updated ${lastUpdated.toLocaleTimeString()}`
+                : 'Waiting for sensor data'}
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {[
+            ['Current Distance', sensor.distance !== null ? `${sensor.distance.toFixed(1)} cm` : '—'],
+            ['Empty Threshold', `${sensor.emptyThreshold} cm`],
+            ['Full Threshold', `${sensor.fullThreshold} cm`],
+            ['Calculated Fullness', `${sensor.fullness}%`],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              style={{
+                backgroundColor: COLORS.ivory,
+                borderRadius: '14px',
+                padding: '15px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: COLORS.darkMuted,
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                }}
+              >
+                {label}
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Container 2 (Bar chart with grow animation applied directly to elements) */}
-        <div style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}`, gridColumn: 'span 1' }}>
-          <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>Rejected Items by Hour</h3>
-          <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: COLORS.darkMuted }}>When non-PET items were attempted today</p>
-          
-          <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderBottom: `1px solid ${COLORS.mintMuted}`, paddingBottom: '8px', gap: '4px' }}>
-            {rejectedByHour.map((item, index) => {
-              const heightPercent = (item.v / maxRejectedValue) * 100;
-              return (
-                <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
-                  {item.v > 0 && (
-                    <div style={{ fontSize: '10px', fontWeight: '600', color: COLORS.redText, marginBottom: '2px' }}>
-                      {item.v}
-                    </div>
-                  )}
-                  <div 
-                    className="animate-chart-grow"
+              <div
+                style={{
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  color: COLORS.dark,
+                  marginTop: '5px',
+                }}
+              >
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Rejected items by hour */}
+      <div
+        className="animate-fade-in-up"
+        style={{
+          backgroundColor: COLORS.white,
+          borderRadius: '24px',
+          padding: '24px',
+          border: `1px solid ${COLORS.mintLight}`,
+        }}
+      >
+        <h3
+          style={{
+            margin: '0 0 4px',
+            fontSize: '18px',
+            fontWeight: '700',
+            color: COLORS.dark,
+          }}
+        >
+          Rejected Items by Hour
+        </h3>
+
+        <p
+          style={{
+            margin: '0 0 16px',
+            fontSize: '13px',
+            color: COLORS.darkMuted,
+          }}
+        >
+          When non-PET items were attempted today.
+        </p>
+
+        <div
+          style={{
+            height: '200px',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${COLORS.mintMuted}`,
+            paddingBottom: '8px',
+            gap: '4px',
+          }}
+        >
+          {rejectedByHour.map((item, index) => {
+            const heightPercent = (item.v / maxRejectedValue) * 100;
+
+            return (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  flex: 1,
+                  height: '100%',
+                  justifyContent: 'flex-end',
+                }}
+              >
+                {item.v > 0 && (
+                  <div
                     style={{
-                      width: '70%',
-                      minWidth: '12px',
-                      height: item.v === 0 ? '2px' : `${heightPercent}%`,
-                      backgroundColor: item.v === 0 ? '#e2e8f0' : '#dc2626',
-                      borderRadius: '4px 4px 0 0',
-                      transition: 'height 0.3s ease'
-                    }} 
-                    title={`${item.h}: ${item.v} rejections`} 
-                  />
-                  <div style={{ fontSize: '10px', color: COLORS.dark, marginTop: '6px', whiteSpace: 'nowrap' }}>
-                    {item.h}
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      color: COLORS.redText,
+                      marginBottom: '2px',
+                    }}
+                  >
+                    {item.v}
                   </div>
+                )}
+
+                <div
+                  style={{
+                    width: '70%',
+                    minWidth: '12px',
+                    height: item.v === 0 ? '2px' : `${heightPercent}%`,
+                    backgroundColor: item.v === 0 ? '#e2e8f0' : '#dc2626',
+                    borderRadius: '4px 4px 0 0',
+                  }}
+                  title={`${item.h}: ${item.v} rejections`}
+                />
+
+                <div
+                  style={{
+                    fontSize: '10px',
+                    color: COLORS.dark,
+                    marginTop: '6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.h}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-      </div>
-
-      {/* Info Legend Panel Card */}
-      <div className="animate-fade-in-up" style={{ backgroundColor: COLORS.white, borderRadius: '24px', padding: '24px', border: `1px solid ${COLORS.mintLight}`, animationDelay: '0.3s', opacity: 0 }}>
-        <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>Status Indicators</h3>
-        <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: COLORS.darkMuted }}>How the bin status is determined</p>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-          <div style={{ backgroundColor: COLORS.mintLight, borderRadius: '16px', padding: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: COLORS.sage, marginTop: '4px', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: '600', color: COLORS.dark }}>Normal</div>
-              <div style={{ fontSize: '12px', color: 'rgba(62,95,68,0.7)', marginTop: '2px' }}>0–64% full. Bin is accepting bottles as usual.</div>
-            </div>
-          </div>
-          <div style={{ backgroundColor: COLORS.amberBg, borderRadius: '16px', padding: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#f59e0b', marginTop: '4px', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: '600', color: '#92400e' }}>Warning</div>
-              <div style={{ fontSize: '12px', color: 'rgba(62,95,68,0.7)', marginTop: '2px' }}>65–84% full. Prepare to empty soon.</div>
-            </div>
-          </div>
-          <div style={{ backgroundColor: COLORS.redBg, borderRadius: '16px', padding: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ef4444', marginTop: '4px', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: '600', color: COLORS.redText }}>Full / Critical</div>
-              <div style={{ fontSize: '12px', color: 'rgba(62,95,68,0.7)', marginTop: '2px' }}>85–100% full. Empty bin immediately to keep accepting.</div>
-            </div>
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
-
     </div>
   );
 }

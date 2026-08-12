@@ -43,7 +43,6 @@ const normalizeStudent = (student) => {
     section_id: student.section_id ?? section?.section_id ?? null,
     points_balance: Number(student.points_balance ?? 0),
     points: Number(student.points_balance ?? 0),
-    status: student.status || 'inactive',
     rfid_cards: rfidCards,
     active_rfid_card: activeCard,
   };
@@ -107,6 +106,29 @@ const normalizeSection = (section) => ({
   id: section.section_id ?? section.id,
   section_id: section.section_id ?? section.id,
   name: section.name || section.section_name || 'Unnamed Section',
+});
+
+// Smart Bin presentation model. Fullness is calculated from HC-SR04 distance
+// in the monitoring page; these values are normalized here so the frontend
+// consistently understands the revised backend schema.
+const normalizeSmartBin = (bin) => ({
+  ...bin,
+  id: bin.smart_bin_id ?? bin.machine_id ?? bin.id,
+  smart_bin_id: bin.smart_bin_id ?? bin.machine_id ?? bin.id,
+  name: bin.name || 'Smart Recycling Bin',
+  location: bin.location || 'Unknown location',
+  status: bin.status || 'offline',
+  current_distance_cm: Number(
+    bin.current_distance_cm ?? bin.distance_cm ?? 0
+  ),
+  current_fill_percentage:
+    bin.current_fill_percentage === null || bin.current_fill_percentage === undefined
+      ? null
+      : Number(bin.current_fill_percentage),
+  full_threshold_cm: Number(bin.full_threshold_cm ?? 20),
+  empty_threshold_cm: Number(bin.empty_threshold_cm ?? 80),
+  last_active_at: bin.last_active_at || null,
+  last_maintenance_at: bin.last_maintenance_at || null,
 });
 
 const formatRelativeTime = (dateString) => {
@@ -255,7 +277,7 @@ export const DataProvider = ({ children }) => {
 
   const refreshSmartBins = async () => {
     const res = await api.getSmartBins();
-    setData((prev) => ({ ...prev, smartBins: arrayFrom(res.data) }));
+    setData((prev) => ({ ...prev, smartBins: arrayFrom(res.data).map(normalizeSmartBin) }));
     return res;
   };
 
@@ -301,7 +323,7 @@ export const DataProvider = ({ children }) => {
         notifications: arrayFrom(get(6, [])).map(normalizeNotification),
         settings: normalizeSettings(get(7, {})),
         plasticTypes: arrayFrom(get(8, [])).map(normalizePlasticType),
-        smartBins: arrayFrom(get(9, [])),
+        smartBins: arrayFrom(get(9, [])).map(normalizeSmartBin),
         isLoading: false,
         error: null,
       });

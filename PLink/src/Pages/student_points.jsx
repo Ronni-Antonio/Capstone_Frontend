@@ -20,7 +20,7 @@ export default function StudentPoints() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
-  const [activationError, setActivationError] = useState(null);
+  const [assignmentError, setAssignmentError] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
   const { 
     students, 
@@ -113,16 +113,26 @@ export default function StudentPoints() {
       return 'Inactive';
     };
     
+    // DataContext normalizes Laravel's `rfid_cards` relation into these fields.
+    // Keep the card state separate from the student's account status.
+    const rfidCards = Array.isArray(student?.rfid_cards) ? student.rfid_cards : [];
+    const activeRfidCard = student?.active_rfid_card ||
+      rfidCards.find(card => String(card?.status || '').toLowerCase() === 'active') ||
+      null;
+
     const finalStudent = {
       id: displayId, // use student_number for display in the table
-      actual_student_id: actualStudentId, // keep the actual id for transaction matching
+      actual_student_id: actualStudentId, // keep the actual id for API calls/transaction matching
       name: fullName,
       initials: getInitials(),
-      grade_level: student?.grade_level,
+      grade_level: student?.grade_level || 'N/A',
       section: student?.section || 'No Section',
       bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
       points: student?.points_balance ?? student?.points ?? 0,
-      status: normalizeStatus(student?.status) // normalize status
+      status: normalizeStatus(student?.status),
+      rfid_cards: rfidCards,
+      active_rfid_card: activeRfidCard,
+      has_active_rfid_card: Boolean(activeRfidCard)
     };
     return finalStudent;
   };
@@ -296,17 +306,17 @@ export default function StudentPoints() {
     };
   }, [pollingInterval]);
 
-  // Handle Activate Card button click
-  const handleActivateCard = (student) => {
+  // Handle Assign RFID Card button click
+  const handleAssignCard = (student) => {
     setSelectedStudent(student);
     setScanning(false);
     setScanSuccess(false);
-    setActivationError(null);
+    setAssignmentError(null);
     setShowRfidModal(true);
   };
 
-  // Handle Cancel Activation
-  const handleCancelActivation = async () => {
+  // Handle Cancel RFID Assignment
+  const handleCancelCardAssignment = async () => {
     if (selectedStudent) {
       try {
         await cancelActivation(selectedStudent.actual_student_id);
@@ -322,24 +332,24 @@ export default function StudentPoints() {
     setSelectedStudent(null);
     setScanning(false);
     setScanSuccess(false);
-    setActivationError(null);
+    setAssignmentError(null);
   };
 
-  // Handle Start RFID Scan (waiting for ESP32)
-  const handleStartScan = async () => {
+  // Start RFID assignment: Laravel tells the ESP32 to wait for a card tap
+  const handleStartCardAssignment = async () => {
     if (!selectedStudent) return;
     setScanning(true);
-    setActivationError(null);
+    setAssignmentError(null);
     
     try {
-      // 1. Start activation session on backend
+      // 1. Tell Laravel to put the ESP32 into RFID assignment mode
       await activateStudent(selectedStudent.actual_student_id);
       
-      // 2. Poll for activation status from backend
+      // 2. Poll until Laravel sees the newly assigned RFID card
       const interval = setInterval(async () => {
         try {
           const statusData = await getActivationStatus(selectedStudent.actual_student_id);
-          console.log('Activation status:', statusData);
+          console.log('RFID assignment status:', statusData);
           
           if (statusData.status === 'success') {
             clearInterval(interval);
@@ -355,7 +365,7 @@ export default function StudentPoints() {
             clearInterval(interval);
             setPollingInterval(null);
             setScanning(false);
-            setActivationError(statusData.message || 'Activation failed');
+            setAssignmentError(statusData.message || 'RFID card assignment failed');
           }
         } catch (pollErr) {
           console.error('Polling error:', pollErr);
@@ -365,9 +375,9 @@ export default function StudentPoints() {
       setPollingInterval(interval);
       
     } catch (err) {
-      console.error('Start activation error:', err);
+      console.error('Start RFID assignment error:', err);
       setScanning(false);
-      setActivationError(err.response?.data?.message || err.message || 'Failed to start activation');
+      setAssignmentError(err.response?.data?.message || err.message || 'Failed to start RFID card assignment');
     }
   };
 
@@ -648,7 +658,7 @@ export default function StudentPoints() {
               <th style={th}>Student Name</th>
               <th style={th}>Grade</th>
               <th style={th}>Section</th>
-              <th style={th}>Status</th>
+              <th style={th}>RFID Card</th>
               <th style={th}>Bottles</th>
               <th style={th}>Points</th>
               <th style={th}>Actions</th>
@@ -726,20 +736,46 @@ export default function StudentPoints() {
                   </td>
 
                   <td style={td}>
-                    <span
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '999px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        background: student.status === 'Active' ? COLORS.mint : '#fee2e2',
-                        color: student.status === 'Active' ? COLORS.dark : '#dc2626'
-                      }}
-                    >
-                      {student.status}
-                    </span>
+                    {student.has_active_rfid_card ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            width: 'fit-content',
+                            alignItems: 'center',
+                            background: COLORS.mint,
+                            color: COLORS.dark,
+                            padding: '6px 10px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            fontWeight: '700'
+                          }}
+                        >
+                          <i className="fa-solid fa-circle-check" style={{ marginRight: '6px' }}></i>
+                          Assigned
+                        </span>
+                        <span style={{ fontSize: '11px', color: COLORS.darkMuted }}>
+                          {student.active_rfid_card?.card_uid || 'RFID card linked'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          width: 'fit-content',
+                          background: '#fef3c7',
+                          color: '#92400e',
+                          padding: '6px 10px',
+                          borderRadius: '999px',
+                          fontSize: '12px',
+                          fontWeight: '700'
+                        }}
+                      >
+                        Not Assigned
+                      </span>
+                    )}
                   </td>
-
+                  
                   <td style={td}>{student.bottles}</td>
 
                   <td
@@ -761,15 +797,15 @@ export default function StudentPoints() {
                       <i className="fa-solid fa-pen"></i>
                     </button>
 
-                    {student.status !== 'Active' && (
+                    {!student.has_active_rfid_card && (
                       <button
-                        onClick={() => handleActivateCard(student)}
+                        onClick={() => handleAssignCard(student)}
                         style={{
                           ...actionBtn,
                           background: '#3e5f44',
                           color: '#fff'
                         }}
-                        title="Activate Card"
+                        title="Assign RFID Card"
                       >
                         <i className="fa-solid fa-id-card"></i>
                       </button>
@@ -1172,7 +1208,7 @@ export default function StudentPoints() {
               }}
             >
               <button
-                onClick={() => setShowRfidModal(false)}
+                onClick={handleCancelCardAssignment}
                 style={{
                   border: 'none',
                   background: 'transparent',
@@ -1200,10 +1236,10 @@ export default function StudentPoints() {
               }}
             >
               {scanSuccess 
-                ? 'Card Activated!' 
+                ? 'RFID Card Assigned!' 
                 : scanning 
                   ? 'Waiting for RFID Scan...' 
-                  : 'Activate Student Card'}
+                  : 'Assign RFID Card'}
             </h2>
 
             <p
@@ -1215,10 +1251,10 @@ export default function StudentPoints() {
               }}
             >
               {scanSuccess 
-                ? `${selectedStudent.name}'s card has been activated successfully!` 
+                ? `${selectedStudent.name}'s RFID card has been assigned successfully!` 
                 : scanning 
-                  ? 'The system is waiting for the ESP32 to scan an RFID card...' 
-                  : `Click "Start Scan" to activate ${selectedStudent.name}'s RFID card.`}
+                  ? 'The system is waiting for the ESP32 RFID reader to detect the card...' 
+                  : `Click "Start Card Assignment" to begin assigning ${selectedStudent.name}'s RFID card.`}
             </p>
 
             {selectedStudent && (
@@ -1263,8 +1299,8 @@ export default function StudentPoints() {
               </div>
             )}
 
-            {/* Activation Error Display */}
-            {activationError && (
+            {/* RFID Assignment Error Display */}
+            {assignmentError && (
               <div
                 style={{
                   marginBottom: '16px',
@@ -1276,14 +1312,14 @@ export default function StudentPoints() {
                   textAlign: 'left'
                 }}
               >
-                ❌ {activationError}
+                ❌ {assignmentError}
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '12px' }}>
               {/* Cancel Button */}
               <button
-                onClick={handleCancelActivation}
+                onClick={handleCancelCardAssignment}
                 style={{
                   flex: 1,
                   padding: '14px 20px',
@@ -1301,7 +1337,7 @@ export default function StudentPoints() {
 
               {!scanning && !scanSuccess && (
                 <button
-                  onClick={handleStartScan}
+                  onClick={handleStartCardAssignment}
                   style={{
                     flex: 2,
                     padding: '14px 20px',
@@ -1314,7 +1350,7 @@ export default function StudentPoints() {
                     cursor: 'pointer'
                   }}
                 >
-                  Start Scan
+                  Start Card Assignment
                 </button>
               )}
             </div>
