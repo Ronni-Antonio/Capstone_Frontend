@@ -834,7 +834,11 @@ function RedemptionFlow() {
 /* ===================== MAIN COMPONENT ===================== */
 export default function IncentivesRewards() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { rewards: dashboardRewards } = useData();
+  const { rewards: dashboardRewards, refreshRewards, refreshRedemptions, refreshStudents } = useData();
+
+  useEffect(() => {
+    Promise.allSettled([refreshRewards(), refreshRedemptions(), refreshStudents()]);
+  }, []);
 
   const totalRewards = dashboardRewards.length;
   const totalStock = dashboardRewards.reduce((sum, reward) => sum + reward.stock, 0);

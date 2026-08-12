@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
@@ -22,7 +22,11 @@ const reports = [
 ];
 
 export default function Reports() {
-  const { students, transactions } = useData();
+  const { students, transactions, refreshStudents, refreshTransactions } = useData();
+
+  useEffect(() => {
+    Promise.allSettled([refreshStudents(), refreshTransactions()]);
+  }, []);
 
   // Calculate total bottles
   const totalBottles = transactions.reduce((sum, tx) => {

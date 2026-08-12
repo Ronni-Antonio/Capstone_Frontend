@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import Login from './Pages/Login.jsx';
 
 import { Sidebar } from './Pages/sidebar.jsx';
 import { Header } from './Pages/header.jsx';
 
-import Dashboard from './Pages/Dashboard.jsx';
-import Reports from './Pages/Reports.jsx';
-import StudentPoints from './Pages/student_points.jsx';
-import SectionsRanking from './Pages/sections_ranking.jsx';
-import IncentivesRewards from './Pages/incentives_rewards.jsx';
-import Profile from './Pages/profile.jsx';
 
-import { MachineMonitoring } from './Pages/machine_monitoring.jsx';
-import { Notifications } from './Pages/notifications.jsx';
-import { Settings } from './Pages/Settings.jsx';
 
 import { DataProvider, useData } from './context/DataContext.jsx';
+
+
+const Dashboard = lazy(() => import('./Pages/Dashboard.jsx'));
+const Reports = lazy(() => import('./Pages/Reports.jsx'));
+const StudentPoints = lazy(() => import('./Pages/student_points.jsx'));
+const SectionsRanking = lazy(() => import('./Pages/sections_ranking.jsx'));
+const IncentivesRewards = lazy(() => import('./Pages/incentives_rewards.jsx'));
+const Profile = lazy(() => import('./Pages/profile.jsx'));
+const MachineMonitoring = lazy(() => import('./Pages/machine_monitoring.jsx').then((m) => ({ default: m.MachineMonitoring })));
+const Notifications = lazy(() => import('./Pages/notifications.jsx').then((m) => ({ default: m.Notifications })));
+const Settings = lazy(() => import('./Pages/Settings.jsx').then((m) => ({ default: m.Settings })));
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -190,7 +192,9 @@ function App() {
           />
 
           <div className="flex-1 mt-4">
-            {renderPageContent()}
+            <Suspense fallback={<div className="p-8 text-[#3e5f44]/70">Loading page...</div>}>
+              {renderPageContent()}
+            </Suspense>
           </div>
         </div>
       </>

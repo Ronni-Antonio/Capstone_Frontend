@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 
 const badges = ['Eco Champion', 'Rising Star', 'Green Warriors', 'Steady Recyclers', 'On the Rise'];
 
 export default function SectionsRanking() {
-  const { students, transactions, sectionsRanking } = useData();
+  const { students, transactions, sectionsRanking, refreshSectionsRanking } = useData();
+
+  useEffect(() => {
+    refreshSectionsRanking().catch((error) => console.error('Unable to load section ranking:', error));
+  }, []);
   
   // Calculate ranking from students/transactions if API ranking is empty
   const sectionsData = useMemo(() => {

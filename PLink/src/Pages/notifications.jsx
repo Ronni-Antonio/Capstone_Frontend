@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 
 // Fallback notifications if API not implemented
@@ -124,8 +124,13 @@ export function Notifications({ onNavigate }) {
     notifications, 
     markNotificationRead, 
     markAllNotificationsRead, 
-    deleteNotification 
+    deleteNotification,
+    refreshNotifications
   } = useData();
+
+  useEffect(() => {
+    refreshNotifications().catch((error) => console.error('Unable to load notifications:', error));
+  }, []);
   
   // Use API notifications or fallback
   const items = useMemo(() => {

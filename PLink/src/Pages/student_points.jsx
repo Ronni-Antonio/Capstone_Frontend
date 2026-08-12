@@ -27,12 +27,17 @@ export default function StudentPoints() {
     transactions, 
     sections: sectionsList,
     refreshStudents,
+    refreshSections,
     addStudent: addStudentToContext,
     activateStudent,
     getActivationStatus,
     cancelActivation
   } = useData();
   
+  useEffect(() => {
+    Promise.allSettled([refreshStudents(), refreshSections()]);
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,18 +69,14 @@ export default function StudentPoints() {
   const [addStudentSuccess, setAddStudentSuccess] = useState(null);
 
   // Calculate total bottles per student from transactions
-  const getTotalBottlesForStudent = (actualStudentId) => {
-    // Ensure transactions is always an array
+  const getTotalBottlesForStudent = (actualStudentId, studentRecord = null) => {
+    if (studentRecord?.total_items_recycled !== undefined && studentRecord?.total_items_recycled !== null) {
+      return Number(studentRecord.total_items_recycled) || 0;
+    }
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    
-    const matchingTransactions = safeTransactions.filter(tx => tx && tx.student_id === actualStudentId);
-    
-    const total = matchingTransactions.reduce((total, tx) => {
-      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-      return total + bottles;
-    }, 0);
-  
-    return total;
+    return safeTransactions
+      .filter((tx) => tx && tx.student_id === actualStudentId)
+      .reduce((total, tx) => total + Number(tx.total_items || tx.bottle_qty || 0), 0);
   };
 
   // Helper to safely get student data with defaults
@@ -103,7 +104,7 @@ export default function StudentPoints() {
     const actualStudentId = student?.id || student?.student_id || 0;
     const displayId = student?.student_number || student?.id || 'N/A';
     
-    const totalFromTransactions = getTotalBottlesForStudent(actualStudentId);
+    const totalFromTransactions = getTotalBottlesForStudent(actualStudentId, student);
     
     // Normalize status to Title Case (e.g., "active" → "Active")
     const normalizeStatus = (status) => {
@@ -659,6 +660,7 @@ export default function StudentPoints() {
               <th style={th}>Grade</th>
               <th style={th}>Section</th>
               <th style={th}>RFID Card</th>
+              <th style={th}>Status</th>
               <th style={th}>Bottles</th>
               <th style={th}>Points</th>
               <th style={th}>Actions</th>
@@ -775,7 +777,22 @@ export default function StudentPoints() {
                       </span>
                     )}
                   </td>
-                  
+
+                  <td style={td}>
+                    <span
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        background: student.status === 'Active' ? COLORS.mint : '#fee2e2',
+                        color: student.status === 'Active' ? COLORS.dark : '#dc2626'
+                      }}
+                    >
+                      {student.status}
+                    </span>
+                  </td>
+
                   <td style={td}>{student.bottles}</td>
 
                   <td
@@ -815,7 +832,7 @@ export default function StudentPoints() {
               ))
             ) : (
               <tr>
-                <td colSpan="7" style={{ ...td, textAlign: 'center' }}>
+                <td colSpan="8" style={{ ...td, textAlign: 'center' }}>
                   No students found
                 </td>
               </tr>

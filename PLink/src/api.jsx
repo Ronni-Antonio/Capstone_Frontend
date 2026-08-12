@@ -8,12 +8,33 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('ACCESS_TOKEN');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.metadata = { startTime: performance.now() };
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => {
+    if (import.meta.env.DEV && response.config?.metadata?.startTime) {
+      const ms = performance.now() - response.config.metadata.startTime;
+      console.debug(`[API] ${response.config.method?.toUpperCase()} ${response.config.url} ${ms.toFixed(0)}ms`);
+    }
+    return response;
+  },
+  (error) => {
+    if (import.meta.env.DEV && error.config?.metadata?.startTime) {
+      const ms = performance.now() - error.config.metadata.startTime;
+      console.debug(`[API] ${error.config.method?.toUpperCase()} ${error.config.url} failed after ${ms.toFixed(0)}ms`);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Authentication
 api.login = (data) => api.post('/auth/login', data);
 api.logout = () => api.post('/auth/logout');
+
+// Dashboard
+api.getDashboard = () => api.get('/dashboard');
 
 // Students / RFID
 api.getStudents = () => api.get('/students');
@@ -35,7 +56,7 @@ api.importStudentsCsv = (file) => {
 };
 
 // Recycling transactions
-api.getTransactions = () => api.get('/transactions');
+api.getTransactions = () => api.get('/transactions', { params: { summary: 1 } });
 api.getTransaction = (id) => api.get(`/transactions/${id}`);
 api.deleteTransaction = (id) => api.delete(`/transactions/${id}`);
 api.startIoTTransaction = (smartBinId) =>

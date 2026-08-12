@@ -108,7 +108,6 @@ const stateStyles = {
 
 export function MachineMonitoring() {
   const {
-    transactions,
     smartBins,
     refreshSmartBins,
   } = useData();
@@ -193,24 +192,12 @@ export function MachineMonitoring() {
     };
   }, [smartBin]);
 
-  const todayTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (!tx.transaction_date) return false;
-      const date = new Date(tx.transaction_date);
-      const now = new Date();
-      return date.toDateString() === now.toDateString();
-    });
-  }, [transactions]);
-
-  const acceptedToday = todayTransactions.reduce(
-    (sum, tx) => sum + Number(tx.valid_qty || 0),
-    0
-  );
-
-  const rejectedToday = todayTransactions.reduce(
-    (sum, tx) => sum + Number(tx.rejected_qty || 0),
-    0
-  );
+  // Today's bottle classification statistics are supplied by /api/machines.
+  // The backend derives them from recycling_items.status so Machine Monitoring
+  // does not need to download the complete recycling transaction history.
+  const todayStats = smartBin?.today_stats || {};
+  const acceptedToday = Number(todayStats.accepted || 0);
+  const rejectedToday = Number(todayStats.rejected || 0);
 
   const binState = getBinState(
     smartBin,
@@ -221,21 +208,24 @@ export function MachineMonitoring() {
 
   const styles = stateStyles[binState.key] || stateStyles.unknown;
 
+  const hourlyRejectedMap = useMemo(() => {
+    const rows = Array.isArray(smartBin?.rejected_by_hour)
+      ? smartBin.rejected_by_hour
+      : [];
+
+    return new Map(
+      rows.map((row) => [Number(row.hour), Number(row.count || 0)])
+    );
+  }, [smartBin]);
+
   const rejectedByHour = Array.from({ length: 11 }, (_, index) => {
     const hour = index + 7;
-
-    const count = todayTransactions.reduce((sum, tx) => {
-      const date = tx.transaction_date ? new Date(tx.transaction_date) : null;
-      if (!date || date.getHours() !== hour) return sum;
-      return sum + Number(tx.rejected_qty || 0);
-    }, 0);
-
     const suffix = hour >= 12 ? 'pm' : 'am';
     const displayHour = hour > 12 ? hour - 12 : hour;
 
     return {
       h: `${displayHour}${suffix}`,
-      v: count,
+      v: hourlyRejectedMap.get(hour) || 0,
     };
   });
 
@@ -244,12 +234,13 @@ export function MachineMonitoring() {
     1
   );
 
+  const classifiedToday = acceptedToday + rejectedToday;
   const acceptanceRate =
-    acceptedToday + rejectedToday > 0
-      ? Math.round(
-          (acceptedToday / (acceptedToday + rejectedToday)) * 100
-        )
-      : 100;
+    todayStats.acceptance_rate !== undefined && todayStats.acceptance_rate !== null
+      ? Math.round(Number(todayStats.acceptance_rate))
+      : classifiedToday > 0
+        ? Math.round((acceptedToday / classifiedToday) * 100)
+        : 0;
 
   const circleDashOffset = 100 - sensor.fullness;
 
@@ -793,7 +784,7 @@ export function MachineMonitoring() {
                 color: COLORS.darkMuted,
               }}
             >
-            
+              The dashboard uses distance, not weight, to determine bin fullness.
             </p>
           </div>
 

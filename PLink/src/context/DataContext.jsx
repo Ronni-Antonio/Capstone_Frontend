@@ -43,6 +43,7 @@ const normalizeStudent = (student) => {
     section_id: student.section_id ?? section?.section_id ?? null,
     points_balance: Number(student.points_balance ?? 0),
     points: Number(student.points_balance ?? 0),
+    status: student.status || 'inactive',
     rfid_cards: rfidCards,
     active_rfid_card: activeCard,
   };
@@ -207,9 +208,16 @@ export const DataProvider = ({ children }) => {
     settings: {},
     plasticTypes: [],
     smartBins: [],
+    dashboard: null,
     isLoading: true,
     error: null,
   });
+
+  const refreshDashboard = async () => {
+    const res = await api.getDashboard();
+    setData((prev) => ({ ...prev, dashboard: res.data }));
+    return res;
+  };
 
   const refreshStudents = async () => {
     const res = await api.getStudents();
@@ -284,52 +292,18 @@ export const DataProvider = ({ children }) => {
   const refreshData = async () => {
     setData((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const results = await Promise.allSettled([
-        api.getStudents(),
-        api.getTransactions(),
-        api.getRewards(),
-        api.getRedemptions(),
-        api.getSectionsList(),
-        api.getSectionsRanking(),
-        api.getNotifications(),
-        api.getSettings(),
-        api.getPlasticTypes(),
-        api.getSmartBins(),
-      ]);
-
-      const get = (i, fallback) => results[i].status === 'fulfilled' ? results[i].value.data : fallback;
-      const students = arrayFrom(get(0, [])).map(normalizeStudent);
-      const rewards = arrayFrom(get(2, [])).map(normalizeReward);
-      const sections = arrayFrom(get(4, [])).map(normalizeSection);
-      const transactions = arrayFrom(get(1, [])).map(normalizeTransaction);
-      const redemptions = arrayFrom(get(3, [])).map((r) => normalizeRedemption(r, students, rewards));
-      const rankingRaw = get(5, []);
-      const sectionsRanking = arrayFrom(rankingRaw).map((s) => ({
-        ...s,
-        name: s.section_name || s.name,
-        students: Number(s.student_count ?? s.students ?? 0),
-        bottles: Number(s.total_bottles ?? s.bottles ?? 0),
-        points: Number(s.total_points ?? s.points ?? 0),
-        rank: s.points_rank || s.rank,
-      }));
-
-      setData({
-        students,
-        transactions,
-        rewards,
-        redemptions,
-        sections,
-        sectionsRanking,
-        notifications: arrayFrom(get(6, [])).map(normalizeNotification),
-        settings: normalizeSettings(get(7, {})),
-        plasticTypes: arrayFrom(get(8, [])).map(normalizePlasticType),
-        smartBins: arrayFrom(get(9, [])).map(normalizeSmartBin),
+      // Only the lightweight dashboard payload blocks the first render.
+      // Every other page fetches its own data when the admin opens that page.
+      const res = await api.getDashboard();
+      setData((prev) => ({
+        ...prev,
+        dashboard: res.data,
         isLoading: false,
         error: null,
-      });
+      }));
     } catch (error) {
-      console.error('Error loading application data:', error);
-      setData((prev) => ({ ...prev, isLoading: false, error }));
+      console.error('Error loading dashboard data:', error);
+      setData((prev) => ({ ...prev, isLoading: false, error: error?.message || 'Failed to load dashboard' }));
     }
   };
 
@@ -385,6 +359,7 @@ export const DataProvider = ({ children }) => {
     <DataContext.Provider value={{
       ...data,
       refreshData,
+      refreshDashboard,
       refreshStudents,
       refreshTransactions,
       refreshRewards,

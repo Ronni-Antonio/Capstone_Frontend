@@ -25,12 +25,17 @@ export function Settings() {
     plasticTypes,
     refreshSections,
     refreshPlasticTypes,
+    refreshSettings,
     updateSettings: updateSettingsInContext,
     addSection: addSectionToContext,
     updateSection: updateSectionInContext,
     removeSection: removeSectionFromContext
   } = useData();
   
+  useEffect(() => {
+    Promise.allSettled([refreshSettings(), refreshPlasticTypes(), refreshSections()]);
+  }, []);
+
   // Safe default matching your exact database records layout
   const [schoolInfo, setSchoolInfo] = useState({
     name: 'PLP',

@@ -20,189 +20,119 @@ const COLORS = {
 };
 
 export default function Dashboard() {
-  const { students, transactions, smartBins } = useData();
+  const { dashboard } = useData();
 
-  // Process transactions to get daily bottle counts
-  const getDailyData = () => {
-    const dailyStats = {};
-    
-    transactions.forEach(tx => {
-      // Extract date from transaction
-      let dateStr = 'Unknown';
-      if (tx.created_at) {
-        const date = new Date(tx.created_at);
-        dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      } else if (tx.date) {
-        const date = new Date(tx.date);
-        dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }
-      
-      if (!dailyStats[dateStr]) {
-        dailyStats[dateStr] = { bottles: 0, points: 0 };
-      }
-      
-      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-      dailyStats[dateStr].bottles += bottles;
-      dailyStats[dateStr].points += Number(tx.total_points || tx.points_earned || 0);
-    });
-    
-    // Convert to array and sort by date
-    const sortedDates = Object.entries(dailyStats).map(([date, data]) => ({
-      date,
-      ...data
-    }));
-    
-    // Keep the chart honest: no synthetic activity when there is no data.
-    if (sortedDates.length === 0) return [];
+  const summary = dashboard?.summary || {};
+  const dailyData = (dashboard?.daily_recycling || []).map((row) => ({
+    date: row.date
+      ? new Date(`${row.date}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : 'Unknown',
+    bottles: Number(row.items || 0),
+    points: Number(row.points || 0),
+  }));
 
-    // Limit to last 7 days
-    return sortedDates.slice(-7);
-  };
-
-  const dailyData = getDailyData();
-
-  // Calculate SVG points for graph
-  const graphMaxBottles = Math.max(...dailyData.map(d => d.bottles), 1);
-  const graphMaxPoints = Math.max(...dailyData.map(d => d.points), 1);
+  const graphMaxBottles = Math.max(...dailyData.map((d) => d.bottles), 1);
+  const graphMaxPoints = Math.max(...dailyData.map((d) => d.points), 1);
   const step = 510 / (dailyData.length - 1 || 1);
-  
+
   const bottlesPoints = dailyData.map((d, i) => {
     const x = 60 + i * step;
     const y = 200 - (d.bottles / graphMaxBottles) * 150;
     return `${x},${y}`;
   }).join(' ');
-  
+
   const pointsPoints = dailyData.map((d, i) => {
     const x = 60 + i * step;
     const y = 200 - (d.points / graphMaxPoints) * 150;
     return `${x},${y}`;
   }).join(' ');
 
-  // Calculate total bottles
-  const totalBottles = transactions.reduce((sum, tx) => {
-    const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-    return sum + bottles;
-  }, 0);
+  const totalBottles = Number(summary.total_items || 0);
+  const totalPoints = Number(summary.total_points || 0);
+  const grade3Participants = Number(summary.grade_3_participants || 0);
+  const activeStudents = Number(summary.active_students || 0);
+  const inactiveStudents = Number(summary.inactive_students || 0);
+  const totalStudents = Number(summary.total_students || (activeStudents + inactiveStudents) || 0);
 
-  // Use the actual smart-bin weight/capacity reported by Laravel.
-  const primaryBin = smartBins[0];
-  const binFullness = primaryBin?.max_capacity_kg > 0
-    ? Math.min(Math.round((Number(primaryBin.current_weight_kg || 0) / Number(primaryBin.max_capacity_kg)) * 100), 100)
-    : 0;
-
-  // Calculate total points earned
-  const totalPoints = students.reduce((sum, student) => {
-    return sum + (student.points_balance || student.points || 0);
-  }, 0);
-
-  // Calculate grade 3 participants
-  const grade3Participants = students.filter((student) =>
-    String(student.grade_level || '').toLowerCase() === 'grade 3'
-  ).length;
-
-  // Calculate active vs inactive students
-  const activeStudents = students.filter(student => 
-    (student.status || 'Inactive').toLowerCase() === 'active'
-  ).length;
-  const inactiveStudents = students.length - activeStudents;
-
-  // Generate conic gradient for participation chart
+  // Dashboard is intentionally lightweight after login, so do not depend on the
+  // globally-loaded students/transactions arrays here. Build the participation
+  // chart directly from the dashboard summary returned by Laravel.
   const generateParticipationGradient = () => {
-    if (students.length === 0) {
-      return 'conic-gradient(#e6f2d4 0deg 360deg)';
-    }
-    const activeDeg = (activeStudents / students.length) * 360;
-    return `conic-gradient(#3e5f44 0deg ${activeDeg}deg,#8bc37a ${activeDeg}deg 360deg)`;
+    if (totalStudents <= 0) return '#eef5e9';
+    const activePct = Math.max(0, Math.min(100, (activeStudents / totalStudents) * 100));
+    return `conic-gradient(${COLORS.dark} 0% ${activePct}%, #8bc37a ${activePct}% 100%)`;
   };
 
-  // Calculate top section
-  const sectionStats = {};
-  students.forEach(student => {
-    const section = student.section || 'Unknown';
-    if (!sectionStats[section]) {
-      sectionStats[section] = { bottles: 0, points: 0 };
-    }
-    sectionStats[section].points += student.points_balance || student.points || 0;
-  });
-  transactions.forEach(tx => {
-    const student = students.find(s => 
-      (s.id || s.student_id) === (tx.student_id || tx.id)
-    );
-    if (student) {
-      const section = student.section || 'Unknown';
-      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-      sectionStats[section].bottles += bottles;
-    }
-  });
+  const primaryBin = dashboard?.smart_bin || null;
+  const emptyDistance = Number(primaryBin?.empty_threshold_cm ?? 80);
+  const fullDistance = Number(primaryBin?.full_threshold_cm ?? 20);
+  const currentDistance = Number(primaryBin?.current_distance_cm ?? emptyDistance);
+  const range = emptyDistance - fullDistance;
+  const calculatedFill = range > 0
+    ? ((emptyDistance - currentDistance) / range) * 100
+    : Number(primaryBin?.current_fill_percentage || 0);
+  const binFullness = Math.max(0, Math.min(100, Math.round(calculatedFill)));
 
-  let topSection = null;
-  let maxBottles = 0;
-  Object.entries(sectionStats).forEach(([section, stats]) => {
-    if (stats.bottles > maxBottles) {
-      maxBottles = stats.bottles;
-      topSection = { name: section, bottles: stats.bottles, points: stats.points };
-    }
-  });
+  const topSection = dashboard?.top_section
+    ? {
+        name: dashboard.top_section.name,
+        bottles: Number(dashboard.top_section.total_items || 0),
+        points: Number(dashboard.top_section.total_points || 0),
+      }
+    : null;
 
-  // Generate recent activities from transactions
-  const activities = transactions.slice(0, 5).map(tx => {
-    const student = students.find(s => 
-      (s.id || s.student_id) === (tx.student_id || tx.id)
-    );
-    const name = student ? 
-      [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Unknown Student' : 
-      'Unknown Student';
-    
-    const initials = student ? 
-      (student.initials || 
-        (student.first_name && student.last_name ? 
-          `${student.first_name[0]}${student.last_name[0]}`.toUpperCase() : 
-          name[0].toUpperCase())) : 
-      'UN';
-    
-    const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-    
-    // Get point conversion from settings or use default
-    const pointConversion = 5; // Default if not available
-    const points = bottles * pointConversion;
+  // The optimized dashboard endpoint currently returns the top section only.
+  // Use it for the section chart until a full `section_stats` payload is added.
+  // This keeps the first dashboard request small and prevents runtime errors.
+  const sectionStats = Array.isArray(dashboard?.section_stats)
+    ? Object.fromEntries(
+        dashboard.section_stats.map((row) => [
+          row.name || 'Unknown Section',
+          {
+            bottles: Number(row.total_items || 0),
+            points: Number(row.total_points || 0),
+          },
+        ])
+      )
+    : topSection
+      ? {
+          [topSection.name || 'Top Section']: {
+            bottles: topSection.bottles,
+            points: topSection.points,
+          },
+        }
+      : {};
 
+  const maxBottles = Math.max(
+    ...Object.values(sectionStats).map((stats) => Number(stats.bottles || 0)),
+    1
+  );
+
+  const activities = (dashboard?.recent_activity || []).map((tx) => {
+    const name = tx.student_name || 'Unknown Student';
+    const parts = name.split(' ').filter(Boolean);
+    const initials = parts.length > 1
+      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      : (parts[0]?.[0] || 'U').toUpperCase();
+    const bottles = Number(tx.total_items || 0);
+    const points = Number(tx.total_points || 0);
     return {
       initials,
       name,
       action: `recycled ${bottles} bottle${bottles !== 1 ? 's' : ''}`,
-      points: `+${points} pts`
+      points: `+${points} pts`,
     };
   });
 
   const stats = [
-    {
-      title: 'Bottles Collected',
-      value: totalBottles.toLocaleString(),
-      change: '+0%'
-    },
-    {
-      title: 'Points Earned',
-      value: totalPoints.toLocaleString(),
-      change: '+0%'
-    },
-    {
-      title: 'Bin Fullness',
-      value: `${binFullness}%`,
-      change: binFullness === 0 ? '0%' : '+2%'
-    },
-    {
-      title: 'Grade 3 Participants',
-      value: grade3Participants.toString(),
-      change: '+0%'
-    }
+    { title: 'Bottles Collected', value: totalBottles.toLocaleString(), change: '+0%' },
+    { title: 'Points Earned', value: totalPoints.toLocaleString(), change: '+0%' },
+    { title: 'Bin Fullness', value: `${binFullness}%`, change: binFullness === 0 ? '0%' : '+2%' },
+    { title: 'Grade 3 Participants', value: grade3Participants.toString(), change: '+0%' },
   ];
 
   const alerts = [
-    {
-      title: 'Welcome',
-      desc: 'Dashboard is using real data',
-      type: 'warning'
-    }
+    { title: 'Welcome', desc: 'Dashboard is using optimized live data', type: 'warning' },
   ];
 
   return (
@@ -520,7 +450,7 @@ export default function Dashboard() {
                 }}
               >
                 <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.dark }}>
-                  {students.length}
+                  {totalStudents}
                 </div>
                 <div style={{ fontSize: '12px', color: COLORS.darkMuted }}>
                   Total
