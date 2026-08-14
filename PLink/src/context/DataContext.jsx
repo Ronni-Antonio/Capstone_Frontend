@@ -87,6 +87,9 @@ const normalizeReward = (reward) => ({
   points: Number(reward.points_cost ?? 0),
   stock: Number(reward.stock_quantity ?? 0),
   status: reward.is_active === false ? 'Inactive' : 'Active',
+  /* PRICE ADD START - preserve price field through normalization so inventory tab can use it */
+  price: reward.price !== undefined && reward.price !== null ? Number(reward.price) : null,
+  /* PRICE ADD END */
 });
 
 const normalizePlasticType = (item) => ({
@@ -201,6 +204,9 @@ export const DataProvider = ({ children }) => {
     students: [],
     transactions: [],
     rewards: [],
+    /* INVENTORY TAB START - dedicated inventory list fed from /rewards/inventory */
+    inventory: [],
+    /* INVENTORY TAB END */
     redemptions: [],
     sections: [],
     sectionsRanking: [],
@@ -236,6 +242,30 @@ export const DataProvider = ({ children }) => {
     setData((prev) => ({ ...prev, rewards: arrayFrom(res.data).map(normalizeReward) }));
     return res;
   };
+
+  /* INVENTORY TAB START - refreshInventory calls /rewards/inventory and normalizes numbers for UI */
+  const refreshInventory = async () => {
+    const res = await api.getInventory();
+    const rows = arrayFrom(res.data).map((item) => ({
+      ...item,
+      id: item.reward_id ?? item.id,
+      reward_id: item.reward_id ?? item.id,
+      name: item.reward_name || item.name || 'Unnamed Item',
+      item_price: Number(item.item_price ?? item.price ?? 0),
+      purchased_item: Number(item.purchased_item ?? item.purchased_item_count ?? item.purchased_count ?? 0),
+      date_purchased: item.date_purchased ?? item.created_at ?? null,
+      remaining_stocks: Number(item.remaining_stocks ?? item.stock_quantity ?? item.stock ?? 0),
+      total_stocks_on_hand: Number(item.total_stocks_on_hand ?? item.total_stocks ?? 0),
+      total_price: Number(item.total_price ?? (
+        (Number(item.total_stocks_on_hand ?? item.total_stocks ?? 0)) *
+        (Number(item.item_price ?? item.price ?? 0))
+      )),
+      variance: Number(item.variance ?? 0),
+    }));
+    setData((prev) => ({ ...prev, inventory: rows }));
+    return res;
+  };
+  /* INVENTORY TAB END */
 
   const refreshRedemptions = async () => {
     const res = await api.getRedemptions();
@@ -363,6 +393,9 @@ export const DataProvider = ({ children }) => {
       refreshStudents,
       refreshTransactions,
       refreshRewards,
+      /* INVENTORY TAB START - expose inventory data + refresh fn to pages */
+      refreshInventory,
+      /* INVENTORY TAB END */
       refreshRedemptions,
       refreshSections,
       refreshSectionsRanking,

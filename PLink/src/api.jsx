@@ -79,6 +79,9 @@ api.getRewards = () => api.get('/rewards');
 api.addReward = (data) => api.post('/rewards', data);
 api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
+/* INVENTORY TAB START - new dedicated inventory endpoint for purchase tracking + columns */
+api.getInventory = () => api.get('/rewards/inventory');
+/* INVENTORY TAB END */
 
 // Settings
 api.getSettings = () => api.get('/settings');

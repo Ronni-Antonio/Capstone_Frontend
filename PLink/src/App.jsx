@@ -18,6 +18,7 @@ const Profile = lazy(() => import('./Pages/profile.jsx'));
 const MachineMonitoring = lazy(() => import('./Pages/machine_monitoring.jsx').then((m) => ({ default: m.MachineMonitoring })));
 const Notifications = lazy(() => import('./Pages/notifications.jsx').then((m) => ({ default: m.Notifications })));
 const Settings = lazy(() => import('./Pages/Settings.jsx').then((m) => ({ default: m.Settings })));
+const Logs = lazy(() => import('./Pages/Logs.jsx').then((m) => ({ default: m.Logs })));
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -87,6 +88,9 @@ function App() {
 
       case 'settings':
         return <Settings />;
+
+      case 'logs':
+        return <Logs />;
 
       default:
         return (
