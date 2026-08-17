@@ -128,7 +128,7 @@ export default function Dashboard() {
     { title: 'Bottles Collected', value: totalBottles.toLocaleString(), change: '+0%' },
     { title: 'Points Earned', value: totalPoints.toLocaleString(), change: '+0%' },
     { title: 'Bin Fullness', value: `${binFullness}%`, change: binFullness === 0 ? '0%' : '+2%' },
-    { title: 'Grade 3 Participants', value: grade3Participants.toString(), change: '+0%' },
+    { title: 'Student Participants', value: grade3Participants.toString(), change: '+0%' },
   ];
 
   // New dashboard sections.
