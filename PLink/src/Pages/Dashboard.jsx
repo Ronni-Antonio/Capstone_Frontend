@@ -131,6 +131,67 @@ export default function Dashboard() {
     { title: 'Grade 3 Participants', value: grade3Participants.toString(), change: '+0%' },
   ];
 
+  // New dashboard sections.
+  // These read optional fields from the dashboard API. The backend can provide
+  // dashboard.waste_categories, dashboard.user_ranking, and dashboard.reward_history
+  // later without requiring another frontend rewrite.
+  const wasteCategories = Array.isArray(dashboard?.waste_categories)
+    ? dashboard.waste_categories
+    : [];
+
+  const userRanking = Array.isArray(dashboard?.user_ranking)
+    ? dashboard.user_ranking
+    : Array.isArray(dashboard?.top_users)
+      ? dashboard.top_users
+      : [];
+
+  const rewardHistory = Array.isArray(dashboard?.reward_history)
+    ? dashboard.reward_history
+    : [];
+
+  const categoryTotal = wasteCategories.reduce(
+    (sum, item) => sum + Number(item.total_items || item.quantity || item.count || 0),
+    0
+  );
+
+  const categoryColors = ['#3e5f44', '#8bc37a', '#92c283', '#dcefd1', '#a8d5ba'];
+
+  const getCategoryName = (item) =>
+    item.category || item.name || item.type || 'Unknown';
+
+  const getCategoryValue = (item) =>
+    Number(item.total_items || item.quantity || item.count || 0);
+
+  const getRankingName = (item) =>
+    item.student_name || item.name || item.fullname || item.student || 'Unknown Student';
+
+  const getRankingPoints = (item) =>
+    Number(item.total_points || item.points || 0);
+
+  const getRankingBottles = (item) =>
+    Number(item.total_items || item.bottles || item.items || 0);
+
+  const getRewardName = (item) =>
+    item.reward_name || item.name || item.reward || 'Unknown Reward';
+
+  const getRewardStudent = (item) =>
+    item.student_name || item.student || item.user_name || 'Unknown Student';
+
+  const getRewardPoints = (item) =>
+    Number(item.points || item.points_used || item.cost || 0);
+
+  const getRewardDate = (item) =>
+    item.redeemed_at || item.date || item.created_at || '—';
+
+  const trendBottles = dailyData.slice(-7);
+  const trendTotal = trendBottles.reduce((sum, item) => sum + item.bottles, 0);
+  const trendAverage = trendBottles.length
+    ? Math.round(trendTotal / trendBottles.length)
+    : 0;
+  const trendBestDay = trendBottles.length
+    ? trendBottles.reduce((best, item) => item.bottles > best.bottles ? item : best, trendBottles[0])
+    : null;
+
   const alerts = [
     { title: 'Welcome', desc: 'Dashboard is using optimized live data', type: 'warning' },
   ];
@@ -158,6 +219,12 @@ export default function Dashboard() {
 
         .fade-up{
           animation:fadeInUp .5s ease forwards;
+        }
+
+        @media (max-width: 900px){
+          .dashboard-two-column{
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
 
@@ -226,6 +293,205 @@ export default function Dashboard() {
             </h2>
           </div>
         ))}
+      </div>
+
+      {/* Daily Waste Collection Report + Waste Category Statistics */}
+      <div
+        className="fade-up"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 1fr',
+          gap: '20px'
+        }}
+      >
+        {/* Daily Waste Collection Report */}
+        <div
+          style={{
+            background: COLORS.white,
+            borderRadius: '24px',
+            padding: '24px',
+            border: `1px solid ${COLORS.mintLight}`,
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '18px',
+              gap: '12px'
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0, color: COLORS.dark }}>
+                Daily Waste Collection Report
+              </h3>
+              <div style={{ fontSize: '12px', color: COLORS.darkMuted, marginTop: '5px' }}>
+                Daily recycling collection and points generated
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '6px 10px',
+                borderRadius: '999px',
+                background: COLORS.limeLight,
+                color: COLORS.dark,
+                fontSize: '11px',
+                fontWeight: '700',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {dailyData.length} day{dailyData.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {dailyData.length > 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  minWidth: '480px'
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${COLORS.mintLight}` }}>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Date
+                    </th>
+                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Bottles Collected
+                    </th>
+                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Points Earned
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyData.slice(-7).reverse().map((item, index) => (
+                    <tr
+                      key={`${item.date}-${index}`}
+                      style={{ borderBottom: '1px solid rgba(0,0,0,.04)' }}
+                    >
+                      <td style={{ padding: '12px 8px', color: COLORS.dark, fontSize: '13px', fontWeight: '600' }}>
+                        {item.date}
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', color: COLORS.sage, fontSize: '13px', fontWeight: '700' }}>
+                        {item.bottles.toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', color: COLORS.dark, fontSize: '13px', fontWeight: '700' }}>
+                        {item.points.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: COLORS.darkMuted,
+                fontSize: '13px'
+              }}
+            >
+              No daily waste collection data available yet.
+            </div>
+          )}
+        </div>
+
+        {/* Waste Category Statistics */}
+        <div
+          style={{
+            background: COLORS.white,
+            borderRadius: '24px',
+            padding: '24px',
+            border: `1px solid ${COLORS.mintLight}`
+          }}
+        >
+          <h3 style={{ margin: 0, color: COLORS.dark }}>
+            Waste Category Statistics
+          </h3>
+          <div style={{ fontSize: '12px', color: COLORS.darkMuted, marginTop: '5px', marginBottom: '20px' }}>
+            Collected waste by category
+          </div>
+
+          {wasteCategories.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {wasteCategories.map((item, index) => {
+                const value = getCategoryValue(item);
+                const percentage = categoryTotal > 0
+                  ? Math.round((value / categoryTotal) * 100)
+                  : 0;
+
+                return (
+                  <div key={`${getCategoryName(item)}-${index}`}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            width: '9px',
+                            height: '9px',
+                            borderRadius: '50%',
+                            background: categoryColors[index % categoryColors.length],
+                            display: 'inline-block'
+                          }}
+                        />
+                        <span style={{ fontSize: '12px', color: COLORS.dark, fontWeight: '600' }}>
+                          {getCategoryName(item)}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '12px', color: COLORS.darkMuted, fontWeight: '700' }}>
+                        {value.toLocaleString()} ({percentage}%)
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        height: '8px',
+                        borderRadius: '999px',
+                        background: COLORS.mintLight,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${percentage}%`,
+                          height: '100%',
+                          borderRadius: '999px',
+                          background: categoryColors[index % categoryColors.length]
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '30px 10px',
+                textAlign: 'center',
+                color: COLORS.darkMuted,
+                fontSize: '13px',
+                lineHeight: '1.5'
+              }}
+            >
+              Waste category data will appear here once the backend provides
+              category totals.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Charts Row */}
@@ -480,6 +746,138 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* User Ranking */}
+      <div
+        className="fade-up"
+        style={{
+          background: COLORS.white,
+          borderRadius: '24px',
+          padding: '24px',
+          border: `1px solid ${COLORS.mintLight}`
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '18px'
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0, color: COLORS.dark }}>
+              User Ranking
+            </h3>
+            <div style={{ fontSize: '12px', color: COLORS.darkMuted, marginTop: '5px' }}>
+              Top recycling participants based on points earned
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: COLORS.limeLight,
+              color: COLORS.dark,
+              borderRadius: '999px',
+              padding: '6px 10px',
+              fontSize: '11px',
+              fontWeight: '700'
+            }}
+          >
+            Top 5
+          </div>
+        </div>
+
+        {userRanking.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {userRanking.slice(0, 5).map((item, index) => (
+              <div
+                key={`${getRankingName(item)}-${index}`}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '45px 1fr auto auto',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '13px 0',
+                  borderBottom: index < Math.min(userRanking.length, 5) - 1
+                    ? '1px solid rgba(0,0,0,.05)'
+                    : 'none'
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '12px',
+                    background: index === 0
+                      ? COLORS.dark
+                      : index === 1
+                        ? '#8bc37a'
+                        : COLORS.mintMuted,
+                    color: index < 2 ? '#fff' : COLORS.dark,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '800',
+                    fontSize: '13px'
+                  }}
+                >
+                  #{index + 1}
+                </div>
+
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: COLORS.dark,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {getRankingName(item)}
+                  </div>
+                  <div style={{ fontSize: '11px', color: COLORS.darkMuted, marginTop: '3px' }}>
+                    {getRankingBottles(item).toLocaleString()} bottle{getRankingBottles(item) !== 1 ? 's' : ''} recycled
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.sage }}>
+                    {getRankingPoints(item).toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '10px', color: COLORS.darkMuted }}>
+                    points
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: COLORS.dark
+                  }}
+                >
+                  {index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '35px 20px',
+              textAlign: 'center',
+              color: COLORS.darkMuted,
+              fontSize: '13px'
+            }}
+          >
+            User ranking data will appear here once the backend provides the
+            ranking records.
+          </div>
+        )}
+      </div>
+
       {/* Lower Section */}
 
       <div
@@ -677,6 +1075,244 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Reward History + Collection Trends */}
+      <div
+        className="fade-up"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '20px'
+        }}
+      >
+        {/* Reward History */}
+        <div
+          style={{
+            background: COLORS.white,
+            borderRadius: '24px',
+            padding: '24px',
+            border: `1px solid ${COLORS.mintLight}`,
+            overflow: 'hidden'
+          }}
+        >
+          <h3 style={{ margin: 0, color: COLORS.dark }}>
+            Reward History
+          </h3>
+          <div style={{ fontSize: '12px', color: COLORS.darkMuted, marginTop: '5px', marginBottom: '18px' }}>
+            Recent reward redemptions
+          </div>
+
+          {rewardHistory.length > 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  minWidth: '430px'
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${COLORS.mintLight}` }}>
+                    <th style={{ textAlign: 'left', padding: '9px 7px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Reward
+                    </th>
+                    <th style={{ textAlign: 'left', padding: '9px 7px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Student
+                    </th>
+                    <th style={{ textAlign: 'right', padding: '9px 7px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Points
+                    </th>
+                    <th style={{ textAlign: 'right', padding: '9px 7px', fontSize: '11px', color: COLORS.darkMuted }}>
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rewardHistory.slice(0, 5).map((item, index) => (
+                    <tr
+                      key={`${getRewardName(item)}-${index}`}
+                      style={{ borderBottom: '1px solid rgba(0,0,0,.04)' }}
+                    >
+                      <td style={{ padding: '11px 7px', fontSize: '12px', color: COLORS.dark, fontWeight: '600' }}>
+                        {getRewardName(item)}
+                      </td>
+                      <td style={{ padding: '11px 7px', fontSize: '12px', color: COLORS.darkMuted }}>
+                        {getRewardStudent(item)}
+                      </td>
+                      <td style={{ padding: '11px 7px', textAlign: 'right', fontSize: '12px', color: COLORS.sage, fontWeight: '700' }}>
+                        {getRewardPoints(item).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '11px 7px', textAlign: 'right', fontSize: '11px', color: COLORS.darkMuted }}>
+                        {getRewardDate(item)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '35px 20px',
+                textAlign: 'center',
+                color: COLORS.darkMuted,
+                fontSize: '13px'
+              }}
+            >
+              No reward redemption history available yet.
+            </div>
+          )}
+        </div>
+
+        {/* Collection Trends */}
+        <div
+          style={{
+            background: COLORS.white,
+            borderRadius: '24px',
+            padding: '24px',
+            border: `1px solid ${COLORS.mintLight}`
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0, color: COLORS.dark }}>
+                Collection Trends
+              </h3>
+              <div style={{ fontSize: '12px', color: COLORS.darkMuted, marginTop: '5px' }}>
+                Recent collection performance
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: COLORS.limeLight,
+                color: COLORS.dark,
+                borderRadius: '12px',
+                padding: '8px 10px',
+                textAlign: 'right'
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: '800' }}>
+                {trendAverage.toLocaleString()}
+              </div>
+              <div style={{ fontSize: '9px', fontWeight: '600' }}>
+                avg/day
+              </div>
+            </div>
+          </div>
+
+          {trendBottles.length > 0 ? (
+            <>
+              <div
+                style={{
+                  height: '155px',
+                  display: 'flex',
+                  alignItems: 'end',
+                  gap: '10px',
+                  marginTop: '25px',
+                  padding: '0 4px',
+                  borderBottom: `1px solid ${COLORS.mintLight}`
+                }}
+              >
+                {trendBottles.map((item, index) => {
+                  const max = Math.max(...trendBottles.map((d) => d.bottles), 1);
+                  const height = Math.max(8, (item.bottles / max) * 125);
+
+                  return (
+                    <div
+                      key={`${item.date}-${index}`}
+                      style={{
+                        flex: 1,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'end',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          color: COLORS.darkMuted,
+                          fontWeight: '700'
+                        }}
+                      >
+                        {item.bottles}
+                      </span>
+                      <div
+                        style={{
+                          width: '100%',
+                          maxWidth: '42px',
+                          height: `${height}px`,
+                          background: COLORS.sage,
+                          borderRadius: '8px 8px 0 0'
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          color: COLORS.darkMuted,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {item.date}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '18px',
+                  padding: '12px',
+                  borderRadius: '14px',
+                  background: COLORS.ivory
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '10px', color: COLORS.darkMuted }}>
+                    7-day total
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: '800', color: COLORS.dark }}>
+                    {trendTotal.toLocaleString()} bottles
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', color: COLORS.darkMuted }}>
+                    Best day
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.sage }}>
+                    {trendBestDay ? `${trendBestDay.date} · ${trendBestDay.bottles}` : '—'}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div
+              style={{
+                padding: '50px 20px',
+                textAlign: 'center',
+                color: COLORS.darkMuted,
+                fontSize: '13px'
+              }}
+            >
+              Collection trend data will appear here once daily records are available.
+            </div>
+          )}
         </div>
       </div>
 
