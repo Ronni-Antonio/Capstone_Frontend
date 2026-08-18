@@ -72,6 +72,8 @@ api.getSmartBin = (id) => api.get(`/machines/${id}`);
 api.addSmartBin = (data) => api.post('/machines', data);
 api.updateSmartBin = (id, data) => api.put(`/machines/${id}`, data);
 api.deleteSmartBin = (id) => api.delete(`/machines/${id}`);
+api.updateSmartBinCompartmentSensor = (machineId, compartmentId, data) =>
+  api.patch(`/machines/${machineId}/compartments/${compartmentId}/sensor`, data);
 api.getSmartBinLogs = () => api.get('/machine-logs');
 
 // Rewards
@@ -126,6 +128,11 @@ api.getAiModels = () => api.get('/ai-models');
 api.getClassifications = () => api.get('/classifications');
 api.getPredictions = () => api.get('/predictions');
 api.getAnalyticsReports = () => api.get('/analytics-reports');
+api.getReportsAnalytics = (params = {}) => api.get('/reports-analytics', { params });
+api.runProphetForecast = (data = { periods: 7 }) => api.post('/prophet/run-forecast', data);
+api.getProphetForecastData = () => api.get('/prophet/forecast-data');
+api.downloadSustainabilityReport = (params = {}) =>
+  api.get('/reports-analytics/pdf', { params, responseType: 'blob' });
 
 // User profile
 api.getUser = (id) => api.get(`/users/${id}`);

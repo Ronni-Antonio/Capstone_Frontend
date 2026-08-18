@@ -115,6 +115,24 @@ const normalizeSection = (section) => ({
 // Smart Bin presentation model. Fullness is calculated from HC-SR04 distance
 // in the monitoring page; these values are normalized here so the frontend
 // consistently understands the revised backend schema.
+const normalizeCompartment = (compartment) => ({
+  ...compartment,
+  id: compartment.compartment_id ?? compartment.id,
+  compartment_id: compartment.compartment_id ?? compartment.id,
+  name: compartment.name || 'Compartment',
+  material_category: compartment.material_category || 'other',
+  status: compartment.status || 'offline',
+  current_distance_cm:
+    compartment.current_distance_cm === null || compartment.current_distance_cm === undefined
+      ? null
+      : Number(compartment.current_distance_cm),
+  current_fill_percentage: Number(compartment.current_fill_percentage ?? 0),
+  full_threshold_cm: Number(compartment.full_threshold_cm ?? 20),
+  empty_threshold_cm: Number(compartment.empty_threshold_cm ?? 80),
+  fill_state: compartment.fill_state || 'normal',
+  last_active_at: compartment.last_active_at || null,
+});
+
 const normalizeSmartBin = (bin) => ({
   ...bin,
   id: bin.smart_bin_id ?? bin.machine_id ?? bin.id,
@@ -131,6 +149,9 @@ const normalizeSmartBin = (bin) => ({
       : Number(bin.current_fill_percentage),
   full_threshold_cm: Number(bin.full_threshold_cm ?? 20),
   empty_threshold_cm: Number(bin.empty_threshold_cm ?? 80),
+  compartments: Array.isArray(bin.compartments)
+    ? bin.compartments.map(normalizeCompartment)
+    : [],
   last_active_at: bin.last_active_at || null,
   last_maintenance_at: bin.last_maintenance_at || null,
 });
