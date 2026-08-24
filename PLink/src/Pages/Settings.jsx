@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../api';
+import { useData } from '../context/DataContext.jsx';
 import {
   SchoolIcon,
   SparklesIcon,
@@ -17,6 +19,23 @@ import {
 } from 'lucide-react';
 
 export function Settings() {
+  // Use settings and plastic types from our data context!
+  const { 
+    settings, 
+    plasticTypes,
+    refreshSections,
+    refreshPlasticTypes,
+    refreshSettings,
+    updateSettings: updateSettingsInContext,
+    addSection: addSectionToContext,
+    updateSection: updateSectionInContext,
+    removeSection: removeSectionFromContext
+  } = useData();
+  
+  useEffect(() => {
+    Promise.allSettled([refreshSettings(), refreshPlasticTypes(), refreshSections()]);
+  }, []);
+
   // Safe default matching your exact database records layout
   const [schoolInfo, setSchoolInfo] = useState({
     name: 'PLP',
@@ -27,10 +46,13 @@ export function Settings() {
 
   const [conversion, setConversion] = useState(5);
   const [penalties, setPenalties] = useState({
-    rejected: -1,
-    invalid: -2,
-    nonPet: -1,
-    custom: -3,
+    rejected: 1, // contaminated PET points
+    nonPet: 0, // invalid/non-accepted items earn 0 points
+  });
+  const [plasticTypeConfig, setPlasticTypeConfig] = useState({
+    pet: null,
+    contaminated: null,
+    nonPet: null,
   });
 
   const [notifications, setNotifications] = useState({
@@ -50,45 +72,57 @@ export function Settings() {
     if (done) setTimeout(() => setToast(null), 3000);
   };
 
-  // CONTROLLER 1: System Settings Loader
-  useEffect(() => {
-    const fetchSystemSettings = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/api/settings');
-        if (!response.ok) throw new Error('Backend offline');
-        const data = await response.json();
-        
-        const settings = Array.isArray(data) ? data[0] : data;
-        if (settings) {
-          setSchoolInfo({
-            name: settings.school_name || '',
-            address: settings.school_address || '',
-            year: settings.school_year || '',
-            email: settings.school_email || '',
-          });
-          setConversion(Number(settings.point_conversion) || 5);
-          setPenalties({
-            rejected: Number(settings.penalty_rejected) || -1,
-            invalid: Number(settings.penalty_invalid) || -2,
-            nonPet: Number(settings.penalty_non_pet) || -1,
-            custom: Number(settings.penalty_custom) || -3,
-          });
-          setNotifications({
-            machineFull: settings.notify_machine_full == 1,
-            scannerErrors: settings.notify_scanner_errors == 1,
-            machineOffline: settings.notify_machine_offline == 1,
-            maintenance: settings.notify_maintenance == 1,
-            weeklySummary: settings.notify_weekly_summary == 1,
-            milestones: settings.notify_milestones == 1,
-          });
-        }
-      } catch (error) {
-        console.warn('Backend server on port 8000 is offline. Using default local layout views.');
-      }
-    };
+  const mapPlasticTypesToConfig = (plasticTypes) => {
+    const findByKeywords = (keywords) =>
+      plasticTypes.find((item) => {
+        const name = item.name.toLowerCase();
+        return keywords.some((keyword) => name.includes(keyword));
+      }) || null;
 
-    fetchSystemSettings();
-  }, []);
+    return {
+      pet: findByKeywords(['pet bottle', 'pet']),
+      contaminated: findByKeywords(['contaminated']),
+      nonPet: findByKeywords(['invalid', 'non-pet', 'non pet', 'other plastics', 'aluminum']),
+    };
+  };
+
+  // CONTROLLER 1: System Settings Loader - Initialize from context
+  useEffect(() => {
+    if (settings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSchoolInfo({
+        name: settings.school_name || '',
+        address: settings.school_address || '',
+        year: settings.school_year || '',
+        email: settings.school_email || '',
+      });
+      setNotifications({
+        machineFull: settings.notify_machine_full == 1,
+        scannerErrors: settings.notify_scanner_errors == 1,
+        machineOffline: settings.notify_machine_offline == 1,
+        maintenance: settings.notify_maintenance == 1,
+        weeklySummary: settings.notify_weekly_summary == 1,
+        milestones: settings.notify_milestones == 1,
+      });
+    }
+  }, [settings]);
+
+  // Update plastic type config when plasticTypes from context changes!
+  useEffect(() => {
+    if (plasticTypes && plasticTypes.length > 0) {
+      const mappedConfig = mapPlasticTypesToConfig(plasticTypes);
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPlasticTypeConfig(mappedConfig);
+      if (mappedConfig.pet) {
+        setConversion(mappedConfig.pet.points);
+      }
+      setPenalties({
+        rejected: mappedConfig.contaminated?.points ?? 1,
+        nonPet: mappedConfig.nonPet?.points ?? 0,
+      });
+    }
+  }, [plasticTypes]);
 
   // CONTROLLER 1: System Settings Updater
   const handleSaveAll = async () => {
@@ -99,11 +133,6 @@ export function Settings() {
       school_address: schoolInfo.address,
       school_year: schoolInfo.year,
       school_email: schoolInfo.email,
-      point_conversion: Number(conversion),
-      penalty_rejected: Number(penalties.rejected),
-      penalty_invalid: Number(penalties.invalid),
-      penalty_non_pet: Number(penalties.nonPet),
-      penalty_custom: Number(penalties.custom),
       notify_machine_full: notifications.machineFull ? 1 : 0,
       notify_scanner_errors: notifications.scannerErrors ? 1 : 0,
       notify_machine_offline: notifications.machineOffline ? 1 : 0,
@@ -113,16 +142,43 @@ export function Settings() {
     };
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/settings', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload),
-      });
+      const plasticTypeUpdates = [];
 
-      if (!response.ok) throw new Error('Save error');
+      if (plasticTypeConfig.pet?.id) {
+        plasticTypeUpdates.push(
+          api.updatePlasticType(plasticTypeConfig.pet.id, {
+            ...plasticTypeConfig.pet.raw,
+            points_value: Number(conversion),
+          })
+        );
+      }
+
+      if (plasticTypeConfig.contaminated?.id) {
+        plasticTypeUpdates.push(
+          api.updatePlasticType(plasticTypeConfig.contaminated.id, {
+            ...plasticTypeConfig.contaminated.raw,
+            points_value: Number(penalties.rejected),
+          })
+        );
+      }
+
+      if (plasticTypeConfig.nonPet?.id) {
+        plasticTypeUpdates.push(
+          api.updatePlasticType(plasticTypeConfig.nonPet.id, {
+            ...plasticTypeConfig.nonPet.raw,
+            points_value: Number(penalties.nonPet),
+          })
+        );
+      }
+
+      await Promise.all([
+        api.updateSettings(payload),
+        ...plasticTypeUpdates,
+      ]);
+
+      // Update the context directly so we don't refresh everything
+      updateSettingsInContext(payload);
+      await refreshPlasticTypes(); // Refresh plastic types in context after saving!
       showToast('Settings saved successfully!');
     } catch (error) {
       console.error(error);
@@ -146,13 +202,11 @@ export function Settings() {
         </SettingsCard>
 
         {/* Point Conversion & Penalties */}
-        <SettingsCard icon={SparklesIcon} title="Point Conversion & Penalties" desc="Configure points for accepted bottles and penalties for rejected items">
+        <SettingsCard icon={SparklesIcon} title="Point Conversion & Rules" desc="Configure points awarded for accepted and non-accepted items">
           <div className="space-y-3">
             <PointRule label="Accepted PET Bottle" desc="Points awarded for a valid, accepted bottle" value={conversion} onChange={setConversion} min={1} />
-            <PointRule label="Rejected Bottle Penalty" desc="Deduction for a bottle rejected after validation" value={penalties.rejected} onChange={(v) => setPenalties({ ...penalties, rejected: v })} max={0} />
-            <PointRule label="Invalid Bottle Penalty" desc="Deduction for crushed or liquid-filled bottles" value={penalties.invalid} onChange={(v) => setPenalties({ ...penalties, invalid: v })} max={0} />
-            <PointRule label="Non-PET Bottle Penalty" desc="Deduction for aluminum cans or other plastics" value={penalties.nonPet} onChange={(v) => setPenalties({ ...penalties, nonPet: v })} max={0} />
-            <PointRule label="Custom Rejection Penalty" desc="Configurable deduction for other rejection reasons" value={penalties.custom} onChange={(v) => setPenalties({ ...penalties, custom: v })} max={0} />
+            <PointRule label="Contaminated Bottle Points" desc="Points awarded for a contaminated PET bottle" value={penalties.rejected} onChange={(v) => setPenalties({ ...penalties, rejected: v })} min={0} />
+            <PointRule label="Invalid Item Points" desc="Points awarded for invalid or non-accepted items" value={penalties.nonPet} onChange={(v) => setPenalties({ ...penalties, nonPet: v })} min={0} />
           </div>
         </SettingsCard>
 
@@ -170,7 +224,13 @@ export function Settings() {
 
         {/* CONTROLLER 2: Sections Component Embedded Inside Section Management Card */}
         <SettingsCard icon={UsersIcon} title="Section Management" desc="Add, edit, and remove student sections">
-          <SectionsManager onToast={(msg) => showToast(msg)} />
+          <SectionsManager 
+            onToast={(msg) => showToast(msg)} 
+            refreshSections={refreshSections}
+            addSectionToContext={addSectionToContext}
+            updateSectionInContext={updateSectionInContext}
+            removeSectionFromContext={removeSectionFromContext}
+          />
         </SettingsCard>
 
         {/* Backup & Data */}
@@ -274,33 +334,24 @@ function PointRule({ label, desc, value, onChange, min, max }) {
 }
 
 // CONTROLLER 2: Section Table Manager Component
-function SectionsManager({ onToast }) {
-  const [sections, setSections] = useState([]);
+function SectionsManager({ 
+  onToast, 
+  refreshSections, 
+  addSectionToContext, 
+  updateSectionInContext, 
+  removeSectionFromContext 
+}) {
+  const { sections: sectionsFromContext } = useData();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '' });
 
-  // 1. Independent data fetching that won't touch top-level states
-  const fetchSectionsOnly = async () => {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/sections');
-      if (response.ok) {
-        const data = await response.json();
-        const normalized = (Array.isArray(data) ? data : []).map(s => ({
-          ...s,
-          name: s.section_name || s.name || ''
-        }));
-        setSections(normalized);
-      }
-    } catch (error) {
-      console.warn('Sections backend offline.');
-    }
-  };
-
-  useEffect(() => {
-    fetchSectionsOnly();
-  }, []);
+  // 1. Use sections from context
+  const sections = (sectionsFromContext || []).map(s => ({
+    ...s,
+    name: s.section_name || s.name || ''
+  }));
 
   const filtered = sections.filter(
     (s) => s && s.name && s.name.toLowerCase().includes(search.toLowerCase())
@@ -312,31 +363,27 @@ function SectionsManager({ onToast }) {
     
     const payload = {
       name: form.name,
-      section_name: form.name
     };
 
     try {
       if (editing) {
         const targetIdentifier = editing.id || editing.name;
-        await fetch(`http://127.0.0.1:8000/api/sections/${encodeURIComponent(targetIdentifier)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const res = await api.updateSection(targetIdentifier, payload);
+        if (res.data) {
+          updateSectionInContext(targetIdentifier, res.data);
+        } else {
+          await refreshSections();
+        }
         onToast('Section updated successfully');
       } else {
-        const response = await fetch('http://127.0.0.1:8000/api/sections', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) throw new Error('Failed to create row');
+        const res = await api.addSection(payload);
+        if (res.data) {
+          addSectionToContext(res.data);
+        } else {
+          await refreshSections();
+        }
         onToast('Section added successfully');
       }
-      
-      // ONLY re-fetch the local table data, leaving school information untouched
-      await fetchSectionsOnly();
     } catch (e) {
       console.error(e);
       onToast('Error handling section request');
@@ -348,14 +395,12 @@ function SectionsManager({ onToast }) {
   const handleDelete = async (sectionItem) => {
     try {
       const targetIdentifier = sectionItem.id || sectionItem.name;
-      await fetch(`http://127.0.0.1:8000/api/sections/${encodeURIComponent(targetIdentifier)}`, {
-        method: 'DELETE',
-        headers: { 'Accept': 'application/json' }
-      });
+      await api.deleteSection(targetIdentifier);
+      removeSectionFromContext(targetIdentifier);
       onToast('Section removed successfully');
-      await fetchSectionsOnly();
     } catch (error) {
       console.error(error);
+      onToast('Error deleting section');
     }
   };
 

@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-import api from '../api.jsx';
 
 const titles = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of recycling activity today' },
@@ -13,8 +11,7 @@ const titles = {
   settings: { title: 'Settings', subtitle: 'Customize your Plink system' },
 };
 
-export function Header({ activePage, setActivePage, onLogout }) {
-  const [search, setSearch] = useState('');
+export function Header({ activePage, setActivePage }) {
 
   const meta = titles[activePage] || titles.machines;
 
@@ -34,22 +31,6 @@ export function Header({ activePage, setActivePage, onLogout }) {
       {/* 2. Right Section: Actions Panel */}
       <div className="flex items-center gap-3.5">
         
-        {/* Search Bar */}
-        <div className="flex items-center gap-2.5 bg-white border border-[#dbe6db] rounded-full px-4 py-2 w-64 shadow-sm">
-          <i className="fa-solid fa-magnifying-glass text-[#7a947e] text-sm"></i>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && search.trim()) {
-                setActivePage('students');
-              }
-            }}
-            placeholder="Search students, machines..."
-            className="bg-transparent border-none outline-none text-sm text-[#2d4a33] w-full font-sans placeholder:text-[#7a947e]/60"
-          />
-        </div>
 
         {/* Notifications Icon Button */}
         <button

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboardIcon,
   CpuIcon,
@@ -13,6 +13,7 @@ import {
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   UserCircleIcon,
+  ScrollTextIcon,
 } from 'lucide-react';
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { key: 'rankings', label: 'Sections Ranking', icon: TrophyIcon },
   { key: 'reports', label: 'Reports & Analytics', icon: BarChart3Icon },
   { key: 'incentives', label: 'Incentives & Rewards', icon: GiftIcon },
+  { key: 'logs', label: 'Logs', icon: ScrollTextIcon },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, badge: 3 },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },
 ];

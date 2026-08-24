@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
+import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
   white: '#ffffff',
@@ -15,104 +16,61 @@ const COLORS = {
 
 export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
-  const [students, setStudents] = useState(() => {
-    // Load cached data immediately on first render
-    try {
-      const cached = localStorage.getItem('students_cache');
-      const parsed = cached ? JSON.parse(cached) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-  const [transactions, setTransactions] = useState(() => {
-    // Load cached transactions immediately on first render
-    try {
-      const cached = localStorage.getItem('transactions_cache');
-      const parsed = cached ? JSON.parse(cached) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-  const [loading, setLoading] = useState(() => {
-    // Only show loading if there's no cached data
-    try {
-      const cached = localStorage.getItem('students_cache');
-      return !cached;
-    } catch {
-      return true;
-    }
-  });
-  const [error, setError] = useState(null);
+  const [showRfidModal, setShowRfidModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const [assignmentError, setAssignmentError] = useState(null);
+  const [pollingInterval, setPollingInterval] = useState(null);
+  const { 
+    students, 
+    transactions, 
+    sections: sectionsList,
+    refreshStudents,
+    refreshSections,
+    addStudent: addStudentToContext,
+    activateStudent,
+    getActivationStatus,
+    cancelActivation
+  } = useData();
+  
+  useEffect(() => {
+    Promise.allSettled([refreshStudents(), refreshSections()]);
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Initialize newStudent with first section from context
   const [newStudent, setNewStudent] = useState({
     first_name: '',
     last_name: '',
-    grade_level: '3',
-    section: 'Sampaguita',
+    grade_level_id: 1,
+    section_id: '',
     bottles: 0,
     points: 0
   });
+  
   // CSV Upload State
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState(null);
   const [csvSuccess, setCsvSuccess] = useState(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      // Fetch both students and transactions in parallel
-      const [studentsRes, transactionsRes] = await Promise.all([
-        api.getStudents(),
-        api.getTransactions()
-      ]);
-      
-      const studentsData = studentsRes.data;
-      const transactionsData = transactionsRes.data;
-      
-      setStudents(studentsData);
-      setTransactions(transactionsData);
-      
-      // Save to cache
-      localStorage.setItem('students_cache', JSON.stringify(studentsData));
-      localStorage.setItem('transactions_cache', JSON.stringify(transactionsData));
-      
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      // If there's cached data, use it
-      try {
-        const cachedStudents = localStorage.getItem('students_cache');
-        const cachedTransactions = localStorage.getItem('transactions_cache');
-        if (cachedStudents) setStudents(JSON.parse(cachedStudents));
-        if (cachedTransactions) setTransactions(JSON.parse(cachedTransactions));
-      } catch {}
-      
-      setError(err.response?.data?.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // Add Individual Student State
+  const [addStudentError, setAddStudentError] = useState(null);
+  const [addStudentSuccess, setAddStudentSuccess] = useState(null);
 
   // Calculate total bottles per student from transactions
-  const getTotalBottlesForStudent = (actualStudentId) => {
-    // Ensure transactions is always an array
+  const getTotalBottlesForStudent = (actualStudentId, studentRecord = null) => {
+    if (studentRecord?.total_items_recycled !== undefined && studentRecord?.total_items_recycled !== null) {
+      return Number(studentRecord.total_items_recycled) || 0;
+    }
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    
-    const matchingTransactions = safeTransactions.filter(tx => tx && tx.student_id === actualStudentId);
-    
-    const total = matchingTransactions.reduce((total, tx) => {
-      const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-      return total + bottles;
-    }, 0);
-  
-    return total;
+    return safeTransactions
+      .filter((tx) => tx && tx.student_id === actualStudentId)
+      .reduce((total, tx) => total + Number(tx.total_items || tx.bottle_qty || 0), 0);
   };
 
   // Helper to safely get student data with defaults
@@ -140,23 +98,42 @@ export default function StudentPoints() {
     const actualStudentId = student?.id || student?.student_id || 0;
     const displayId = student?.student_number || student?.id || 'N/A';
     
-    const totalFromTransactions = getTotalBottlesForStudent(actualStudentId);
+    const totalFromTransactions = getTotalBottlesForStudent(actualStudentId, student);
     
+    // Normalize status to Title Case (e.g., "active" → "Active")
+    const normalizeStatus = (status) => {
+      if (!status) return 'Inactive';
+      const lowerStatus = status.toLowerCase();
+      if (lowerStatus === 'active') return 'Active';
+      return 'Inactive';
+    };
+    
+    // DataContext normalizes Laravel's `rfid_cards` relation into these fields.
+    // Keep the card state separate from the student's account status.
+    const rfidCards = Array.isArray(student?.rfid_cards) ? student.rfid_cards : [];
+    const activeRfidCard = student?.active_rfid_card ||
+      rfidCards.find(card => String(card?.status || '').toLowerCase() === 'active') ||
+      null;
+
     const finalStudent = {
       id: displayId, // use student_number for display in the table
-      actual_student_id: actualStudentId, // keep the actual id for transaction matching
+      actual_student_id: actualStudentId, // keep the actual id for API calls/transaction matching
       name: fullName,
       initials: getInitials(),
-      grade_level: student?.grade_level || '3',
+      grade_level: student?.grade_level || 'N/A',
       section: student?.section || 'No Section',
       bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
-      points: student?.points_balance ?? student?.points ?? 0
+      points: student?.points_balance ?? student?.points ?? 0,
+      status: normalizeStatus(student?.status),
+      rfid_cards: rfidCards,
+      active_rfid_card: activeRfidCard,
+      has_active_rfid_card: Boolean(activeRfidCard)
     };
     return finalStudent;
   };
 
   // Calculate stats for top cards
-  const processedStudents = students.map(safeStudent);
+  const processedStudents = students.map(safeStudent);  
   const topStudent = [...processedStudents].sort((a, b) => b.points - a.points)[0];
   const totalStudents = students.length;
   const uniqueSections = [...new Set(processedStudents.map(s => s.section).filter(Boolean))];
@@ -168,25 +145,60 @@ export default function StudentPoints() {
     return matchesSearch && matchesSection;
   });
 
+  // Calculate pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleAddStudent = async (e) => {
     e.preventDefault();
+    setAddStudentError(null);
+    setAddStudentSuccess(null);
+    
     try {
-      await api.addStudent(newStudent);
-      setShowModal(false);
-      setNewStudent({
-        student_number: '',
-        first_name: '',
-        last_name: '',
-        grade_level: '3',
-        initials: '',
-        section: 'Sampaguita',
-        bottles: 0,
-        points: 0
+      const res = await api.addStudent({
+        student_number: newStudent.student_number,
+        first_name: newStudent.first_name,
+        last_name: newStudent.last_name,
+        grade_level_id: Number(newStudent.grade_level_id),
+        section_id: Number(newStudent.section_id),
+        status: 'inactive',
       });
-      fetchData();
+      // If the API returns the created student, add it directly to context (optimistic update)
+      if (res.data) {
+        addStudentToContext(res.data);
+      } else {
+        // Otherwise refresh just the students list
+        await refreshStudents();
+      }
+      
+      setAddStudentSuccess('Student added successfully!');
+      
+      // Wait 1.5 seconds then close modal and reset
+      setTimeout(() => {
+        setShowModal(false);
+        setNewStudent({
+          student_number: '',
+          first_name: '',
+          last_name: '',
+          grade_level_id: 1,
+          initials: '',
+          section_id: sectionsList.length > 0 ? sectionsList[0].section_id : '',
+          bottles: 0,
+          points: 0
+        });
+        setAddStudentSuccess(null);
+      }, 1500);
+      
     } catch (err) {
       console.error('Error adding student:', err);
-      alert('Failed to add student');
+      setAddStudentError(err.response?.data?.message || err.message || 'Failed to add student');
     }
   };
 
@@ -196,9 +208,8 @@ export default function StudentPoints() {
   const downloadSampleCsv = () => {
     const sampleContent = [
       ['student_number', 'first_name', 'last_name', 'grade_level', 'section'],
-      ['1001', 'John', 'Doe', '3', 'Sampaguita'],
-      ['1002', 'Jane', 'Smith', '3', 'Rosal'],
-      ['1003', 'Mike', 'Johnson', '3', 'Orchid'],
+      ['136721000000', 'John', 'Doe', '3', 'Sampaguita'],
+
     ];
     const csvContent = sampleContent.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -228,13 +239,13 @@ export default function StudentPoints() {
       const errors = response.data?.errors || [];
       
       if (importedCount > 0 && errors.length === 0) {
-        // Fully successful - close modal and refresh
-        setCsvSuccess(`Successfully imported ${importedCount} student(s)!`);
-        setShowModal(false);
-        fetchData();
-        // Clear file input
-        e.target.value = '';
-      } else {
+                // Fully successful - close modal and refresh just students
+                setCsvSuccess(`Successfully imported ${importedCount} student(s)!`);
+                setShowModal(false);
+                await refreshStudents();
+                // Clear file input
+                e.target.value = '';
+              } else {
         // Partial success or all errors - show detailed errors and keep modal open
         let message = '';
         if (importedCount > 0) {
@@ -273,6 +284,90 @@ export default function StudentPoints() {
       setCsvError(errorMessage);
     } finally {
       setCsvLoading(false);
+    }
+  };
+
+  // Clean up polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
+  // Handle Assign RFID Card button click
+  const handleAssignCard = (student) => {
+    setSelectedStudent(student);
+    setScanning(false);
+    setScanSuccess(false);
+    setAssignmentError(null);
+    setShowRfidModal(true);
+  };
+
+  // Handle Cancel RFID Assignment
+  const handleCancelCardAssignment = async () => {
+    if (selectedStudent) {
+      try {
+        await cancelActivation(selectedStudent.actual_student_id);
+      } catch (err) {
+        console.error('Cancel error:', err);
+      }
+    }
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+    setShowRfidModal(false);
+    setSelectedStudent(null);
+    setScanning(false);
+    setScanSuccess(false);
+    setAssignmentError(null);
+  };
+
+  // Start RFID assignment: Laravel tells the ESP32 to wait for a card tap
+  const handleStartCardAssignment = async () => {
+    if (!selectedStudent) return;
+    setScanning(true);
+    setAssignmentError(null);
+    
+    try {
+      // 1. Tell Laravel to put the ESP32 into RFID assignment mode
+      await activateStudent(selectedStudent.actual_student_id);
+      
+      // 2. Poll until Laravel sees the newly assigned RFID card
+      const interval = setInterval(async () => {
+        try {
+          const statusData = await getActivationStatus(selectedStudent.actual_student_id);
+          console.log('RFID assignment status:', statusData);
+          
+          if (statusData.status === 'success') {
+            clearInterval(interval);
+            setPollingInterval(null);
+            setScanSuccess(true);
+            await refreshStudents();
+            
+            setTimeout(() => {
+              setShowRfidModal(false);
+              setSelectedStudent(null);
+            }, 1500);
+          } else if (statusData.status === 'error') {
+            clearInterval(interval);
+            setPollingInterval(null);
+            setScanning(false);
+            setAssignmentError(statusData.message || 'RFID card assignment failed');
+          }
+        } catch (pollErr) {
+          console.error('Polling error:', pollErr);
+        }
+      }, 2000); // Poll every 2 seconds
+      
+      setPollingInterval(interval);
+      
+    } catch (err) {
+      console.error('Start RFID assignment error:', err);
+      setScanning(false);
+      setAssignmentError(err.response?.data?.message || err.message || 'Failed to start RFID card assignment');
     }
   };
 
@@ -482,7 +577,7 @@ export default function StudentPoints() {
         <input
           placeholder="Search student..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           style={{
             flex: 1,
             minWidth: '250px',
@@ -493,28 +588,24 @@ export default function StudentPoints() {
           }}
         />
 
-        {['All', ...uniqueSections].map((section) => (
-          <button
-            key={section}
-            onClick={() => setFilterSection(section)}
-            style={{
-              border: 'none',
-              background:
-                filterSection === section
-                  ? COLORS.dark
-                  : COLORS.lime,
-              color:
-                filterSection === section
-                  ? 'white'
-                  : COLORS.dark,
-              padding: '10px 16px',
-              borderRadius: '999px',
-              cursor: 'pointer'
-            }}
-          >
-            {section}
-          </button>
-        ))}
+        <select
+          value={filterSection}
+          onChange={(e) => { setFilterSection(e.target.value); setCurrentPage(1); }}
+          style={{
+            border: `1px solid ${COLORS.mintLight}`,
+            borderRadius: '12px',
+            padding: '10px 16px',
+            background: COLORS.white,
+            color: COLORS.dark,
+            cursor: 'pointer',
+            outline: 'none',
+            fontSize: '14px'
+          }}
+        >
+          {['All', ...uniqueSections].map((section) => (
+            <option key={section} value={section}>{section}</option>
+          ))}
+        </select>
 
         <button
           onClick={() => setShowModal(true)}
@@ -533,12 +624,6 @@ export default function StudentPoints() {
       </div>
 
       {/* TABLE */}
-
-      {error && (
-        <div style={{ padding: '20px', background: '#fee2e2', borderRadius: '12px', color: '#dc2626' }}>
-          {error}
-        </div>
-      )}
 
       <div
         style={{
@@ -563,6 +648,8 @@ export default function StudentPoints() {
               <th style={th}>Student Name</th>
               <th style={th}>Grade</th>
               <th style={th}>Section</th>
+              <th style={th}>RFID Card</th>
+              <th style={th}>Status</th>
               <th style={th}>Bottles</th>
               <th style={th}>Points</th>
               <th style={th}>Actions</th>
@@ -570,14 +657,8 @@ export default function StudentPoints() {
           </thead>
 
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
-                  Loading students...
-                </td>
-              </tr>
-            ) : filteredStudents.length > 0 ? (
-              filteredStudents.map((student) => (
+            {currentStudents.length > 0 ? (
+              currentStudents.map((student) => (
                 <tr
                   key={student.id}
                   style={{
@@ -630,7 +711,7 @@ export default function StudentPoints() {
                     </div>
                   </td>
 
-                  <td style={td}>Grade {student.grade_level}</td>
+                  <td style={td}>{student.grade_level}</td>
 
                   <td style={td}>
                     <span
@@ -642,6 +723,62 @@ export default function StudentPoints() {
                       }}
                     >
                       {student.section}
+                    </span>
+                  </td>
+
+                  <td style={td}>
+                    {student.has_active_rfid_card ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            width: 'fit-content',
+                            alignItems: 'center',
+                            background: COLORS.mint,
+                            color: COLORS.dark,
+                            padding: '6px 10px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            fontWeight: '700'
+                          }}
+                        >
+                          <i className="fa-solid fa-circle-check" style={{ marginRight: '6px' }}></i>
+                          Assigned
+                        </span>
+                        <span style={{ fontSize: '11px', color: COLORS.darkMuted }}>
+                          {student.active_rfid_card?.card_uid || 'RFID card linked'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          width: 'fit-content',
+                          background: '#fef3c7',
+                          color: '#92400e',
+                          padding: '6px 10px',
+                          borderRadius: '999px',
+                          fontSize: '12px',
+                          fontWeight: '700'
+                        }}
+                      >
+                        Not Assigned
+                      </span>
+                    )}
+                  </td>
+
+                  <td style={td}>
+                    <span
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        background: student.status === 'Active' ? COLORS.mint : '#fee2e2',
+                        color: student.status === 'Active' ? COLORS.dark : '#dc2626'
+                      }}
+                    >
+                      {student.status}
                     </span>
                   </td>
 
@@ -665,18 +802,94 @@ export default function StudentPoints() {
                     <button style={actionBtn}>
                       <i className="fa-solid fa-pen"></i>
                     </button>
+
+                    {!student.has_active_rfid_card && (
+                      <button
+                        onClick={() => handleAssignCard(student)}
+                        style={{
+                          ...actionBtn,
+                          background: '#3e5f44',
+                          color: '#fff'
+                        }}
+                        title="Assign RFID Card"
+                      >
+                        <i className="fa-solid fa-id-card"></i>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ ...td, textAlign: 'center' }}>
+                <td colSpan="8" style={{ ...td, textAlign: 'center' }}>
                   No students found
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '20px',
+            borderTop: `1px solid ${COLORS.mintLight}`
+          }}>
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.mintLight}`,
+                background: currentPage === 1 ? '#f4f4f4' : 'white',
+                color: currentPage === 1 ? '#aaa' : COLORS.dark,
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Previous
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: currentPage === page ? COLORS.dark : 'transparent',
+                  color: currentPage === page ? 'white' : COLORS.dark,
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                {page}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.mintLight}`,
+                background: currentPage === totalPages ? '#f4f4f4' : 'white',
+                color: currentPage === totalPages ? '#aaa' : COLORS.dark,
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -719,7 +932,13 @@ export default function StudentPoints() {
               </h2>
 
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setAddStudentError(null);
+                  setAddStudentSuccess(null);
+                  setCsvError(null);
+                  setCsvSuccess(null);
+                }}
                 style={{
                   border: 'none',
                   background: 'transparent',
@@ -849,6 +1068,38 @@ export default function StudentPoints() {
               >
                 Add Individual Student
               </h3>
+              
+              {/* Add Individual Student Error */}
+              {addStudentError && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    borderRadius: '12px',
+                    fontSize: '13px'
+                  }}
+                >
+                  ❌ {addStudentError}
+                </div>
+              )}
+              
+              {/* Add Individual Student Success */}
+              {addStudentSuccess && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    background: '#dcfce7',
+                    color: '#166534',
+                    borderRadius: '12px',
+                    fontSize: '14px'
+                  }}
+                >
+                  ✅ {addStudentSuccess}
+                </div>
+              )}
 
               <div
                 style={{
@@ -865,13 +1116,16 @@ export default function StudentPoints() {
                   required
                 />
 
-                <input
-                  placeholder="Grade Level"
-                  value={newStudent.grade_level || ''}
-                  onChange={(e) => setNewStudent({ ...newStudent, grade_level: e.target.value })}
+                <select
+                  value={newStudent.grade_level_id || ''}
+                  onChange={(e) => setNewStudent({ ...newStudent, grade_level_id: e.target.value })}
                   style={modalInput}
                   required
-                />
+                >
+                  {[3, 4, 5, 6].map((grade) => (
+                    <option key={grade} value={grade}>Grade {grade}</option>
+                  ))}
+                </select>
 
                 <input
                   placeholder="First Name"
@@ -897,14 +1151,14 @@ export default function StudentPoints() {
                 />
 
                 <select
-                  value={newStudent.section}
-                  onChange={(e) => setNewStudent({ ...newStudent, section: e.target.value })}
+                  value={newStudent.section_id}
+                  onChange={(e) => setNewStudent({ ...newStudent, section_id: e.target.value })}
                   style={modalInput}
+                  required
                 >
-                  <option>Sampaguita</option>
-                  <option>Rosal</option>
-                  <option>Orchid</option>
-                  <option>Jasmine</option>
+                  {sectionsList.map((section) => (
+                    <option key={section.section_id} value={section.section_id}>{section.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -924,6 +1178,188 @@ export default function StudentPoints() {
                 Add Student
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* RFID Scan Modal */}
+      {showRfidModal && selectedStudent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.45)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999
+          }}
+        >
+          <div
+            style={{
+              width: '500px',
+              maxWidth: '95%',
+              background: '#fff',
+              borderRadius: '24px',
+              padding: '32px',
+              border: `1px solid ${COLORS.mintLight}`,
+              textAlign: 'center'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '16px'
+              }}
+            >
+              <button
+                onClick={handleCancelCardAssignment}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '22px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                fontSize: '64px',
+                marginBottom: '16px'
+              }}
+            >
+              {scanSuccess ? '✅' : scanning ? '📶' : '🪪'}
+            </div>
+
+            <h2
+              style={{
+                margin: '0 0 8px 0',
+                color: COLORS.dark
+              }}
+            >
+              {scanSuccess 
+                ? 'RFID Card Assigned!' 
+                : scanning 
+                  ? 'Waiting for RFID Scan...' 
+                  : 'Assign RFID Card'}
+            </h2>
+
+            <p
+              style={{
+                margin: '0 0 24px 0',
+                color: COLORS.darkMuted,
+                fontSize: '14px',
+                lineHeight: '1.5'
+              }}
+            >
+              {scanSuccess 
+                ? `${selectedStudent.name}'s RFID card has been assigned successfully!` 
+                : scanning 
+                  ? 'The system is waiting for the ESP32 RFID reader to detect the card...' 
+                  : `Click "Start Card Assignment" to begin assigning ${selectedStudent.name}'s RFID card.`}
+            </p>
+
+            {selectedStudent && (
+              <div
+                style={{
+                  background: '#eef4df',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  marginBottom: '24px',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      background: COLORS.dark,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      fontWeight: '700'
+                    }}
+                  >
+                    {selectedStudent.initials}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.dark }}>
+                      {selectedStudent.name}
+                    </div>
+                    <div style={{ fontSize: '14px', color: COLORS.darkMuted }}>
+                      {selectedStudent.section} • {selectedStudent.grade_level}
+                    </div>
+                    <div style={{ fontSize: '14px', color: COLORS.darkMuted }}>
+                      ID: {selectedStudent.id}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* RFID Assignment Error Display */}
+            {assignmentError && (
+              <div
+                style={{
+                  marginBottom: '16px',
+                  padding: '12px',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  textAlign: 'left'
+                }}
+              >
+                ❌ {assignmentError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {/* Cancel Button */}
+              <button
+                onClick={handleCancelCardAssignment}
+                style={{
+                  flex: 1,
+                  padding: '14px 20px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  borderRadius: '16px',
+                  border: `2px solid ${COLORS.dark}`,
+                  background: 'transparent',
+                  color: COLORS.dark,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+
+              {!scanning && !scanSuccess && (
+                <button
+                  onClick={handleStartCardAssignment}
+                  style={{
+                    flex: 2,
+                    padding: '14px 20px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: COLORS.dark,
+                    color: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Start Card Assignment
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
