@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   SearchIcon,
@@ -10,7 +10,6 @@ import {
   ScrollTextIcon,
 } from 'lucide-react'
 import { logEntries } from '../data/logs'
-import api from '../api';
 import { useData } from '../context/DataContext.jsx';
 
 const PAGE_SIZE = 8

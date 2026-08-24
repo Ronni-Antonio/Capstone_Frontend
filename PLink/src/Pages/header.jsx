@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-import api from '../api.jsx';
 
 const titles = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of recycling activity today' },
@@ -13,7 +11,7 @@ const titles = {
   settings: { title: 'Settings', subtitle: 'Customize your Plink system' },
 };
 
-export function Header({ activePage, setActivePage, onLogout }) {
+export function Header({ activePage, setActivePage }) {
 
   const meta = titles[activePage] || titles.machines;
 

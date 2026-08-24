@@ -451,6 +451,8 @@ export const DataProvider = ({ children }) => {
   );
 };
 
+// Shared context hook intentionally co-located to avoid changing existing imports.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useData = () => {
   const context = useContext(DataContext);
   if (!context) throw new Error('useData must be used within a DataProvider');

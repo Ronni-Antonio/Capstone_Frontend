@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api.jsx';
 
 const COLORS = {
@@ -308,6 +308,8 @@ export default function Reports() {
   };
 
   useEffect(() => {
+    // Loading remote report data is an intentional effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData(period);
   }, [period]);
 
@@ -389,7 +391,12 @@ export default function Reports() {
           gap: '14px',
         }}
       >
-
+        <div>
+          <h2 style={{ margin: 0, color: COLORS.dark, fontSize: '26px' }}>Reports & Analytics</h2>
+          <div style={{ color: COLORS.muted, fontSize: '13px', marginTop: '5px' }}>
+            Historical performance, Prophet forecasts, and downloadable sustainability reporting
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <select
             value={period}
