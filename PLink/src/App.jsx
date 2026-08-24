@@ -119,19 +119,17 @@ function AppContent({ activePage, setActivePage, handleLogout, sidebarCollapsed,
 }
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return !!localStorage.getItem('ACCESS_TOKEN');
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const [activePage, setActivePage] = useState('dashboard');
 
-  console.log('Current isLoggedIn state:', isLoggedIn);
-
-  const handleLogout = () => {console.log('Logging out...');
+  const handleLogout = () => {
+    
     localStorage.removeItem('ACCESS_TOKEN');
-    setIsLoggedIn(false);
-    console.log('isLoggedIn set to false');
 
-  }; 
+    setIsLoggedIn(false);
+    
+  };
 
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
