@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api.jsx';
 
 const COLORS = {
@@ -293,7 +293,7 @@ export default function Reports() {
   const [error, setError] = useState('');
   const [forecastMessage, setForecastMessage] = useState('');
 
-  const loadData = async (days = period) => {
+  const loadData = useCallback(async (days) => {
     setLoading(true);
     setError('');
     try {
@@ -305,13 +305,13 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Loading remote report data is an intentional effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData(period);
-  }, [period]);
+  }, [period, loadData]);
 
   const runForecast = async () => {
     setForecasting(true);

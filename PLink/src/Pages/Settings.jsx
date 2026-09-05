@@ -34,7 +34,7 @@ export function Settings() {
   
   useEffect(() => {
     Promise.allSettled([refreshSettings(), refreshPlasticTypes(), refreshSections()]);
-  }, []);
+  }, [refreshSettings, refreshPlasticTypes, refreshSections]);
 
   // Safe default matching your exact database records layout
   const [schoolInfo, setSchoolInfo] = useState({

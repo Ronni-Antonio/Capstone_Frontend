@@ -106,6 +106,32 @@ const normalizeLog = (log, idx) => {
   };
 };
 
+const requestNormalizedLogs = async () => {
+  const res = await api.getLogs();
+  const raw = arrayFrom(res.data);
+  const normalized = raw.map((log, index) => normalizeLog(log, index));
+
+  normalized.sort((a, b) => {
+    const ta = a.timestamp ? new Date(a.timestamp.replace(' ', 'T')).getTime() : 0;
+    const tb = b.timestamp ? new Date(b.timestamp.replace(' ', 'T')).getTime() : 0;
+    return tb - ta;
+  });
+
+  return normalized;
+};
+
+const getLogErrorMessage = (err) => {
+  const data = err?.response?.data;
+  return (
+    data?.message ||
+    data?.error ||
+    (typeof data === 'string' ? data : null) ||
+    (data?.errors && Object.values(data.errors).flat().join(' ')) ||
+    err?.message ||
+    'Failed to load activity logs'
+  );
+};
+
 /* ===================== ACTIVITY LOGS TAB ===================== */
 function ActivityLogsTab() {
   const [search, setSearch] = useState('');
@@ -119,29 +145,13 @@ function ActivityLogsTab() {
   const [error, setError] = useState(null);
 
   const fetchLogs = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const res = await api.getLogs();
-      const raw = arrayFrom(res.data);
-      const normalized = raw.map((l, i) => normalizeLog(l, i));
-      normalized.sort((a, b) => {
-        const ta = a.timestamp ? new Date(a.timestamp.replace(' ', 'T')).getTime() : 0;
-        const tb = b.timestamp ? new Date(b.timestamp.replace(' ', 'T')).getTime() : 0;
-        return tb - ta;
-      });
+      const normalized = await requestNormalizedLogs();
       setLogs(normalized);
+      setError(null);
     } catch (err) {
       console.error('❌ Error fetching activity logs:', err);
-      const data = err?.response?.data;
-      const rawMsg =
-        data?.message ||
-        data?.error ||
-        (typeof data === 'string' ? data : null) ||
-        (data?.errors && Object.values(data.errors).flat().join(' ')) ||
-        err?.message ||
-        'Failed to load activity logs';
-      setError(rawMsg);
+      setError(getLogErrorMessage(err));
       setLogs([]);
     } finally {
       setIsLoading(false);
@@ -149,8 +159,28 @@ function ActivityLogsTab() {
   }, []);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    let cancelled = false;
+
+    requestNormalizedLogs()
+      .then((normalized) => {
+        if (cancelled) return;
+        setLogs(normalized);
+        setError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('❌ Error fetching activity logs:', err);
+        setError(getLogErrorMessage(err));
+        setLogs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     return logs.filter((log) => {
@@ -206,7 +236,11 @@ function ActivityLogsTab() {
         <h3 className="text-lg font-bold text-[#3e5f44] mb-2">Unable to load activity logs</h3>
         <p className="text-sm text-[#6f876f] mb-5 max-w-md mx-auto">{error}</p>
         <button
-          onClick={fetchLogs}
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            fetchLogs();
+          }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
         >
           <RefreshCwIcon className="w-4 h-4" />
@@ -1006,7 +1040,7 @@ export function Logs() {
 
   useEffect(() => {
     Promise.allSettled([refreshRedemptions(), refreshStudents(), refreshRewards()]);
-  }, []);
+  }, [refreshRedemptions, refreshStudents, refreshRewards]);
 
   return (
     <div className="space-y-6">

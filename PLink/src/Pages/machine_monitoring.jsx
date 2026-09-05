@@ -184,7 +184,7 @@ export function MachineMonitoring() {
     load();
     const interval = window.setInterval(load, 5000);
     return () => { mounted = false; window.clearInterval(interval); };
-  }, []);
+  }, [refreshSmartBins]);
 
   const compartments = useMemo(() => {
     const rows = Array.isArray(smartBin?.compartments) ? smartBin.compartments : [];

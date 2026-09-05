@@ -45,7 +45,7 @@ export default function StudentPoints() {
   
   useEffect(() => {
     Promise.allSettled([refreshStudents(), refreshSections()]);
-  }, []);
+  }, [refreshStudents, refreshSections]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');

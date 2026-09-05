@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api from '../api';
 
 const DataContext = createContext(null);
@@ -243,32 +243,32 @@ export const DataProvider = ({ children }) => {
     error: null,
   });
 
-  const refreshDashboard = async () => {
+  const refreshDashboard = useCallback(async () => {
     const res = await api.getDashboard();
     setData((prev) => ({ ...prev, dashboard: res.data }));
     return res;
-  };
+  }, []);
 
-  const refreshStudents = async () => {
+  const refreshStudents = useCallback(async () => {
     const res = await api.getStudents();
     setData((prev) => ({ ...prev, students: arrayFrom(res.data).map(normalizeStudent) }));
     return res;
-  };
+  }, []);
 
-  const refreshTransactions = async () => {
+  const refreshTransactions = useCallback(async () => {
     const res = await api.getTransactions();
     setData((prev) => ({ ...prev, transactions: arrayFrom(res.data).map(normalizeTransaction) }));
     return res;
-  };
+  }, []);
 
-  const refreshRewards = async () => {
+  const refreshRewards = useCallback(async () => {
     const res = await api.getRewards();
     setData((prev) => ({ ...prev, rewards: arrayFrom(res.data).map(normalizeReward) }));
     return res;
-  };
+  }, []);
 
   /* INVENTORY TAB START - refreshInventory calls /rewards/inventory and normalizes numbers for UI */
-  const refreshInventory = async () => {
+  const refreshInventory = useCallback(async () => {
     const res = await api.getInventory();
     const rows = arrayFrom(res.data).map((item) => ({
       ...item,
@@ -288,25 +288,25 @@ export const DataProvider = ({ children }) => {
     }));
     setData((prev) => ({ ...prev, inventory: rows }));
     return res;
-  };
+  }, []);
   /* INVENTORY TAB END */
 
-  const refreshRedemptions = async () => {
+  const refreshRedemptions = useCallback(async () => {
     const res = await api.getRedemptions();
     setData((prev) => ({
       ...prev,
       redemptions: arrayFrom(res.data).map((r) => normalizeRedemption(r, prev.students, prev.rewards)),
     }));
     return res;
-  };
+  }, []);
 
-  const refreshSections = async () => {
+  const refreshSections = useCallback(async () => {
     const res = await api.getSectionsList();
     setData((prev) => ({ ...prev, sections: arrayFrom(res.data).map(normalizeSection) }));
     return res;
-  };
+  }, []);
 
-  const refreshSectionsRanking = async () => {
+  const refreshSectionsRanking = useCallback(async () => {
     const res = await api.getSectionsRanking();
     setData((prev) => ({ ...prev, sectionsRanking: arrayFrom(res.data).map((s) => ({
       ...s,
@@ -317,33 +317,33 @@ export const DataProvider = ({ children }) => {
       rank: s.points_rank || s.rank,
     })) }));
     return res;
-  };
+  }, []);
 
-  const refreshNotifications = async () => {
+  const refreshNotifications = useCallback(async () => {
     const res = await api.getNotifications();
     setData((prev) => ({ ...prev, notifications: arrayFrom(res.data).map(normalizeNotification) }));
     return res;
-  };
+  }, []);
 
-  const refreshSettings = async () => {
+  const refreshSettings = useCallback(async () => {
     const res = await api.getSettings();
     setData((prev) => ({ ...prev, settings: normalizeSettings(res.data) }));
     return res;
-  };
+  }, []);
 
-  const refreshPlasticTypes = async () => {
+  const refreshPlasticTypes = useCallback(async () => {
     const res = await api.getPlasticTypes();
     setData((prev) => ({ ...prev, plasticTypes: arrayFrom(res.data).map(normalizePlasticType) }));
     return res;
-  };
+  }, []);
 
-  const refreshSmartBins = async () => {
+  const refreshSmartBins = useCallback(async () => {
     const res = await api.getSmartBins();
     setData((prev) => ({ ...prev, smartBins: arrayFrom(res.data).map(normalizeSmartBin) }));
     return res;
-  };
+  }, []);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     setData((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       // Only the lightweight dashboard payload blocks the first render.
@@ -359,9 +359,12 @@ export const DataProvider = ({ children }) => {
       console.error('Error loading dashboard data:', error);
       setData((prev) => ({ ...prev, isLoading: false, error: error?.message || 'Failed to load dashboard' }));
     }
-  };
+  }, []);
 
-  useEffect(() => { refreshData(); }, []);
+  useEffect(() => {
+    // Defer the initial remote load so state updates occur asynchronously from the effect.
+    void Promise.resolve().then(refreshData);
+  }, [refreshData]);
 
   const addStudent = (student) => setData((prev) => ({ ...prev, students: [...prev.students, normalizeStudent(student)] }));
   const removeStudent = (id) => setData((prev) => ({ ...prev, students: prev.students.filter((s) => s.student_id !== id) }));

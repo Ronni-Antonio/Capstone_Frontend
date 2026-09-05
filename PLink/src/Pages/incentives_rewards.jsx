@@ -384,7 +384,7 @@ function InventoryTab() {
     };
     load();
     return () => { mounted = false; cancelled = true; };
-  }, []);
+  }, [refreshRewards]);
 
   const inventoryItems = rewards.map((r, idx) => {
     const stocksInHand = Number(r.stock ?? r.stocks ?? r.stock_quantity ?? 0);
@@ -979,7 +979,7 @@ export default function IncentivesRewards() {
 
   useEffect(() => {
     Promise.allSettled([refreshRewards(), refreshRedemptions(), refreshStudents()]);
-  }, []);
+  }, [refreshRewards, refreshRedemptions, refreshStudents]);
 
   const totalRewards = dashboardRewards.length;
   const totalStock = dashboardRewards.reduce((sum, reward) => sum + reward.stock, 0);

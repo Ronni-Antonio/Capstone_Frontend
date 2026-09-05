@@ -9,7 +9,7 @@ export default function SectionsRanking() {
 
   useEffect(() => {
     refreshSectionsRanking().catch((error) => console.error('Unable to load section ranking:', error));
-  }, []);
+  }, [refreshSectionsRanking]);
   
   // Calculate ranking from students/transactions if API ranking is empty
   const sectionsData = useMemo(() => {
