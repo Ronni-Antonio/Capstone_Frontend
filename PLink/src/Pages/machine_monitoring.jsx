@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../context/DataContext.jsx';
+import { RecycleIcon } from 'lucide-react';
 
 const COLORS = {
   white: '#ffffff',
@@ -183,7 +184,7 @@ export function MachineMonitoring() {
     load();
     const interval = window.setInterval(load, 5000);
     return () => { mounted = false; window.clearInterval(interval); };
-  }, []);
+  }, [refreshSmartBins]);
 
   const compartments = useMemo(() => {
     const rows = Array.isArray(smartBin?.compartments) ? smartBin.compartments : [];
@@ -239,10 +240,43 @@ export function MachineMonitoring() {
         }
       `}</style>
 
-      <div className="animate-fade-in-up" style={{ background: COLORS.white, borderRadius: '24px', padding: '28px', boxShadow: '0 10px 25px -5px rgba(0,0,0,.05)', border: `1px solid ${COLORS.mintLight}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: COLORS.mintMuted, display: 'grid', placeItems: 'center', fontSize: 26 }}>♻️</div>
+      <div
+        className="animate-fade-in-up"
+        style={{
+          backgroundColor: COLORS.white,
+          borderRadius: '24px',
+          padding: '28px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+          border: `1px solid ${COLORS.mintLight}`,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '24px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '12px',
+                background: '#EBF5E4',
+                border: '2px solid #A2CB8B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <RecycleIcon className="w-5 h-5 text-[#2F5D3A]" />
+            </div>
+
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.darkMuted, textTransform: 'uppercase', letterSpacing: '.05em' }}>Plink Dual-Compartment Smart Bin</div>
               <h2 style={{ margin: '4px 0 0', fontSize: 24, color: COLORS.dark }}>{smartBin?.name || 'Smart Recycling Bin'}</h2>

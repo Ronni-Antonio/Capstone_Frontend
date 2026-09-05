@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
+import {
+  UsersIcon,
+  LayersIcon,
+  PlusIcon,
+  CircleCheckIcon,
+  EyeIcon,
+  PencilIcon,
+  CreditCardIcon,
+} from 'lucide-react';
 
 const COLORS = {
   white: '#ffffff',
@@ -36,7 +45,7 @@ export default function StudentPoints() {
   
   useEffect(() => {
     Promise.allSettled([refreshStudents(), refreshSections()]);
-  }, []);
+  }, [refreshStudents, refreshSections]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
@@ -464,14 +473,15 @@ export default function StudentPoints() {
             style={{
               width: '44px',
               height: '44px',
-              borderRadius: '14px',
-              background: COLORS.mint,
+              borderRadius: '12px',
+              background: '#EBF5E4',
+              border: '2px solid #A2CB8B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            ⭐
+            <UsersIcon className="w-5 h-5 text-[#2F5D3A]" />
           </div>
 
           <div
@@ -519,14 +529,15 @@ export default function StudentPoints() {
             style={{
               width: '44px',
               height: '44px',
-              borderRadius: '14px',
-              background: COLORS.mint,
+              borderRadius: '12px',
+              background: '#EBF5E4',
+              border: '2px solid #A2CB8B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            👨‍🎓
+            <LayersIcon className="w-5 h-5 text-[#2F5D3A]" />
           </div>
 
           <div
@@ -619,7 +630,7 @@ export default function StudentPoints() {
             fontWeight: '600'
           }}
         >
-          <i className="fa-solid fa-plus"></i> Add Student
+          <PlusIcon className="w-4 h-4 inline mr-1.5" /> Add Student
         </button>
       </div>
 
@@ -742,7 +753,7 @@ export default function StudentPoints() {
                             fontWeight: '700'
                           }}
                         >
-                          <i className="fa-solid fa-circle-check" style={{ marginRight: '6px' }}></i>
+                          <CircleCheckIcon className="w-4 h-4 inline" style={{ marginRight: '6px' }} />
                           Assigned
                         </span>
                         <span style={{ fontSize: '11px', color: COLORS.darkMuted }}>
@@ -796,11 +807,11 @@ export default function StudentPoints() {
 
                   <td style={td}>
                     <button style={actionBtn}>
-                      <i className="fa-solid fa-eye"></i>
+                      <EyeIcon className="w-4 h-4" />
                     </button>
 
                     <button style={actionBtn}>
-                      <i className="fa-solid fa-pen"></i>
+                      <PencilIcon className="w-4 h-4" />
                     </button>
 
                     {!student.has_active_rfid_card && (
@@ -813,7 +824,7 @@ export default function StudentPoints() {
                         }}
                         title="Assign RFID Card"
                       >
-                        <i className="fa-solid fa-id-card"></i>
+                        <CreditCardIcon className="w-4 h-4" />
                       </button>
                     )}
                   </td>

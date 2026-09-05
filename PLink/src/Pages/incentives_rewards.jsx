@@ -1,6 +1,22 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
+import {
+  ListOrderedIcon,
+  CircleCheckIcon,
+  BellIcon,
+  CircleXIcon,
+  DownloadIcon,
+  CoinsIcon,
+  CircleDollarSignIcon,
+  GiftIcon,
+  StarIcon,
+  BoxIcon,
+  TrendingUpIcon,
+  AlertCircleIcon,
+  RefreshCwIcon,
+  Loader2Icon,
+} from 'lucide-react';
 
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
@@ -50,7 +66,7 @@ function RewardsTab() {
     try {
       setModalError(null);
       setModalSuccess(null);
-      
+
       // Validate inputs
       if (!newReward.reward_name.trim()) {
         setModalError('Please enter a reward name');
@@ -64,38 +80,47 @@ function RewardsTab() {
         setModalError('Please enter a valid stock quantity');
         return;
       }
-      /* PRICE ADD START - validate price if provided */
-      if (newReward.price !== '' && Number(newReward.price) < 0) {
-        setModalError('Please enter a valid price');
+      // Backend requires unit_price
+      if (newReward.price === '' || newReward.price === null || newReward.price === undefined) {
+        setModalError('The unit price field is required.');
         return;
       }
-      /* PRICE ADD END */
-      
-      // Send to API
+      if (Number(newReward.price) < 0 || Number.isNaN(Number(newReward.price))) {
+        setModalError('Please enter a valid unit price');
+        return;
+      }
+
+      // Send to API using backend-expected field names
       const rewardData = {
         reward_name: newReward.reward_name.trim(),
         points_cost: Number(newReward.points_cost),
+        points_value: Number(newReward.points_cost),
         stock_quantity: Number(newReward.stock_quantity),
-        /* PRICE ADD START - include price in payload (for inventory/backend) */
-        price: newReward.price !== '' ? Number(newReward.price) : null,
-        /* PRICE ADD END */
+        stocks: Number(newReward.stock_quantity),
+        unit_price: Number(newReward.price),
+        price: Number(newReward.price),
       };
-      
+
       await api.addReward(rewardData);
       setModalSuccess('Reward created successfully!');
-      
+
       // Reset form and close modal after a delay
       setTimeout(() => {
         setShowModal(false);
-        /* PRICE ADD START - include price in reset state */
         setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '' });
-        /* PRICE ADD END */
         setModalSuccess(null);
         refreshRewards();
       }, 1500);
     } catch (error) {
       console.error('❌ Error creating reward:', error);
-      setModalError(error.response?.data?.message || error.message || 'Failed to create reward');
+      const data = error?.response?.data;
+      const msg =
+        data?.message ||
+        (data?.errors && Object.values(data.errors).flat().join(' ')) ||
+        data?.error ||
+        error?.message ||
+        'Failed to create reward';
+      setModalError(msg);
     }
   };
 
@@ -307,54 +332,134 @@ function RewardsTab() {
 
 /* ===================== INVENTORY TAB START ===================== */
 function InventoryTab() {
-  const { rewards } = useData();
+  const { rewards, refreshRewards } = useData();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  /* PRICE ADD START - include price field pulled from reward data for inventory display */
-  const inventoryItems = rewards.map((r, idx) => ({
-    id: r.id || r.reward_id || idx,
-    sku: `SKU-${String(1000 + (r.id || r.reward_id || idx + 1)).padStart(4, '0')}`,
-    name: r.name,
-    category: 'Reward Items',
-    currentStock: r.stock,
-    minThreshold: 10,
-    pointsCost: r.points || r.points_required || r.points_cost || 0,
-    /* PRICE ADD START - price from reward data (hidden from rewards table, visible in inventory) */
-    unitPrice: r.price || r.unit_price || 0,
-    /* PRICE ADD END */
-    status:
-      r.stock === 0
-        ? 'Out of Stock'
-        : r.stock < 10
-        ? 'Low Stock'
-        : r.status === 'Active'
-        ? 'In Stock'
-        : 'Inactive',
-    lastRestocked: 'Aug 10, 2025',
-    supplier: 'School Supplies Co.',
-  }));
-  /* PRICE ADD END */
+  const formatLastStock = (timestamp) => {
+    if (!timestamp) return '—';
+    try {
+      const d = new Date(timestamp.replace(' ', 'T'));
+      if (Number.isNaN(d.getTime())) return '—';
+      const dateStr = d.toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const timeStr = d.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${dateStr} ${timeStr}`;
+    } catch {
+      return '—';
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    let cancelled = false;
+    const load = async () => {
+      if (cancelled) return;
+      setIsLoading(true);
+      setError(null);
+      try {
+        await refreshRewards();
+        if (mounted && !cancelled) {
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('❌ Error loading inventory data:', err);
+        if (mounted && !cancelled) {
+          const msg =
+            err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.message ||
+            'Failed to load inventory data';
+          setError(msg);
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => { mounted = false; cancelled = true; };
+  }, [refreshRewards]);
+
+  const inventoryItems = rewards.map((r, idx) => {
+    const stocksInHand = Number(r.stock ?? r.stocks ?? r.stock_quantity ?? 0);
+    const unitPrice = r.unit_price ?? r.price ?? null;
+    const unitPriceNum = unitPrice !== null && unitPrice !== undefined ? Number(unitPrice) : 0;
+    const totalPrice = unitPriceNum > 0 ? stocksInHand * unitPriceNum : 0;
+    const pointsValue = Number(r.points_value ?? r.points_cost ?? r.points ?? 0);
+    const lastStockFormatted = formatLastStock(r.last_restock ?? null);
+
+    return {
+      id: r.id || r.reward_id || idx,
+      name: r.reward_name || r.name || 'Unnamed Reward',
+      stocksInHand,
+      unitPrice: unitPriceNum,
+      unitPriceDisplay: unitPrice !== null && unitPrice !== undefined && unitPriceNum > 0
+        ? `₱${unitPriceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '—',
+      totalPrice,
+      totalPriceDisplay: totalPrice > 0
+        ? `₱${totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '—',
+      pointsValue,
+      lastStock: r.last_restock ?? null,
+      lastStockFormatted,
+      status:
+        stocksInHand === 0
+          ? 'Out of Stock'
+          : stocksInHand < 10
+          ? 'Low Stock'
+          : r.status === 'Active'
+          ? 'In Stock'
+          : 'Inactive',
+    };
+  });
 
   const lowStockCount = inventoryItems.filter(
-    (i) => i.currentStock > 0 && i.currentStock < i.minThreshold
+    (i) => i.stocksInHand > 0 && i.stocksInHand < 10
   ).length;
-  const outOfStockCount = inventoryItems.filter((i) => i.currentStock === 0).length;
+  const outOfStockCount = inventoryItems.filter((i) => i.stocksInHand === 0).length;
   const totalStockValue = inventoryItems.reduce(
-    (sum, i) => sum + i.currentStock * i.pointsCost,
+    (sum, i) => sum + i.stocksInHand * i.pointsValue,
     0
   );
-  /* PRICE ADD START - compute total monetary value of inventory (unit price × stock) */
   const totalMonetaryValue = inventoryItems.reduce(
-    (sum, i) => sum + i.currentStock * (Number(i.unitPrice) || 0),
+    (sum, i) => sum + i.totalPrice,
     0
   );
-  /* PRICE ADD END */
 
-  const statusStyle = {
-    'In Stock': 'bg-[#c7eabb] text-[#3e5f44]',
-    'Low Stock': 'bg-amber-100 text-amber-800',
-    'Out of Stock': 'bg-red-100 text-red-700',
-    Inactive: 'bg-gray-200 text-gray-600',
-  };
+  if (error) {
+    return (
+      <div className="bg-white rounded-3xl border border-[#dbe6db] shadow-sm p-12 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
+          <AlertCircleIcon className="w-8 h-8 text-red-500" />
+        </div>
+        <h3 className="text-lg font-bold text-[#3e5f44] mb-2">Unable to load inventory</h3>
+        <p className="text-sm text-[#8da28e] mb-5 max-w-md mx-auto">{error}</p>
+        <button
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            refreshRewards()
+              .then(() => setIsLoading(false))
+              .catch((err) => {
+                setError(err.response?.data?.message || err.message || 'Failed to load inventory data');
+                setIsLoading(false);
+              });
+          }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
+        >
+          <RefreshCwIcon className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -362,51 +467,71 @@ function InventoryTab() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-[#e8f5bd] flex items-center justify-center">
-              <i className="fa-solid fa-boxes-stacked text-[#3e5f44]" />
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <ListOrderedIcon className="w-5 h-5 text-[#2F5D3A]" />
             </div>
           </div>
-          <p className="text-sm text-[#7a947e]">Total SKUs</p>
+          <p className="text-sm text-[#7a947e]">Total Items</p>
           <h2 className="text-4xl font-bold text-[#3e5f44]">
-            {inventoryItems.length.toLocaleString()}
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              inventoryItems.length.toLocaleString()
+            )}
           </h2>
-          <p className="text-xs text-[#94a894] mt-2">Tracked items</p>
+          <p className="text-xs text-[#94a894] mt-2">Tracked rewards</p>
         </div>
 
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-[#c7eabb]/60 flex items-center justify-center">
-              <i className="fa-solid fa-check-circle text-[#3e5f44]" />
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <CircleCheckIcon className="w-5 h-5 text-[#2F5D3A]" />
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Total Units</p>
           <h2 className="text-4xl font-bold text-[#3e5f44]">
-            {inventoryItems
-              .reduce((sum, i) => sum + i.currentStock, 0)
-              .toLocaleString()}
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              inventoryItems
+                .reduce((sum, i) => sum + i.stocksInHand, 0)
+                .toLocaleString()
+            )}
           </h2>
           <p className="text-xs text-[#94a894] mt-2">In inventory</p>
         </div>
 
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center">
-              <i className="fa-solid fa-triangle-exclamation text-amber-700" />
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <BellIcon className="w-5 h-5 text-[#2F5D3A]" />
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Low Stock</p>
-          <h2 className="text-4xl font-bold text-amber-700">{lowStockCount}</h2>
+          <h2 className="text-4xl font-bold text-amber-700">
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              lowStockCount
+            )}
+          </h2>
           <p className="text-xs text-[#94a894] mt-2">Below threshold</p>
         </div>
 
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-red-100 flex items-center justify-center">
-              <i className="fa-solid fa-circle-xmark text-red-700" />
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <CircleXIcon className="w-5 h-5 text-[#2F5D3A]" />
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Out of Stock</p>
-          <h2 className="text-4xl font-bold text-red-700">{outOfStockCount}</h2>
+          <h2 className="text-4xl font-bold text-red-700">
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              outOfStockCount
+            )}
+          </h2>
           <p className="text-xs text-[#94a894] mt-2">Needs restock</p>
         </div>
       </div>
@@ -435,7 +560,7 @@ function InventoryTab() {
             </select>
 
             <button className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold">
-              <i className="fa-solid fa-file-export mr-2" />
+              <DownloadIcon className="w-4 h-4 inline mr-2" />
               Export
             </button>
           </div>
@@ -444,107 +569,79 @@ function InventoryTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[#6f876f] border-b">
+              <tr className="text-left text-[#011400] border-b">
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider">
-                  SKU
-                </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
-                  Item Name
-                </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
-                  Category
+                  Reward
                 </th>
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
-                  Current Stock
+                  Stocks in Hand
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
-                  Min Threshold
-                </th>
-                {/* PRICE ADD START - Unit Price column header (inventory only) */}
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
                   Unit Price
                 </th>
-                {/* PRICE ADD END */}
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                  Total Price
+                </th>
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
                   Points Value
                 </th>
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider">
-                  Last Restock
-                </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
-                  Status
-                </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
-                  Actions
+                  Last Stock
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {inventoryItems.length === 0 ? (
+              {isLoading && (
                 <tr>
-                  {/* PRICE ADD START - colSpan updated after adding Unit Price column */}
+                  <td colSpan="6" className="py-16 text-center">
+                    <div className="inline-flex flex-col items-center gap-3">
+                      <Loader2Icon className="w-8 h-8 animate-spin text-[#3e5f44]" />
+                      <span className="text-sm text-[#011400]">Loading inventory…</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!isLoading && inventoryItems.length === 0 ? (
+                <tr>
                   <td
-                    colSpan="10"
-                    className="py-10 text-center text-[#6f876f]"
+                    colSpan="6"
+                    className="py-10 text-center text-[#011400]"
                   >
                     No inventory items found
                   </td>
-                  {/* PRICE ADD END */}
                 </tr>
               ) : (
-                inventoryItems.map((item) => (
+                !isLoading && inventoryItems.map((item) => (
                   <tr
                     key={item.id}
                     className="border-b hover:bg-[#fcfcf7] transition-colors"
                   >
-                    <td className="py-3 text-[#6f876f] font-mono text-xs">
-                      {item.sku}
-                    </td>
-                    <td className="py-3 text-[#3e5f44] font-medium">
+                    <td className="py-3 text-[#011400] font-medium">
                       {item.name}
                     </td>
-                    <td className="py-3 text-[#6f876f]">{item.category}</td>
                     <td
                       className={`py-3 text-right font-bold ${
-                        item.currentStock === 0
+                        item.stocksInHand === 0
                           ? 'text-red-700'
-                          : item.currentStock < item.minThreshold
+                          : item.stocksInHand < 10
                           ? 'text-amber-700'
-                          : 'text-[#3e5f44]'
+                          : 'text-[#011400]'
                       }`}
                     >
-                      {item.currentStock.toLocaleString()}
+                      {item.stocksInHand.toLocaleString()}
                     </td>
-                    <td className="py-3 text-right text-[#6f876f]">
-                      {item.minThreshold}
+                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                      {item.unitPriceDisplay}
                     </td>
-                    {/* PRICE ADD START - Unit Price cell (displayed in inventory only, not in rewards table) */}
-                    <td className="py-3 text-right text-[#5a7c61] font-semibold">
-                      {item.unitPrice > 0 ? `₱${Number(item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                      {item.totalPriceDisplay}
                     </td>
-                    {/* PRICE ADD END */}
-                    <td className="py-3 text-right text-[#5a7c61] font-semibold">
-                      {item.pointsCost.toLocaleString()} pts
+                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                      {item.pointsValue.toLocaleString()} pts
                     </td>
-                    <td className="py-3 text-[#6f876f] text-xs">
-                      {item.lastRestocked}
-                    </td>
-                    <td className="py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                          statusStyle[item.status]
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <div className="flex justify-end gap-2">
-                        <button className="text-xs px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
-                          View Details
-                        </button>
-                      </div>
+                    <td className="py-3 text-[#011400] text-xs whitespace-nowrap">
+                      {item.lastStockFormatted}
                     </td>
                   </tr>
                 ))
@@ -555,26 +652,26 @@ function InventoryTab() {
 
         {/* Pagination */}
         <div className="flex items-center justify-between pt-4 mt-4 border-t border-[#dbe6db]">
-          <p className="text-xs text-[#6f876f]">
+          <p className="text-xs text-[#011400]">
             Showing{' '}
-            <span className="font-semibold text-[#3e5f44]">1</span> –{' '}
-            <span className="font-semibold text-[#3e5f44]">
-              {inventoryItems.length}
+            <span className="font-semibold text-[#011400]">{isLoading ? '—' : (inventoryItems.length ? 1 : 0)}</span> –{' '}
+            <span className="font-semibold text-[#011400]">
+              {isLoading ? '—' : inventoryItems.length}
             </span>{' '}
             of{' '}
-            <span className="font-semibold text-[#3e5f44]">
-              {inventoryItems.length}
+            <span className="font-semibold text-[#011400]">
+              {isLoading ? '—' : inventoryItems.length}
             </span>{' '}
             inventory items
           </p>
           <div className="flex items-center gap-2">
-            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#6f876f] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
+            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#011400] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
               ←
             </button>
-            <span className="text-sm font-semibold text-[#3e5f44] px-2">
+            <span className="text-sm font-semibold text-[#011400] px-2">
               Page 1 of 1
             </span>
-            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#6f876f] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
+            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#011400] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
               →
             </button>
           </div>
@@ -582,9 +679,7 @@ function InventoryTab() {
       </div>
 
       {/* Stock value summary */}
-      {/* PRICE ADD START - grid-cols-2 layout, Stock Health spans both cols after adding Monetary card */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-      {/* PRICE ADD END */}
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Inventory Value by Points
@@ -596,19 +691,22 @@ function InventoryTab() {
             <div>
               <p className="text-sm text-[#7a947e]">Total Points Value</p>
               <p className="text-4xl font-bold text-[#3e5f44]">
-                {totalStockValue.toLocaleString()}
+                {isLoading ? (
+                  <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
+                ) : (
+                  totalStockValue.toLocaleString()
+                )}
               </p>
               <p className="text-xs text-[#94a894] mt-1">points equivalent</p>
             </div>
             <div className="ml-auto">
-              <div className="w-20 h-20 rounded-2xl bg-[#7faa72] flex items-center justify-center">
-                <i className="fa-solid fa-coins text-3xl text-white" />
+              <div className="w-20 h-20 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+                <CoinsIcon className="w-8 h-8 text-[#2F5D3A]" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* PRICE ADD START - Monetary Inventory Value card (price × stock, visible only in inventory tab) */}
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Inventory Value (Monetary)
@@ -620,22 +718,23 @@ function InventoryTab() {
             <div>
               <p className="text-sm text-[#7a947e]">Total Monetary Value</p>
               <p className="text-4xl font-bold text-[#3e5f44]">
-                ₱{totalMonetaryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isLoading ? (
+                  <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
+                ) : (
+                  <>₱{totalMonetaryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                )}
               </p>
               <p className="text-xs text-[#94a894] mt-1">Philippine Peso (₱)</p>
             </div>
             <div className="ml-auto">
-              <div className="w-20 h-20 rounded-2xl bg-[#3e5f44] flex items-center justify-center">
-                <i className="fa-solid fa-peso-sign text-3xl text-white" />
+              <div className="w-20 h-20 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+                <CircleDollarSignIcon className="w-8 h-8 text-[#2F5D3A]" />
               </div>
             </div>
           </div>
         </div>
-        {/* PRICE ADD END */}
 
-        {/* PRICE ADD START - Stock Health spans full width (2 cols) after adding Monetary Value card */}
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm md:col-span-2">
-        {/* PRICE ADD END */}
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Stock Health Overview
           </h3>
@@ -647,7 +746,7 @@ function InventoryTab() {
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-[#3e5f44]">In Stock</span>
                 <span className="font-semibold text-[#3e5f44]">
-                  {inventoryItems.filter((i) => i.status === 'In Stock').length}
+                  {isLoading ? '—' : inventoryItems.filter((i) => i.status === 'In Stock').length}
                 </span>
               </div>
               <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
@@ -655,7 +754,7 @@ function InventoryTab() {
                   className="h-full bg-[#7faa72]"
                   style={{
                     width: `${
-                      inventoryItems.length > 0
+                      !isLoading && inventoryItems.length > 0
                         ? (inventoryItems.filter((i) => i.status === 'In Stock')
                             .length /
                             inventoryItems.length) *
@@ -670,7 +769,7 @@ function InventoryTab() {
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-[#3e5f44]">Low Stock</span>
                 <span className="font-semibold text-amber-700">
-                  {lowStockCount}
+                  {isLoading ? '—' : lowStockCount}
                 </span>
               </div>
               <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
@@ -678,7 +777,7 @@ function InventoryTab() {
                   className="h-full bg-amber-400"
                   style={{
                     width: `${
-                      inventoryItems.length > 0
+                      !isLoading && inventoryItems.length > 0
                         ? (lowStockCount / inventoryItems.length) * 100
                         : 0
                     }%`,
@@ -690,7 +789,7 @@ function InventoryTab() {
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-[#3e5f44]">Out of Stock</span>
                 <span className="font-semibold text-red-700">
-                  {outOfStockCount}
+                  {isLoading ? '—' : outOfStockCount}
                 </span>
               </div>
               <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
@@ -698,7 +797,7 @@ function InventoryTab() {
                   className="h-full bg-red-400"
                   style={{
                     width: `${
-                      inventoryItems.length > 0
+                      !isLoading && inventoryItems.length > 0
                         ? (outOfStockCount / inventoryItems.length) * 100
                         : 0
                     }%`,
@@ -880,7 +979,7 @@ export default function IncentivesRewards() {
 
   useEffect(() => {
     Promise.allSettled([refreshRewards(), refreshRedemptions(), refreshStudents()]);
-  }, []);
+  }, [refreshRewards, refreshRedemptions, refreshStudents]);
 
   const totalRewards = dashboardRewards.length;
   const totalStock = dashboardRewards.reduce((sum, reward) => sum + reward.stock, 0);
@@ -901,7 +1000,7 @@ export default function IncentivesRewards() {
       title: 'Total Rewards',
       value: totalRewards.toLocaleString(),
       sub: 'Preloaded from data context',
-      icon: 'fa-gift',
+      Icon: GiftIcon,
     },
     {
       title: 'Active Rewards',
@@ -909,19 +1008,19 @@ export default function IncentivesRewards() {
         .filter((reward) => reward.status === 'Active')
         .length.toLocaleString(),
       sub: 'Currently available',
-      icon: 'fa-star',
+      Icon: StarIcon,
     },
     {
       title: 'Total Stock',
       value: totalStock.toLocaleString(),
       sub: 'Units in inventory',
-      icon: 'fa-box-open',
+      Icon: BoxIcon,
     },
     {
       title: 'Average Points Cost',
       value: averagePoints.toLocaleString(),
       sub: 'Points per reward',
-      icon: 'fa-arrow-trend-up',
+      Icon: TrendingUpIcon,
     },
   ];
 
@@ -1001,8 +1100,8 @@ export default function IncentivesRewards() {
                 className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]"
               >
                 <div className="flex justify-between items-center mb-4">
-                  <div className="w-11 h-11 rounded-2xl bg-[#e8f5bd] flex items-center justify-center">
-                    <i className={`fa-solid ${card.icon} text-[#3e5f44]`} />
+                  <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+                    <card.Icon className="w-5 h-5 text-[#2F5D3A]" />
                   </div>
                 </div>
 

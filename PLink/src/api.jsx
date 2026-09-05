@@ -136,6 +136,9 @@ api.getProphetForecastData = () => api.get('/prophet/forecast-data');
 api.downloadSustainabilityReport = (params = {}) =>
   api.get('/reports-analytics/pdf', { params, responseType: 'blob' });
 
+// Activity logs
+api.getLogs = () => api.get('/logs');
+
 // User profile
 api.getUser = (id) => api.get(`/users/${id}`);
 api.updateUser = (id, data) => api.put(`/users/${id}`, data);

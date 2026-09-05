@@ -130,7 +130,7 @@ export function Notifications({ onNavigate }) {
 
   useEffect(() => {
     refreshNotifications().catch((error) => console.error('Unable to load notifications:', error));
-  }, []);
+  }, [refreshNotifications]);
   
   // Use API notifications or fallback
   const items = useMemo(() => {

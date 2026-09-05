@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import { TrophyIcon } from 'lucide-react';
 
 const badges = ['Eco Champion', 'Rising Star', 'Green Warriors', 'Steady Recyclers', 'On the Rise'];
 
@@ -8,7 +9,7 @@ export default function SectionsRanking() {
 
   useEffect(() => {
     refreshSectionsRanking().catch((error) => console.error('Unable to load section ranking:', error));
-  }, []);
+  }, [refreshSectionsRanking]);
   
   // Calculate ranking from students/transactions if API ranking is empty
   const sectionsData = useMemo(() => {
@@ -89,8 +90,8 @@ export default function SectionsRanking() {
       {topSection && (
         <div className="bg-[#3e5f44] rounded-3xl p-8 text-white flex justify-between items-center">
           <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-[#6c8b67] flex items-center justify-center">
-              <i className="fa-solid fa-trophy text-2xl" />
+            <div className="w-14 h-14 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <TrophyIcon className="w-7 h-7 text-[#2F5D3A]" />
             </div>
 
             <div>
