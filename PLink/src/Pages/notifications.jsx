@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 
 // Fallback notifications if API not implemented

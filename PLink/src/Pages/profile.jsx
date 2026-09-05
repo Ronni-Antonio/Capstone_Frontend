@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api'; // Import your Axios config instance cleanly!
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
@@ -54,10 +54,21 @@ export default function Profile() {
     confirmPass: ''
   });
 
-  const [security, setSecurity] = useState({
-    twoFactor: true,
-    loginAlerts: true,
-    autoLogout: false
+  const [security, setSecurity] = useState(() => {
+    const savedSecurity = localStorage.getItem('plink_security');
+    if (savedSecurity) {
+      try {
+        return JSON.parse(savedSecurity);
+      } catch {
+        // Fall back to defaults when saved JSON is invalid.
+      }
+    }
+
+    return {
+      twoFactor: true,
+      loginAlerts: true,
+      autoLogout: false
+    };
   });
 
   const [message, setMessage] = useState('');
@@ -127,10 +138,6 @@ export default function Profile() {
         setMessage('Could not load profile from server.');
       });
 
-    const savedSecurity = localStorage.getItem('plink_security');
-    if (savedSecurity) {
-      setSecurity(JSON.parse(savedSecurity));
-    }
   }, [userId]);
 
   const handleProfileSubmit = () => {
@@ -304,7 +311,7 @@ export default function Profile() {
         setMessageType('error');
         setMessage(response.data.message || 'Failed to update profile.');
       }
-    } catch (error) {
+    } catch{
       setMessageType('error');
       setMessage('Server communication error.');
     }

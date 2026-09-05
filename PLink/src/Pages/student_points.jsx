@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
 import {
@@ -61,12 +61,6 @@ export default function StudentPoints() {
     bottles: 0,
     points: 0
   });
-  
-  useEffect(() => {
-    if (sectionsList.length > 0) {
-      setNewStudent(prev => ({ ...prev, section_id: sectionsList[0].section_id }));
-    }
-  }, [sectionsList]);
   
   // CSV Upload State
   const [csvLoading, setCsvLoading] = useState(false);
@@ -159,11 +153,6 @@ export default function StudentPoints() {
     const matchesSection = filterSection === 'All' || student.section === filterSection;
     return matchesSearch && matchesSection;
   });
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterSection]);
 
   // Calculate pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -308,7 +297,7 @@ export default function StudentPoints() {
   };
 
   // Clean up polling interval on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (pollingInterval) {
         clearInterval(pollingInterval);
@@ -599,7 +588,7 @@ export default function StudentPoints() {
         <input
           placeholder="Search student..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           style={{
             flex: 1,
             minWidth: '250px',
@@ -612,7 +601,7 @@ export default function StudentPoints() {
 
         <select
           value={filterSection}
-          onChange={(e) => setFilterSection(e.target.value)}
+          onChange={(e) => { setFilterSection(e.target.value); setCurrentPage(1); }}
           style={{
             border: `1px solid ${COLORS.mintLight}`,
             borderRadius: '12px',

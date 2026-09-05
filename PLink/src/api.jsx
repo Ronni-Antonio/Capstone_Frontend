@@ -1,10 +1,12 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
-  headers: { Accept: 'application/json' },
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+    },
 });
-
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('ACCESS_TOKEN');
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -72,6 +74,8 @@ api.getSmartBin = (id) => api.get(`/machines/${id}`);
 api.addSmartBin = (data) => api.post('/machines', data);
 api.updateSmartBin = (id, data) => api.put(`/machines/${id}`, data);
 api.deleteSmartBin = (id) => api.delete(`/machines/${id}`);
+api.updateSmartBinCompartmentSensor = (machineId, compartmentId, data) =>
+  api.patch(`/machines/${machineId}/compartments/${compartmentId}/sensor`, data);
 api.getSmartBinLogs = () => api.get('/machine-logs');
 
 // Rewards
@@ -79,6 +83,9 @@ api.getRewards = () => api.get('/rewards');
 api.addReward = (data) => api.post('/rewards', data);
 api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
+/* INVENTORY TAB START - new dedicated inventory endpoint for purchase tracking + columns */
+api.getInventory = () => api.get('/rewards/inventory');
+/* INVENTORY TAB END */
 
 // Settings
 api.getSettings = () => api.get('/settings');
@@ -123,6 +130,11 @@ api.getAiModels = () => api.get('/ai-models');
 api.getClassifications = () => api.get('/classifications');
 api.getPredictions = () => api.get('/predictions');
 api.getAnalyticsReports = () => api.get('/analytics-reports');
+api.getReportsAnalytics = (params = {}) => api.get('/reports-analytics', { params });
+api.runProphetForecast = (data = { periods: 7 }) => api.post('/prophet/run-forecast', data);
+api.getProphetForecastData = () => api.get('/prophet/forecast-data');
+api.downloadSustainabilityReport = (params = {}) =>
+  api.get('/reports-analytics/pdf', { params, responseType: 'blob' });
 
 // Activity logs
 api.getLogs = () => api.get('/logs');

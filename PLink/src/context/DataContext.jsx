@@ -90,6 +90,9 @@ const normalizeReward = (reward) => ({
   unit_price: reward.unit_price ?? reward.price ?? null,
   last_restock: reward.last_restock ?? reward.last_restocked ?? reward.updated_at ?? null,
   status: reward.is_active === false ? 'Inactive' : 'Active',
+  /* PRICE ADD START - preserve price field through normalization so inventory tab can use it */
+  price: reward.price !== undefined && reward.price !== null ? Number(reward.price) : null,
+  /* PRICE ADD END */
 });
 
 const normalizePlasticType = (item) => ({
@@ -115,6 +118,24 @@ const normalizeSection = (section) => ({
 // Smart Bin presentation model. Fullness is calculated from HC-SR04 distance
 // in the monitoring page; these values are normalized here so the frontend
 // consistently understands the revised backend schema.
+const normalizeCompartment = (compartment) => ({
+  ...compartment,
+  id: compartment.compartment_id ?? compartment.id,
+  compartment_id: compartment.compartment_id ?? compartment.id,
+  name: compartment.name || 'Compartment',
+  material_category: compartment.material_category || 'other',
+  status: compartment.status || 'offline',
+  current_distance_cm:
+    compartment.current_distance_cm === null || compartment.current_distance_cm === undefined
+      ? null
+      : Number(compartment.current_distance_cm),
+  current_fill_percentage: Number(compartment.current_fill_percentage ?? 0),
+  full_threshold_cm: Number(compartment.full_threshold_cm ?? 20),
+  empty_threshold_cm: Number(compartment.empty_threshold_cm ?? 80),
+  fill_state: compartment.fill_state || 'normal',
+  last_active_at: compartment.last_active_at || null,
+});
+
 const normalizeSmartBin = (bin) => ({
   ...bin,
   id: bin.smart_bin_id ?? bin.machine_id ?? bin.id,
@@ -131,6 +152,9 @@ const normalizeSmartBin = (bin) => ({
       : Number(bin.current_fill_percentage),
   full_threshold_cm: Number(bin.full_threshold_cm ?? 20),
   empty_threshold_cm: Number(bin.empty_threshold_cm ?? 80),
+  compartments: Array.isArray(bin.compartments)
+    ? bin.compartments.map(normalizeCompartment)
+    : [],
   last_active_at: bin.last_active_at || null,
   last_maintenance_at: bin.last_maintenance_at || null,
 });
@@ -204,6 +228,9 @@ export const DataProvider = ({ children }) => {
     students: [],
     transactions: [],
     rewards: [],
+    /* INVENTORY TAB START - dedicated inventory list fed from /rewards/inventory */
+    inventory: [],
+    /* INVENTORY TAB END */
     redemptions: [],
     sections: [],
     sectionsRanking: [],
@@ -239,6 +266,30 @@ export const DataProvider = ({ children }) => {
     setData((prev) => ({ ...prev, rewards: arrayFrom(res.data).map(normalizeReward) }));
     return res;
   };
+
+  /* INVENTORY TAB START - refreshInventory calls /rewards/inventory and normalizes numbers for UI */
+  const refreshInventory = async () => {
+    const res = await api.getInventory();
+    const rows = arrayFrom(res.data).map((item) => ({
+      ...item,
+      id: item.reward_id ?? item.id,
+      reward_id: item.reward_id ?? item.id,
+      name: item.reward_name || item.name || 'Unnamed Item',
+      item_price: Number(item.item_price ?? item.price ?? 0),
+      purchased_item: Number(item.purchased_item ?? item.purchased_item_count ?? item.purchased_count ?? 0),
+      date_purchased: item.date_purchased ?? item.created_at ?? null,
+      remaining_stocks: Number(item.remaining_stocks ?? item.stock_quantity ?? item.stock ?? 0),
+      total_stocks_on_hand: Number(item.total_stocks_on_hand ?? item.total_stocks ?? 0),
+      total_price: Number(item.total_price ?? (
+        (Number(item.total_stocks_on_hand ?? item.total_stocks ?? 0)) *
+        (Number(item.item_price ?? item.price ?? 0))
+      )),
+      variance: Number(item.variance ?? 0),
+    }));
+    setData((prev) => ({ ...prev, inventory: rows }));
+    return res;
+  };
+  /* INVENTORY TAB END */
 
   const refreshRedemptions = async () => {
     const res = await api.getRedemptions();
@@ -366,6 +417,9 @@ export const DataProvider = ({ children }) => {
       refreshStudents,
       refreshTransactions,
       refreshRewards,
+      /* INVENTORY TAB START - expose inventory data + refresh fn to pages */
+      refreshInventory,
+      /* INVENTORY TAB END */
       refreshRedemptions,
       refreshSections,
       refreshSectionsRanking,
@@ -400,6 +454,8 @@ export const DataProvider = ({ children }) => {
   );
 };
 
+// Shared context hook intentionally co-located to avoid changing existing imports.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useData = () => {
   const context = useContext(DataContext);
   if (!context) throw new Error('useData must be used within a DataProvider');

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import Login from './Pages/Login.jsx';
 
 import { Sidebar } from './Pages/sidebar.jsx';
@@ -19,21 +19,118 @@ const Profile = lazy(() => import('./Pages/profile.jsx'));
 const MachineMonitoring = lazy(() => import('./Pages/machine_monitoring.jsx').then((m) => ({ default: m.MachineMonitoring })));
 const Notifications = lazy(() => import('./Pages/notifications.jsx').then((m) => ({ default: m.Notifications })));
 const Settings = lazy(() => import('./Pages/Settings.jsx').then((m) => ({ default: m.Settings })));
+const Logs = lazy(() => import('./Pages/Logs.jsx').then((m) => ({ default: m.Logs })));
+
+// App content component that uses data context
+function AppContent({ activePage, setActivePage, handleLogout, sidebarCollapsed, renderPageContent }) {
+  const { isLoading, error } = useData();
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        fontFamily: 'sans-serif',
+        backgroundColor: '#f7f8f3'
+      }}>
+        {/* Animated spinner */}
+        <div style={{
+          width: '80px',
+          height: '80px',
+          border: '6px solid #c7eabb',
+          borderTop: '6px solid #3e5f44',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          marginBottom: '24px'
+        }} />
+        <h2 style={{
+          color: '#3e5f44',
+          fontSize: '28px',
+          fontWeight: '700',
+          margin: 0
+        }}>
+          Loading Plink...
+        </h2>
+        <p style={{
+          color: 'rgba(62,95,68,0.7)',
+          fontSize: '14px',
+          marginTop: '8px'
+        }}>
+          Getting your recycling data ready
+        </p>
+        {/* Add keyframe animation style */}
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        fontFamily: 'sans-serif',
+        fontSize: '18px',
+        color: '#b91c1c'
+      }}>
+        Error: {error}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Sidebar
+        activePage={activePage}
+        setActivePage={setActivePage}
+        onLogout={handleLogout}
+      />
+
+      <div
+        className={`min-h-screen flex flex-col p-10 transition-all duration-300 ${
+          sidebarCollapsed
+            ? 'ml-20 w-[calc(100%-80px)]'
+            : 'ml-[260px] w-[calc(100%-260px)]'
+        }`}
+      >
+        <Header
+          activePage={activePage}
+          setActivePage={setActivePage}
+          onLogout={handleLogout}
+        />
+
+        <div className="flex-1 mt-4">
+          <Suspense fallback={<div className="p-8 text-[#3e5f44]/70">Loading page...</div>}>
+            {renderPageContent()}
+          </Suspense>
+        </div>
+      </div>
+    </>
+  );
+}
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return !!localStorage.getItem('ACCESS_TOKEN');
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const [activePage, setActivePage] = useState('dashboard');
 
-  console.log('Current isLoggedIn state:', isLoggedIn);
-
-  const handleLogout = () => {console.log('Logging out...');
+  const handleLogout = () => {
+    
     localStorage.removeItem('ACCESS_TOKEN');
-    setIsLoggedIn(false);
-    console.log('isLoggedIn set to false');
 
-  }; 
+    setIsLoggedIn(false);
+    
+  };
 
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -107,103 +204,7 @@ function App() {
     }
   };
 
-  // App content component that uses data context
-  const AppContent = () => {
-    const { isLoading, error } = useData();
 
-    if (isLoading) {
-      return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          fontFamily: 'sans-serif',
-          backgroundColor: '#f7f8f3'
-        }}>
-          {/* Animated spinner */}
-          <div style={{
-            width: '80px',
-            height: '80px',
-            border: '6px solid #c7eabb',
-            borderTop: '6px solid #3e5f44',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            marginBottom: '24px'
-          }} />
-          <h2 style={{
-            color: '#3e5f44',
-            fontSize: '28px',
-            fontWeight: '700',
-            margin: 0
-          }}>
-            Loading Plink...
-          </h2>
-          <p style={{
-            color: 'rgba(62,95,68,0.7)',
-            fontSize: '14px',
-            marginTop: '8px'
-          }}>
-            Getting your recycling data ready
-          </p>
-          {/* Add keyframe animation style */}
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          fontFamily: 'sans-serif',
-          fontSize: '18px',
-          color: '#b91c1c'
-        }}>
-          Error: {error}
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <Sidebar
-          activePage={activePage}
-          setActivePage={setActivePage}
-          onLogout={handleLogout}
-        />
-
-        <div
-          className={`min-h-screen flex flex-col p-10 transition-all duration-300 ${
-            sidebarCollapsed
-              ? 'ml-20 w-[calc(100%-80px)]'
-              : 'ml-[260px] w-[calc(100%-260px)]'
-          }`}
-        >
-          <Header
-            activePage={activePage}
-            setActivePage={setActivePage}
-            onLogout={handleLogout}
-          />
-
-          <div className="flex-1 mt-4">
-            <Suspense fallback={<div className="p-8 text-[#3e5f44]/70">Loading page...</div>}>
-              {renderPageContent()}
-            </Suspense>
-          </div>
-        </div>
-      </>
-    );
-  };
 
   if (!isLoggedIn) {
     return (
@@ -217,7 +218,13 @@ function App() {
 
   return (
     <DataProvider>
-      <AppContent />
+      <AppContent
+        activePage={activePage}
+        setActivePage={setActivePage}
+        handleLogout={handleLogout}
+        sidebarCollapsed={sidebarCollapsed}
+        renderPageContent={renderPageContent}
+      />
     </DataProvider>
   );
 }

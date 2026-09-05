@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
 import {
@@ -89,6 +89,7 @@ export function Settings() {
   // CONTROLLER 1: System Settings Loader - Initialize from context
   useEffect(() => {
     if (settings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSchoolInfo({
         name: settings.school_name || '',
         address: settings.school_address || '',
@@ -111,6 +112,7 @@ export function Settings() {
     if (plasticTypes && plasticTypes.length > 0) {
       const mappedConfig = mapPlasticTypesToConfig(plasticTypes);
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlasticTypeConfig(mappedConfig);
       if (mappedConfig.pet) {
         setConversion(mappedConfig.pet.points);

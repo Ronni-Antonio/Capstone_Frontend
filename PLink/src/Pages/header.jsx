@@ -15,7 +15,7 @@ const titles = {
   logs: { title: 'Logs', subtitle: 'Activity tracking and redemption management' },
 };
 
-export function Header({ activePage, setActivePage, onLogout }) {
+export function Header({ activePage, setActivePage }) {
 
   const meta = titles[activePage] || titles.machines;
 

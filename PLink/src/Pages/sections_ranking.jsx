@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { TrophyIcon } from 'lucide-react';
 
