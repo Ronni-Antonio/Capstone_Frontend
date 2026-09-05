@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-import api from '../api.jsx';
 import { BellIcon } from 'lucide-react';
 
 const titles = {

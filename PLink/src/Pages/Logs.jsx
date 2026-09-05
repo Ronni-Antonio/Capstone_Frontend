@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   SearchIcon,
@@ -27,13 +27,6 @@ const categories = [
   'Inventory',
   'System',
 ]
-
-const statusStyle = {
-  Completed: 'bg-[#c7eabb]/60 text-[#3e5f44]',
-  Pending: 'bg-amber-100 text-amber-800',
-  Rejected: 'bg-red-100 text-red-700',
-  Info: 'bg-[#e8f5bd] text-[#3e5f44]',
-}
 
 const arrayFrom = (value) => {
   if (Array.isArray(value)) return value;
