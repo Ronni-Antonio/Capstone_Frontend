@@ -1,6 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
+import {
+  ListOrderedIcon,
+  CircleCheckIcon,
+  BellIcon,
+  CircleXIcon,
+  DownloadIcon,
+  CoinsIcon,
+  CircleDollarSignIcon,
+  GiftIcon,
+  StarIcon,
+  BoxIcon,
+  TrendingUpIcon,
+  AlertCircleIcon,
+  RefreshCwIcon,
+  Loader2Icon,
+} from 'lucide-react';
 
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
@@ -8,20 +24,49 @@ const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 function RewardsTab() {
   const { rewards, refreshRewards } = useData();
   const [showModal, setShowModal] = useState(false);
+  /* PRICE ADD START - local price field added to newReward state */
   const [newReward, setNewReward] = useState({
     reward_name: '',
     points_cost: '',
-    stock_quantity: ''
+    stock_quantity: '',
+    price: ''
   });
+  /* PRICE ADD END */
   const [modalError, setModalError] = useState(null);
   const [modalSuccess, setModalSuccess] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  /* Action button handlers */
+  const handleEdit = (reward) => {
+    showToast(`Edit reward: ${reward.name}`, 'info');
+    console.log('Edit reward clicked:', reward);
+  };
+
+  const handleToggleStatus = async (reward) => {
+    const newStatus = reward.status === 'Active' ? 'Inactive' : 'Active';
+    showToast(`${reward.name} ${newStatus === 'Active' ? 'activated' : 'deactivated'}`, 'success');
+    console.log('Toggle status clicked:', reward.name, '→', newStatus);
+  };
+
+  const handleDelete = (reward) => {
+    const confirmed = window.confirm(`Delete reward "${reward.name}"? This cannot be undone.`);
+    if (confirmed) {
+      showToast(`${reward.name} deleted`, 'error');
+      console.log('Delete reward confirmed:', reward);
+    }
+  };
 
   const handleCreateReward = async (e) => {
     e.preventDefault();
     try {
       setModalError(null);
       setModalSuccess(null);
-      
+
       // Validate inputs
       if (!newReward.reward_name.trim()) {
         setModalError('Please enter a reward name');
@@ -35,27 +80,47 @@ function RewardsTab() {
         setModalError('Please enter a valid stock quantity');
         return;
       }
-      
-      // Send to API
+      // Backend requires unit_price
+      if (newReward.price === '' || newReward.price === null || newReward.price === undefined) {
+        setModalError('The unit price field is required.');
+        return;
+      }
+      if (Number(newReward.price) < 0 || Number.isNaN(Number(newReward.price))) {
+        setModalError('Please enter a valid unit price');
+        return;
+      }
+
+      // Send to API using backend-expected field names
       const rewardData = {
         reward_name: newReward.reward_name.trim(),
         points_cost: Number(newReward.points_cost),
-        stock_quantity: Number(newReward.stock_quantity)
+        points_value: Number(newReward.points_cost),
+        stock_quantity: Number(newReward.stock_quantity),
+        stocks: Number(newReward.stock_quantity),
+        unit_price: Number(newReward.price),
+        price: Number(newReward.price),
       };
-      
+
       await api.addReward(rewardData);
       setModalSuccess('Reward created successfully!');
-      
+
       // Reset form and close modal after a delay
       setTimeout(() => {
         setShowModal(false);
-        setNewReward({ reward_name: '', points_cost: '', stock_quantity: '' });
+        setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '' });
         setModalSuccess(null);
         refreshRewards();
       }, 1500);
     } catch (error) {
       console.error('❌ Error creating reward:', error);
-      setModalError(error.response?.data?.message || error.message || 'Failed to create reward');
+      const data = error?.response?.data;
+      const msg =
+        data?.message ||
+        (data?.errors && Object.values(data.errors).flat().join(' ')) ||
+        data?.error ||
+        error?.message ||
+        'Failed to create reward';
+      setModalError(msg);
     }
   };
 
@@ -136,13 +201,32 @@ function RewardsTab() {
                   placeholder="Enter stock quantity"
                 />
               </div>
+
+              {/* PRICE ADD START - price input field (not shown in rewards table, only for inventory) */}
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                  Price (₱)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newReward.price}
+                  onChange={(e) => setNewReward({ ...newReward, price: e.target.value })}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  placeholder="Enter item price (for inventory tracking)"
+                />
+              </div>
+              {/* PRICE ADD END */}
               
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowModal(false);
-                    setNewReward({ reward_name: '', points_cost: '', stock_quantity: '' });
+                    /* PRICE ADD START - reset price on cancel too */
+                    setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '' });
+                    /* PRICE ADD END */
                     setModalError(null);
                     setModalSuccess(null);
                   }}
@@ -200,15 +284,24 @@ function RewardsTab() {
               </td>
 
               <td className="space-x-2">
-                <button className="text-xs px-3 py-1 rounded-lg bg-blue-100 text-blue-700">
+                <button
+                  onClick={() => handleEdit(r)}
+                  className="text-xs px-3 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                >
                   Edit
                 </button>
 
-                <button className="text-xs px-3 py-1 rounded-lg bg-yellow-100 text-yellow-700">
+                <button
+                  onClick={() => handleToggleStatus(r)}
+                  className="text-xs px-3 py-1 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
+                >
                   {r.status === 'Active' ? 'Deactivate' : 'Activate'}
                 </button>
 
-                <button className="text-xs px-3 py-1 rounded-lg bg-red-100 text-red-700">
+                <button
+                  onClick={() => handleDelete(r)}
+                  className="text-xs px-3 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                >
                   Delete
                 </button>
               </td>
@@ -216,74 +309,509 @@ function RewardsTab() {
           ))}
         </tbody>
       </table>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-pulse">
+          <div
+            className={`px-5 py-3 rounded-xl shadow-lg border text-sm font-semibold ${
+              toast.type === 'success'
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : toast.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-blue-50 border-blue-200 text-blue-800'
+            }`}
+          >
+            {toast.message}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ===================== REDEMPTIONS TAB ===================== */
-function RedemptionsTab() {
-  const { redemptions } = useData();
+/* ===================== INVENTORY TAB START ===================== */
+function InventoryTab() {
+  const { rewards, refreshRewards } = useData();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Helper to format date nicely
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
+  const formatLastStock = (timestamp) => {
+    if (!timestamp) return '—';
     try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const d = new Date(timestamp.replace(' ', 'T'));
+      if (Number.isNaN(d.getTime())) return '—';
+      const dateStr = d.toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
       });
+      const timeStr = d.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${dateStr} ${timeStr}`;
     } catch {
-      return dateStr;
+      return '—';
     }
   };
 
+  useEffect(() => {
+    let mounted = true;
+    let cancelled = false;
+    const load = async () => {
+      if (cancelled) return;
+      setIsLoading(true);
+      setError(null);
+      try {
+        await refreshRewards();
+        if (mounted && !cancelled) {
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('❌ Error loading inventory data:', err);
+        if (mounted && !cancelled) {
+          const msg =
+            err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.message ||
+            'Failed to load inventory data';
+          setError(msg);
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => { mounted = false; cancelled = true; };
+  }, []);
+
+  const inventoryItems = rewards.map((r, idx) => {
+    const stocksInHand = Number(r.stock ?? r.stocks ?? r.stock_quantity ?? 0);
+    const unitPrice = r.unit_price ?? r.price ?? null;
+    const unitPriceNum = unitPrice !== null && unitPrice !== undefined ? Number(unitPrice) : 0;
+    const totalPrice = unitPriceNum > 0 ? stocksInHand * unitPriceNum : 0;
+    const pointsValue = Number(r.points_value ?? r.points_cost ?? r.points ?? 0);
+    const lastStockFormatted = formatLastStock(r.last_restock ?? null);
+
+    return {
+      id: r.id || r.reward_id || idx,
+      name: r.reward_name || r.name || 'Unnamed Reward',
+      stocksInHand,
+      unitPrice: unitPriceNum,
+      unitPriceDisplay: unitPrice !== null && unitPrice !== undefined && unitPriceNum > 0
+        ? `₱${unitPriceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '—',
+      totalPrice,
+      totalPriceDisplay: totalPrice > 0
+        ? `₱${totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '—',
+      pointsValue,
+      lastStock: r.last_restock ?? null,
+      lastStockFormatted,
+      status:
+        stocksInHand === 0
+          ? 'Out of Stock'
+          : stocksInHand < 10
+          ? 'Low Stock'
+          : r.status === 'Active'
+          ? 'In Stock'
+          : 'Inactive',
+    };
+  });
+
+  const lowStockCount = inventoryItems.filter(
+    (i) => i.stocksInHand > 0 && i.stocksInHand < 10
+  ).length;
+  const outOfStockCount = inventoryItems.filter((i) => i.stocksInHand === 0).length;
+  const totalStockValue = inventoryItems.reduce(
+    (sum, i) => sum + i.stocksInHand * i.pointsValue,
+    0
+  );
+  const totalMonetaryValue = inventoryItems.reduce(
+    (sum, i) => sum + i.totalPrice,
+    0
+  );
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-3xl border border-[#dbe6db] shadow-sm p-12 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
+          <AlertCircleIcon className="w-8 h-8 text-red-500" />
+        </div>
+        <h3 className="text-lg font-bold text-[#3e5f44] mb-2">Unable to load inventory</h3>
+        <p className="text-sm text-[#8da28e] mb-5 max-w-md mx-auto">{error}</p>
+        <button
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            refreshRewards()
+              .then(() => setIsLoading(false))
+              .catch((err) => {
+                setError(err.response?.data?.message || err.message || 'Failed to load inventory data');
+                setIsLoading(false);
+              });
+          }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
+        >
+          <RefreshCwIcon className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+    <div className="space-y-6">
+      {/* Inventory summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <ListOrderedIcon className="w-5 h-5 text-[#2F5D3A]" />
+            </div>
+          </div>
+          <p className="text-sm text-[#7a947e]">Total Items</p>
+          <h2 className="text-4xl font-bold text-[#3e5f44]">
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              inventoryItems.length.toLocaleString()
+            )}
+          </h2>
+          <p className="text-xs text-[#94a894] mt-2">Tracked rewards</p>
+        </div>
 
-      <h2 className="text-xl font-bold text-[#3e5f44] mb-6">
-        Redemption Logs
-      </h2>
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <CircleCheckIcon className="w-5 h-5 text-[#2F5D3A]" />
+            </div>
+          </div>
+          <p className="text-sm text-[#7a947e]">Total Units</p>
+          <h2 className="text-4xl font-bold text-[#3e5f44]">
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              inventoryItems
+                .reduce((sum, i) => sum + i.stocksInHand, 0)
+                .toLocaleString()
+            )}
+          </h2>
+          <p className="text-xs text-[#94a894] mt-2">In inventory</p>
+        </div>
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-[#6f876f] border-b">
-            <th className="py-3">Student</th>
-            <th>Reward</th>
-            <th>Points</th>
-            <th>Date</th>
-          </tr>
-        </thead>
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <BellIcon className="w-5 h-5 text-[#2F5D3A]" />
+            </div>
+          </div>
+          <p className="text-sm text-[#7a947e]">Low Stock</p>
+          <h2 className="text-4xl font-bold text-amber-700">
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              lowStockCount
+            )}
+          </h2>
+          <p className="text-xs text-[#94a894] mt-2">Below threshold</p>
+        </div>
 
-        <tbody>
-          {redemptions.length === 0 ? (
-            <tr>
-              <td colSpan="4" className="py-6 text-center text-[#6f876f]">
-                No redemptions found
-              </td>
-            </tr>
-          ) : (
-            redemptions.map((r, idx) => (
-            <tr key={r.id || idx} className="border-b">
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+              <CircleXIcon className="w-5 h-5 text-[#2F5D3A]" />
+            </div>
+          </div>
+          <p className="text-sm text-[#7a947e]">Out of Stock</p>
+          <h2 className="text-4xl font-bold text-red-700">
+            {isLoading ? (
+              <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
+            ) : (
+              outOfStockCount
+            )}
+          </h2>
+          <p className="text-xs text-[#94a894] mt-2">Needs restock</p>
+        </div>
+      </div>
 
-              <td className="py-3 text-[#3e5f44] font-medium">
-                {r.student}
-              </td>
+      {/* Inventory table container */}
+      <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-[#3e5f44]">Inventory Items</h3>
+            <p className="text-sm text-[#8da28e] mt-1">
+              Stock levels synced from rewards catalog
+            </p>
+          </div>
 
-              <td>{r.reward}</td>
-              <td>{r.points}</td>
-              <td>{formatDate(r.date)}</td>
-            </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="text"
+              placeholder="Search inventory..."
+              className="border border-[#dbe6db] rounded-xl px-4 py-2 outline-none text-sm"
+            />
+
+            <select className="border border-[#dbe6db] rounded-xl px-4 py-2 outline-none text-sm text-[#3e5f44] bg-white">
+              <option>All Categories</option>
+              <option>Reward Items</option>
+              <option>School Supplies</option>
+            </select>
+
+            <button className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold">
+              <DownloadIcon className="w-4 h-4 inline mr-2" />
+              Export
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[#011400] border-b">
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
+                  Reward
+                </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                  Stocks in Hand
+                </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                  Unit Price
+                </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                  Total Price
+                </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                  Points Value
+                </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
+                  Last Stock
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {isLoading && (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center">
+                    <div className="inline-flex flex-col items-center gap-3">
+                      <Loader2Icon className="w-8 h-8 animate-spin text-[#3e5f44]" />
+                      <span className="text-sm text-[#011400]">Loading inventory…</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!isLoading && inventoryItems.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="py-10 text-center text-[#011400]"
+                  >
+                    No inventory items found
+                  </td>
+                </tr>
+              ) : (
+                !isLoading && inventoryItems.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b hover:bg-[#fcfcf7] transition-colors"
+                  >
+                    <td className="py-3 text-[#011400] font-medium">
+                      {item.name}
+                    </td>
+                    <td
+                      className={`py-3 text-right font-bold ${
+                        item.stocksInHand === 0
+                          ? 'text-red-700'
+                          : item.stocksInHand < 10
+                          ? 'text-amber-700'
+                          : 'text-[#011400]'
+                      }`}
+                    >
+                      {item.stocksInHand.toLocaleString()}
+                    </td>
+                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                      {item.unitPriceDisplay}
+                    </td>
+                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                      {item.totalPriceDisplay}
+                    </td>
+                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                      {item.pointsValue.toLocaleString()} pts
+                    </td>
+                    <td className="py-3 text-[#011400] text-xs whitespace-nowrap">
+                      {item.lastStockFormatted}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between pt-4 mt-4 border-t border-[#dbe6db]">
+          <p className="text-xs text-[#011400]">
+            Showing{' '}
+            <span className="font-semibold text-[#011400]">{isLoading ? '—' : (inventoryItems.length ? 1 : 0)}</span> –{' '}
+            <span className="font-semibold text-[#011400]">
+              {isLoading ? '—' : inventoryItems.length}
+            </span>{' '}
+            of{' '}
+            <span className="font-semibold text-[#011400]">
+              {isLoading ? '—' : inventoryItems.length}
+            </span>{' '}
+            inventory items
+          </p>
+          <div className="flex items-center gap-2">
+            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#011400] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
+              ←
+            </button>
+            <span className="text-sm font-semibold text-[#011400] px-2">
+              Page 1 of 1
+            </span>
+            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#011400] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
+              →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stock value summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+            Inventory Value by Points
+          </h3>
+          <p className="text-sm text-[#8da28e] mb-6">
+            Total value of inventory held in points equivalent
+          </p>
+          <div className="flex items-end gap-4">
+            <div>
+              <p className="text-sm text-[#7a947e]">Total Points Value</p>
+              <p className="text-4xl font-bold text-[#3e5f44]">
+                {isLoading ? (
+                  <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
+                ) : (
+                  totalStockValue.toLocaleString()
+                )}
+              </p>
+              <p className="text-xs text-[#94a894] mt-1">points equivalent</p>
+            </div>
+            <div className="ml-auto">
+              <div className="w-20 h-20 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+                <CoinsIcon className="w-8 h-8 text-[#2F5D3A]" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+            Inventory Value (Monetary)
+          </h3>
+          <p className="text-sm text-[#8da28e] mb-6">
+            Total cost value of inventory based on unit price
+          </p>
+          <div className="flex items-end gap-4">
+            <div>
+              <p className="text-sm text-[#7a947e]">Total Monetary Value</p>
+              <p className="text-4xl font-bold text-[#3e5f44]">
+                {isLoading ? (
+                  <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
+                ) : (
+                  <>₱{totalMonetaryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                )}
+              </p>
+              <p className="text-xs text-[#94a894] mt-1">Philippine Peso (₱)</p>
+            </div>
+            <div className="ml-auto">
+              <div className="w-20 h-20 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+                <CircleDollarSignIcon className="w-8 h-8 text-[#2F5D3A]" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm md:col-span-2">
+          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+            Stock Health Overview
+          </h3>
+          <p className="text-sm text-[#8da28e] mb-6">
+            Summary of stock status distribution
+          </p>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-[#3e5f44]">In Stock</span>
+                <span className="font-semibold text-[#3e5f44]">
+                  {isLoading ? '—' : inventoryItems.filter((i) => i.status === 'In Stock').length}
+                </span>
+              </div>
+              <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#7faa72]"
+                  style={{
+                    width: `${
+                      !isLoading && inventoryItems.length > 0
+                        ? (inventoryItems.filter((i) => i.status === 'In Stock')
+                            .length /
+                            inventoryItems.length) *
+                          100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-[#3e5f44]">Low Stock</span>
+                <span className="font-semibold text-amber-700">
+                  {isLoading ? '—' : lowStockCount}
+                </span>
+              </div>
+              <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-400"
+                  style={{
+                    width: `${
+                      !isLoading && inventoryItems.length > 0
+                        ? (lowStockCount / inventoryItems.length) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-[#3e5f44]">Out of Stock</span>
+                <span className="font-semibold text-red-700">
+                  {isLoading ? '—' : outOfStockCount}
+                </span>
+              </div>
+              <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-400"
+                  style={{
+                    width: `${
+                      !isLoading && inventoryItems.length > 0
+                        ? (outOfStockCount / inventoryItems.length) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+/* ===================== INVENTORY TAB END ===================== */
 
 /* ===================== REPORTS TAB (MATCH YOUR IMAGE) ===================== */
 function ReportsTab() {
@@ -444,393 +972,6 @@ function ReportsTab() {
   );
 }
 
-/* ===================== REDEMPTION FLOW ===================== */
-function RedemptionFlow() {
-  const { 
-    students,
-    rewards, 
-    startStudentIdentify,
-    clearStudentIdentify,
-    initiateRedemption, 
-    getRedemptionStatus,
-    cancelRedemption,
-    refreshStudents, 
-    refreshRewards, 
-    refreshRedemptions 
-  } = useData();
-
-  // State variables
-  const [isScanning, setIsScanning] = useState(false); // Step 1: Identify
-  const [isConfirmingRedeem, setIsConfirmingRedeem] = useState(false); // Step 2: Confirm
-  const [activeStudent, setActiveStudent] = useState(null);
-  const [selectedReward, setSelectedReward] = useState(null);
-  const [error, setError] = useState(null);
-  const [successToast, setSuccessToast] = useState(false);
-
-  // Refs to hold interval IDs
-  const identifyIntervalRef = useRef(null);
-  const confirmIntervalRef = useRef(null);
-
-  // Helper to get student's full name
-  const getStudentFullName = (student) => {
-    if (!student) return 'Unknown Student';
-    if (student.name) return student.name;
-    return `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student';
-  };
-
-  // Helper to get student's initials
-  const getStudentInitials = (student) => {
-    if (!student) return 'S';
-    if (student.initials) return student.initials;
-    const fullName = getStudentFullName(student);
-    if (fullName && fullName !== 'Unknown Student') {
-      const nameParts = fullName.split(' ');
-      if (nameParts.length >= 2) {
-        return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-      }
-      return fullName[0].toUpperCase();
-    }
-    return 'S';
-  };
-
-  // Calculate total points for a student
-  const calculateStudentPoints = (student) => {
-    if (!student) return 0;
-    return student.points_balance || student.points || 0;
-  };
-
-  // Helper to get actual student ID
-  const getStudentId = (student) => {
-    if (!student) return null;
-    return student.student_id || student.id;
-  };
-
-  // Helper to get actual reward ID
-  const getRewardId = (reward) => {
-    if (!reward) return null;
-    return reward.reward_id || reward.id;
-  };
-
-  // Step 1: Start scanning for student identification
-  const startIdentifyScan = async () => {
-    setError(null);
-    setIsScanning(true);
-    setActiveStudent(null);
-    try {
-      await clearStudentIdentify(); // Clear old cache
-    } catch (err) {
-      console.error('Error clearing scan session:', err);
-    }
-    
-    // Start polling every 2 seconds
-    identifyIntervalRef.current = setInterval(async () => {
-      try {
-        const result = await startStudentIdentify();
-        console.log('🔍 Scan session check result:', result);
-        
-        let foundStudent = null;
-        
-        // Handle both possible API response formats:
-        // 1. { student_found: true, student: { ... } }
-        if (result.student_found === true && result.student) {
-          foundStudent = result.student;
-        }
-        // 2. { success: true, student_id: 1, ... }
-        else if (result.success === true && result.student_id) {
-          const studentFromContext = students.find(s => 
-            getStudentId(s) === result.student_id
-          );
-          foundStudent = studentFromContext || {
-            student_id: result.student_id,
-            name: result.name,
-            points_balance: result.points_balance
-          };
-        }
-        
-        if (foundStudent) {
-          // Stop polling
-          clearInterval(identifyIntervalRef.current);
-          identifyIntervalRef.current = null;
-          
-          setActiveStudent(foundStudent);
-          setIsScanning(false);
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-        // Don't show error for polling failures
-      }
-    }, 2000);
-  };
-
-  // Step 2: Handle reward selection and start confirmation
-  const handleSelectReward = async (reward) => {
-    const studentId = getStudentId(activeStudent);
-    const rewardId = getRewardId(reward);
-    const studentPoints = calculateStudentPoints(activeStudent);
-    const rewardPoints = reward.points || reward.points_cost || reward.points_required;
-    
-    console.log('🎁 handleSelectReward called:', { studentId, rewardId, activeStudent, reward });
-
-    if (studentPoints < rewardPoints) {
-      setError('Insufficient points');
-      return;
-    }
-
-    setSelectedReward(reward);
-    setError(null);
-    setIsConfirmingRedeem(true);
-
-    try {
-      await initiateRedemption(studentId, rewardId);
-      
-      // Start polling for redemption completion using getRedemptionStatus
-      confirmIntervalRef.current = setInterval(async () => {
-        try {
-          const redemptionStatus = await getRedemptionStatus(studentId, rewardId);
-          console.log('🔄 Redemption status check:', redemptionStatus);
-          
-          if (redemptionStatus.completed === true || redemptionStatus.success === true) {
-            clearInterval(confirmIntervalRef.current);
-            confirmIntervalRef.current = null;
-            
-            setIsConfirmingRedeem(false);
-            setSuccessToast(true);
-            
-            await refreshRedemptions();
-            await refreshStudents();
-            await refreshRewards();
-            
-            setTimeout(() => {
-              setSuccessToast(false);
-              resetFlow();
-            }, 3000);
-          }
-        } catch (err) {
-          console.error('Redemption polling error:', err);
-        }
-      }, 2000);
-    } catch (err) {
-      console.error('❌ Error initiating redemption:', err);
-      setError(err.response?.data?.message || 'Failed to initiate redemption');
-      setIsConfirmingRedeem(false);
-    }
-  };
-
-  // Cancel the redemption process
-  const handleCancelRedemption = async () => {
-    if (confirmIntervalRef.current) {
-      clearInterval(confirmIntervalRef.current);
-      confirmIntervalRef.current = null;
-    }
-    if (selectedReward && activeStudent) {
-      try {
-        await cancelRedemption(getStudentId(activeStudent), getRewardId(selectedReward));
-      } catch (err) {
-        console.error('Error canceling redemption:', err);
-      }
-    }
-    setIsConfirmingRedeem(false);
-    setSelectedReward(null);
-  };
-
-  // Reset flow completely
-  const resetFlow = () => {
-    if (identifyIntervalRef.current) {
-      clearInterval(identifyIntervalRef.current);
-      identifyIntervalRef.current = null;
-    }
-    if (confirmIntervalRef.current) {
-      clearInterval(confirmIntervalRef.current);
-      confirmIntervalRef.current = null;
-    }
-    setIsScanning(false);
-    setIsConfirmingRedeem(false);
-    setActiveStudent(null);
-    setSelectedReward(null);
-    setError(null);
-  };
-
-  // Cleanup intervals on unmount
-  useEffect(() => {
-    return () => {
-      if (identifyIntervalRef.current) clearInterval(identifyIntervalRef.current);
-      if (confirmIntervalRef.current) clearInterval(confirmIntervalRef.current);
-    };
-  }, []);
-
-  return (
-    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-[#3e5f44]">
-          Redemption Terminal
-        </h2>
-        {(isScanning || activeStudent || isConfirmingRedeem) && !successToast && (
-          <button
-            onClick={isConfirmingRedeem ? handleCancelRedemption : resetFlow}
-            className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold"
-          >
-            ← Cancel
-          </button>
-        )}
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-xl">
-          ❌ {error}
-        </div>
-      )}
-
-      {/* Success Toast */}
-      {successToast && (
-        <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-xl">
-          ✅ Redemption processed successfully!
-        </div>
-      )}
-
-      {/* Step 1: Idle / Tap to Identify */}
-      {!isScanning && !activeStudent && !isConfirmingRedeem && !successToast && (
-        <div className="text-center py-12">
-          <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-8">
-            <i className="fa-solid fa-credit-card text-7xl text-[#3e5f44]" />
-          </div>
-          <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
-            Tap Student Card to Begin
-          </h3>
-          <p className="text-[#6f876f] mb-8 max-w-md mx-auto">
-            Have the student tap their RFID card on the reader to start the redemption process
-          </p>
-          <button
-            onClick={startIdentifyScan}
-            className="bg-[#3e5f44] text-white px-12 py-6 rounded-2xl font-semibold text-xl"
-          >
-            <i className="fa-solid fa-credit-card mr-2" />
-            Tap Card
-          </button>
-        </div>
-      )}
-
-      {/* Step 1: Identifying (Scanning) */}
-      {isScanning && !activeStudent && (
-        <div className="text-center py-12">
-          <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-8">
-            <i className="fa-solid fa-spinner fa-spin text-7xl text-[#3e5f44]" />
-          </div>
-          <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
-            Waiting for student card tap on reader...
-          </h3>
-        </div>
-      )}
-
-      {/* Step 2: Select Reward */}
-      {activeStudent && !isConfirmingRedeem && !successToast && (
-        <div>
-          {/* Student Info Card */}
-          <div className="bg-[#e8f5bd] rounded-2xl p-6 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#3e5f44]">
-                {getStudentInitials(activeStudent)}
-              </div>
-              <div>
-                <h4 className="text-lg font-bold text-[#3e5f44]">
-                  {getStudentFullName(activeStudent)}
-                </h4>
-                <p className="text-sm text-[#6f876f]">
-                  Grade {activeStudent.grade_level || '3'} • {activeStudent.section || 'N/A'}
-                </p>
-              </div>
-              <div className="ml-auto text-right">
-                <div className="text-2xl font-bold text-[#3e5f44]">
-                  {calculateStudentPoints(activeStudent)} points
-                </div>
-                <div className="text-xs text-[#6f876f]">Available Balance</div>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-bold text-[#3e5f44] mb-4">Select a Reward</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rewards
-              .filter(r => r.status === 'Active' && r.stock > 0)
-              .map((reward) => {
-                const studentPoints = calculateStudentPoints(activeStudent);
-                const rewardPoints = reward.points || reward.points_cost || reward.points_required;
-                const canAfford = studentPoints >= rewardPoints;
-                
-                return (
-                  <div
-                    key={reward.id || reward.reward_id}
-                    onClick={() => canAfford && handleSelectReward(reward)}
-                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                      !canAfford
-                        ? 'border-[#e0e0e0] bg-gray-50 opacity-60 cursor-not-allowed'
-                        : 'border-[#dbe6db] hover:border-[#3e5f44]'
-                    }`}
-                  >
-                    <h4 className="font-bold text-[#3e5f44] mb-1">{reward.name}</h4>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#6f876f]">
-                        <i className="fa-solid fa-coins mr-1" /> {rewardPoints} points
-                      </span>
-                      <span className="text-xs text-[#6f876f]">
-                        Stock: {reward.stock}
-                      </span>
-                    </div>
-                    {!canAfford && (
-                      <div className="mt-2 text-xs text-red-600">
-                        Insufficient points
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Confirming (Second Tap) Modal */}
-      {isConfirmingRedeem && activeStudent && selectedReward && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="text-center py-4">
-              <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
-                <i className="fa-solid fa-spinner fa-spin text-7xl text-[#3e5f44]" />
-              </div>
-              <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
-                Confirming transaction for {selectedReward.name}
-              </h3>
-              <p className="text-[#6f876f] mb-8">
-                Cost: {selectedReward.points || selectedReward.points_cost || selectedReward.points_required} Points. Please have the student tap their card a SECOND time on the reader to complete purchase.
-              </p>
-              <button
-                onClick={handleCancelRedemption}
-                className="w-full py-3 rounded-xl border border-[#3e5f44] text-[#3e5f44] font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Step 4: Success (Handled by success toast and auto-reset) */}
-      {successToast && (
-        <div className="text-center py-12">
-          <div className="w-32 h-32 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
-            <i className="fa-solid fa-check text-5xl text-green-700" />
-          </div>
-          <h3 className="text-2xl font-bold text-[#3e5f44] mb-3">
-            Redemption Complete!
-          </h3>
-          <p className="text-[#6f876f] mb-8">
-            {getStudentFullName(activeStudent)} has redeemed {selectedReward?.name}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ===================== MAIN COMPONENT ===================== */
 export default function IncentivesRewards() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -859,7 +1000,7 @@ export default function IncentivesRewards() {
       title: 'Total Rewards',
       value: totalRewards.toLocaleString(),
       sub: 'Preloaded from data context',
-      icon: 'fa-gift',
+      Icon: GiftIcon,
     },
     {
       title: 'Active Rewards',
@@ -867,19 +1008,19 @@ export default function IncentivesRewards() {
         .filter((reward) => reward.status === 'Active')
         .length.toLocaleString(),
       sub: 'Currently available',
-      icon: 'fa-star',
+      Icon: StarIcon,
     },
     {
       title: 'Total Stock',
       value: totalStock.toLocaleString(),
       sub: 'Units in inventory',
-      icon: 'fa-box-open',
+      Icon: BoxIcon,
     },
     {
       title: 'Average Points Cost',
       value: averagePoints.toLocaleString(),
       sub: 'Points per reward',
-      icon: 'fa-arrow-trend-up',
+      Icon: TrendingUpIcon,
     },
   ];
 
@@ -930,9 +1071,9 @@ export default function IncentivesRewards() {
   return (
     <div className="space-y-6">
 
-      {/* Tabs */}
+      {/* Tabs (INVENTORY START - inventory tab added after rewards) */}
       <div className="bg-white rounded-2xl p-2 inline-flex gap-2 shadow-sm border border-[#dbe6db]">
-        {['dashboard', 'rewards', 'redeem', 'redemptions', 'reports'].map(
+        {['dashboard', 'rewards', 'inventory', 'reports'].map(
           (tab) => (
             <button
               key={tab}
@@ -948,6 +1089,7 @@ export default function IncentivesRewards() {
           )
         )}
       </div>
+      {/* Tabs INVENTORY END */}
 
       {activeTab === 'dashboard' && (
         <>
@@ -958,8 +1100,8 @@ export default function IncentivesRewards() {
                 className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]"
               >
                 <div className="flex justify-between items-center mb-4">
-                  <div className="w-11 h-11 rounded-2xl bg-[#e8f5bd] flex items-center justify-center">
-                    <i className={`fa-solid ${card.icon} text-[#3e5f44]`} />
+                  <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
+                    <card.Icon className="w-5 h-5 text-[#2F5D3A]" />
                   </div>
                 </div>
 
@@ -1058,9 +1200,10 @@ export default function IncentivesRewards() {
         </>
       )}
 
-      {activeTab === 'redeem' && <RedemptionFlow />}
       {activeTab === 'rewards' && <RewardsTab />}
-      {activeTab === 'redemptions' && <RedemptionsTab />}
+      {/* INVENTORY START - inventory tab render */}
+      {activeTab === 'inventory' && <InventoryTab />}
+      {/* INVENTORY END */}
       {activeTab === 'reports' && <ReportsTab />}
 
     </div>

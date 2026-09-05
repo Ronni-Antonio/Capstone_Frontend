@@ -14,6 +14,7 @@ const Reports = lazy(() => import('./Pages/Reports.jsx'));
 const StudentPoints = lazy(() => import('./Pages/student_points.jsx'));
 const SectionsRanking = lazy(() => import('./Pages/sections_ranking.jsx'));
 const IncentivesRewards = lazy(() => import('./Pages/incentives_rewards.jsx'));
+const Logs = lazy(() => import('./Pages/Logs.jsx'));
 const Profile = lazy(() => import('./Pages/profile.jsx'));
 const MachineMonitoring = lazy(() => import('./Pages/machine_monitoring.jsx').then((m) => ({ default: m.MachineMonitoring })));
 const Notifications = lazy(() => import('./Pages/notifications.jsx').then((m) => ({ default: m.Notifications })));
@@ -87,6 +88,9 @@ function App() {
 
       case 'settings':
         return <Settings />;
+
+      case 'logs':
+        return <Logs />;
 
       default:
         return (

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api.jsx';
+import { BellIcon } from 'lucide-react';
 
 const titles = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of recycling activity today' },
@@ -11,6 +12,7 @@ const titles = {
   notifications: { title: 'Notifications', subtitle: 'System alerts and machine warnings' },
   users: { title: 'User Management', subtitle: 'Profile, security & account activity' },
   settings: { title: 'Settings', subtitle: 'Customize your Plink system' },
+  logs: { title: 'Logs', subtitle: 'Activity tracking and redemption management' },
 };
 
 export function Header({ activePage, setActivePage, onLogout }) {
@@ -39,7 +41,7 @@ export function Header({ activePage, setActivePage, onLogout }) {
           onClick={() => setActivePage('notifications')}
           className="relative w-10 h-10 rounded-xl border border-[#dbe6db] bg-white flex items-center justify-center cursor-pointer shadow-sm hover:bg-gray-50 transition-colors"
         >
-          <i className="fa-solid fa-bell text-[#2d4a33] text-base"></i>
+          <BellIcon className="w-5 h-5 text-[#2d4a33]" />
           <span className="absolute -top-1.5 -right-1.5 bg-[#f04444] text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[14px] text-center structure-badge">
             3
           </span>

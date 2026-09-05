@@ -84,8 +84,11 @@ const normalizeReward = (reward) => ({
   id: reward.reward_id ?? reward.id,
   reward_id: reward.reward_id ?? reward.id,
   name: reward.reward_name || reward.name || 'Unnamed Reward',
-  points: Number(reward.points_cost ?? 0),
-  stock: Number(reward.stock_quantity ?? 0),
+  points: Number(reward.points_value ?? reward.points_cost ?? reward.points_required ?? 0),
+  points_value: Number(reward.points_value ?? reward.points_cost ?? 0),
+  stock: Number(reward.stocks ?? reward.stock_quantity ?? reward.stock ?? 0),
+  unit_price: reward.unit_price ?? reward.price ?? null,
+  last_restock: reward.last_restock ?? reward.last_restocked ?? reward.updated_at ?? null,
   status: reward.is_active === false ? 'Inactive' : 'Active',
 });
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../context/DataContext.jsx';
+import { RecycleIcon } from 'lucide-react';
 
 // The Smart Bin now uses HC-SR04 distance as the source of truth.
 // empty_threshold_cm = distance when the bin is considered empty
@@ -294,15 +295,15 @@ export function MachineMonitoring() {
               style={{
                 width: '56px',
                 height: '56px',
-                borderRadius: '16px',
-                backgroundColor: COLORS.mintMuted,
+                borderRadius: '12px',
+                background: '#EBF5E4',
+                border: '2px solid #A2CB8B',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '26px',
               }}
             >
-              ♻️
+              <RecycleIcon className="w-5 h-5 text-[#2F5D3A]" />
             </div>
 
             <div>

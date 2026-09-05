@@ -124,6 +124,9 @@ api.getClassifications = () => api.get('/classifications');
 api.getPredictions = () => api.get('/predictions');
 api.getAnalyticsReports = () => api.get('/analytics-reports');
 
+// Activity logs
+api.getLogs = () => api.get('/logs');
+
 // User profile
 api.getUser = (id) => api.get(`/users/${id}`);
 api.updateUser = (id, data) => api.put(`/users/${id}`, data);

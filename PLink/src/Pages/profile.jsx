@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api'; // Import your Axios config instance cleanly!
+import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
 const COLORS = {
   white: '#ffffff',
@@ -498,7 +499,7 @@ export default function Profile() {
                   onClick={() => setShowCurrent(!showCurrent)} 
                   style={eyeButtonStyle}
                 >
-                  <i className={`fa-solid ${showCurrent ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                  {showCurrent ? <EyeOffIcon className="w-4 h-4" style={{ color: COLORS.dark }} /> : <EyeIcon className="w-4 h-4" style={{ color: COLORS.dark }} />}
                 </button>
               </div>
 
@@ -515,7 +516,7 @@ export default function Profile() {
                   onClick={() => setShowNew(!showNew)} 
                   style={eyeButtonStyle}
                 >
-                  <i className={`fa-solid ${showNew ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                  {showNew ? <EyeOffIcon className="w-4 h-4" style={{ color: COLORS.dark }} /> : <EyeIcon className="w-4 h-4" style={{ color: COLORS.dark }} />}
                 </button>
               </div>
 
@@ -532,7 +533,7 @@ export default function Profile() {
                   onClick={() => setShowConfirm(!showConfirm)} 
                   style={eyeButtonStyle}
                 >
-                  <i className={`fa-solid ${showConfirm ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                  {showConfirm ? <EyeOffIcon className="w-4 h-4" style={{ color: COLORS.dark }} /> : <EyeIcon className="w-4 h-4" style={{ color: COLORS.dark }} />}
                 </button>
               </div>
 
@@ -760,7 +761,7 @@ export default function Profile() {
                   onClick={() => setShowModalPass(!showModalPass)} 
                   style={eyeButtonStyle}
                 >
-                  <i className={`fa-solid ${showModalPass ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                  {showModalPass ? <EyeOffIcon className="w-4 h-4" style={{ color: COLORS.dark }} /> : <EyeIcon className="w-4 h-4" style={{ color: COLORS.dark }} />}
                 </button>
               </div>
 
@@ -777,7 +778,7 @@ export default function Profile() {
                   onClick={() => setShowConfirmModalPass(!showConfirmModalPass)} 
                   style={eyeButtonStyle}
                 >
-                  <i className={`fa-solid ${showConfirmModalPass ? 'fa-eye-slash' : 'fa-eye'}`} style={{ color: COLORS.dark }}></i>
+                  {showConfirmModalPass ? <EyeOffIcon className="w-4 h-4" style={{ color: COLORS.dark }} /> : <EyeIcon className="w-4 h-4" style={{ color: COLORS.dark }} />}
                 </button>
               </div>
 
