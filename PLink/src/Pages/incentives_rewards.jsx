@@ -18,12 +18,15 @@ import {
   Loader2Icon,
 } from 'lucide-react';
 
-const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /* ===================== REWARDS TAB ===================== */
 function RewardsTab() {
-  const { rewards, refreshRewards } = useData();
+  const { rewards, refreshRewards, refreshInventory, refreshLogs } = useData();
   const [showModal, setShowModal] = useState(false);
+  const [editingReward, setEditingReward] = useState(null);
+  const [editForm, setEditForm] = useState({ reward_name: '', points_cost: '' });
+  const [actionLoadingId, setActionLoadingId] = useState(null);
   /* PRICE ADD START - local price field added to newReward state */
   const [newReward, setNewReward] = useState({
     reward_name: '',
@@ -43,21 +46,95 @@ function RewardsTab() {
 
   /* Action button handlers */
   const handleEdit = (reward) => {
-    showToast(`Edit reward: ${reward.name}`, 'info');
-    console.log('Edit reward clicked:', reward);
+    setEditingReward(reward);
+    setEditForm({
+      reward_name: reward.name || reward.reward_name || '',
+      points_cost: String(reward.points ?? reward.points_cost ?? ''),
+    });
+    setModalError(null);
+  };
+
+  const handleSaveEdit = async (event) => {
+    event.preventDefault();
+    if (!editingReward) return;
+
+    const name = editForm.reward_name.trim();
+    const points = Number(editForm.points_cost);
+    if (!name) {
+      setModalError('Please enter a reward name.');
+      return;
+    }
+    if (!Number.isInteger(points) || points < 1) {
+      setModalError('Points cost must be a whole number greater than 0.');
+      return;
+    }
+
+    const id = editingReward.reward_id ?? editingReward.id;
+    setActionLoadingId(id);
+    setModalError(null);
+    try {
+      await api.updateReward(id, {
+        reward_name: name,
+        points_cost: points,
+      });
+      await Promise.all([refreshRewards(), refreshInventory(), refreshLogs()]);
+      setEditingReward(null);
+      showToast('Reward updated successfully.', 'success');
+    } catch (error) {
+      const data = error?.response?.data;
+      setModalError(
+        data?.message ||
+        (data?.errors && Object.values(data.errors).flat().join(' ')) ||
+        data?.error ||
+        error?.message ||
+        'Failed to update reward.'
+      );
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const handleToggleStatus = async (reward) => {
-    const newStatus = reward.status === 'Active' ? 'Inactive' : 'Active';
-    showToast(`${reward.name} ${newStatus === 'Active' ? 'activated' : 'deactivated'}`, 'success');
-    console.log('Toggle status clicked:', reward.name, '→', newStatus);
+    const id = reward.reward_id ?? reward.id;
+    const activating = reward.status !== 'Active';
+    setActionLoadingId(id);
+    try {
+      await api.updateReward(id, { is_active: activating });
+      await Promise.all([refreshRewards(), refreshInventory(), refreshLogs()]);
+      showToast(
+        `${reward.name} ${activating ? 'activated' : 'deactivated'}.`,
+        'success'
+      );
+    } catch (error) {
+      showToast(
+        error?.response?.data?.message || error?.message || 'Failed to update reward status.',
+        'error'
+      );
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
-  const handleDelete = (reward) => {
+  const handleDelete = async (reward) => {
     const confirmed = window.confirm(`Delete reward "${reward.name}"? This cannot be undone.`);
-    if (confirmed) {
-      showToast(`${reward.name} deleted`, 'error');
-      console.log('Delete reward confirmed:', reward);
+    if (!confirmed) return;
+
+    const id = reward.reward_id ?? reward.id;
+    setActionLoadingId(id);
+    try {
+      await api.deleteReward(id);
+      await Promise.all([refreshRewards(), refreshInventory(), refreshLogs()]);
+      showToast(`${reward.name} deleted.`, 'success');
+    } catch (error) {
+      showToast(
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to delete reward.',
+        'error'
+      );
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -109,7 +186,7 @@ function RewardsTab() {
         setShowModal(false);
         setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '' });
         setModalSuccess(null);
-        refreshRewards();
+        Promise.allSettled([refreshRewards(), refreshInventory(), refreshLogs()]);
       }, 1500);
     } catch (error) {
       console.error('❌ Error creating reward:', error);
@@ -125,18 +202,18 @@ function RewardsTab() {
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+    <div className="bg-white rounded-3xl p-8 border border-[#dbe6db] shadow-sm min-h-[520px]">
 
-      <div className="flex justify-between items-center mb-6 gap-4">
+      <div className="flex justify-between items-center mb-8 gap-5">
         <input
           type="text"
           placeholder="Search rewards..."
-          className="border border-[#dbe6db] rounded-xl px-4 py-2 w-1/3 outline-none"
+          className="border border-[#dbe6db] rounded-xl px-5 py-3 w-full max-w-xl outline-none text-sm"
         />
 
         <button 
           onClick={() => setShowModal(true)}
-          className="bg-[#3e5f44] text-white px-5 py-2 rounded-xl text-sm font-semibold"
+          className="bg-[#3e5f44] text-white px-6 py-3 rounded-xl text-sm font-semibold whitespace-nowrap"
         >
           + Create Reward
         </button>
@@ -246,10 +323,69 @@ function RewardsTab() {
         </div>
       )}
 
+
+      {/* Edit Reward Modal */}
+      {editingReward && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <h2 className="text-2xl font-bold text-[#3e5f44] mb-2">Edit Reward</h2>
+            <p className="text-sm text-[#8da28e] mb-6">
+              Update the reward name and points requirement. Inventory uses the same reward record, so name changes are reflected there automatically.
+            </p>
+
+            {modalError && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-xl">{modalError}</div>
+            )}
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">Reward Name</label>
+                <input
+                  type="text"
+                  value={editForm.reward_name}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, reward_name: e.target.value }))}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">Points Cost</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={editForm.points_cost}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, points_cost: e.target.value }))}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingReward(null);
+                    setModalError(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoadingId === (editingReward.reward_id ?? editingReward.id)}
+                  className="flex-1 py-3 rounded-xl bg-[#3e5f44] text-white font-semibold disabled:opacity-60"
+                >
+                  {actionLoadingId === (editingReward.reward_id ?? editingReward.id) ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[#6f876f] border-b">
-            <th className="py-3">Reward Name</th>
+            <th className="py-4">Reward Name</th>
             <th>Points Required</th>
             <th>Stock</th>
             <th>Status</th>
@@ -286,6 +422,7 @@ function RewardsTab() {
               <td className="space-x-2">
                 <button
                   onClick={() => handleEdit(r)}
+                  disabled={actionLoadingId === (r.reward_id ?? r.id)}
                   className="text-xs px-3 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
                 >
                   Edit
@@ -293,6 +430,7 @@ function RewardsTab() {
 
                 <button
                   onClick={() => handleToggleStatus(r)}
+                  disabled={actionLoadingId === (r.reward_id ?? r.id)}
                   className="text-xs px-3 py-1 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
                 >
                   {r.status === 'Active' ? 'Deactivate' : 'Activate'}
@@ -300,6 +438,7 @@ function RewardsTab() {
 
                 <button
                   onClick={() => handleDelete(r)}
+                  disabled={actionLoadingId === (r.reward_id ?? r.id)}
                   className="text-xs px-3 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
                 >
                   Delete
@@ -332,14 +471,13 @@ function RewardsTab() {
 
 /* ===================== INVENTORY TAB START ===================== */
 function InventoryTab() {
-  const { rewards, refreshRewards } = useData();
-  const [isLoading, setIsLoading] = useState(true);
+  const { inventory, inventoryLoaded, refreshInventory } = useData();
   const [error, setError] = useState(null);
 
   const formatLastStock = (timestamp) => {
     if (!timestamp) return '—';
     try {
-      const d = new Date(timestamp.replace(' ', 'T'));
+      const d = new Date(String(timestamp).replace(' ', 'T'));
       if (Number.isNaN(d.getTime())) return '—';
       const dateStr = d.toLocaleDateString('en-US', {
         month: 'numeric',
@@ -358,48 +496,33 @@ function InventoryTab() {
   };
 
   useEffect(() => {
-    let mounted = true;
-    let cancelled = false;
-    const load = async () => {
-      if (cancelled) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        await refreshRewards();
-        if (mounted && !cancelled) {
-          setIsLoading(false);
-        }
-      } catch (err) {
+    if (!inventoryLoaded) {
+      void Promise.resolve().then(refreshInventory).catch((err) => {
         console.error('❌ Error loading inventory data:', err);
-        if (mounted && !cancelled) {
-          const msg =
-            err?.response?.data?.message ||
-            err?.response?.data?.error ||
-            err?.message ||
-            'Failed to load inventory data';
-          setError(msg);
-          setIsLoading(false);
-        }
-      }
-    };
-    load();
-    return () => { mounted = false; cancelled = true; };
-  }, [refreshRewards]);
+        setError(
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          'Failed to load inventory data'
+        );
+      });
+    }
+  }, [inventoryLoaded, refreshInventory]);
 
-  const inventoryItems = rewards.map((r, idx) => {
-    const stocksInHand = Number(r.stock ?? r.stocks ?? r.stock_quantity ?? 0);
-    const unitPrice = r.unit_price ?? r.price ?? null;
-    const unitPriceNum = unitPrice !== null && unitPrice !== undefined ? Number(unitPrice) : 0;
-    const totalPrice = unitPriceNum > 0 ? stocksInHand * unitPriceNum : 0;
-    const pointsValue = Number(r.points_value ?? r.points_cost ?? r.points ?? 0);
-    const lastStockFormatted = formatLastStock(r.last_restock ?? null);
+  const isLoading = !inventoryLoaded && !error;
+
+  const inventoryItems = inventory.map((item, idx) => {
+    const stocksInHand = Number(item.remaining_stocks ?? item.stock_quantity ?? item.stock ?? 0);
+    const unitPriceNum = Number(item.item_price ?? item.unit_price ?? item.price ?? 0);
+    const totalPrice = Number(item.total_price ?? (stocksInHand * unitPriceNum));
+    const pointsValue = Number(item.points_value ?? item.points_cost ?? item.points ?? 0);
 
     return {
-      id: r.id || r.reward_id || idx,
-      name: r.reward_name || r.name || 'Unnamed Reward',
+      id: item.reward_id ?? item.id ?? idx,
+      name: item.reward_name || item.name || 'Unnamed Reward',
       stocksInHand,
       unitPrice: unitPriceNum,
-      unitPriceDisplay: unitPrice !== null && unitPrice !== undefined && unitPriceNum > 0
+      unitPriceDisplay: unitPriceNum > 0
         ? `₱${unitPriceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : '—',
       totalPrice,
@@ -407,16 +530,16 @@ function InventoryTab() {
         ? `₱${totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : '—',
       pointsValue,
-      lastStock: r.last_restock ?? null,
-      lastStockFormatted,
+      lastStock: item.last_restock ?? item.date_purchased ?? null,
+      lastStockFormatted: formatLastStock(item.last_restock ?? item.date_purchased ?? null),
       status:
         stocksInHand === 0
           ? 'Out of Stock'
           : stocksInHand < 10
           ? 'Low Stock'
-          : r.status === 'Active'
-          ? 'In Stock'
-          : 'Inactive',
+          : item.status === 'Inactive' || item.is_active === false
+          ? 'Inactive'
+          : 'In Stock',
     };
   });
 
@@ -443,14 +566,10 @@ function InventoryTab() {
         <p className="text-sm text-[#8da28e] mb-5 max-w-md mx-auto">{error}</p>
         <button
           onClick={() => {
-            setIsLoading(true);
             setError(null);
-            refreshRewards()
-              .then(() => setIsLoading(false))
-              .catch((err) => {
-                setError(err.response?.data?.message || err.message || 'Failed to load inventory data');
-                setIsLoading(false);
-              });
+            void Promise.resolve().then(refreshInventory).catch((err) => {
+              setError(err.response?.data?.message || err.message || 'Failed to load inventory data');
+            });
           }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
         >
@@ -617,7 +736,7 @@ function InventoryTab() {
                     key={item.id}
                     className="border-b hover:bg-[#fcfcf7] transition-colors"
                   >
-                    <td className="py-3 text-[#011400] font-medium">
+                    <td className="py-4 text-[#011400] font-semibold text-[15px]">
                       {item.name}
                     </td>
                     <td
@@ -813,7 +932,40 @@ function InventoryTab() {
 }
 /* ===================== INVENTORY TAB END ===================== */
 
-/* ===================== REPORTS TAB (MATCH YOUR IMAGE) ===================== */
+/* ===================== REPORTS TAB ===================== */
+function RewardMiniBarChart({ data, valueKey, valueSuffix = '', barColor = '#7faa72' }) {
+  const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
+  return (
+    <div className="relative h-[280px] pt-5 pb-8 pl-10">
+      <div className="absolute left-0 top-5 bottom-8 w-9 flex flex-col justify-between text-[10px] text-[#7a947e] text-right pr-2">
+        <span>{max.toLocaleString()}</span>
+        <span>{Math.round(max / 2).toLocaleString()}</span>
+        <span>0</span>
+      </div>
+      <div className="absolute left-10 right-0 top-5 bottom-8 border-l border-b border-[#dbe6db] pointer-events-none">
+        <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-[#dbe6db]" />
+      </div>
+      <div className="relative h-full flex items-end gap-4">
+        {data.map((item) => {
+          const value = Number(item[valueKey] || 0);
+          const height = value > 0 ? Math.max((value / max) * 100, 4) : 1.5;
+          return (
+            <div key={item.key || item.label} className="flex-1 h-full min-w-0 flex flex-col justify-end items-center gap-2 relative">
+              <span className="text-[11px] font-bold text-[#3e5f44]">{value.toLocaleString()}{valueSuffix}</span>
+              <div
+                className="w-[68%] max-w-[58px] rounded-t-lg transition-all"
+                title={`${item.label}: ${value.toLocaleString()}${valueSuffix}`}
+                style={{ height: `${height}%`, minHeight: value > 0 ? '8px' : '3px', background: barColor }}
+              />
+              <span className="absolute -bottom-7 text-xs text-[#6f876f] whitespace-nowrap">{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ReportsTab() {
   const { rewards, redemptions } = useData();
 
@@ -860,8 +1012,6 @@ function ReportsTab() {
     return months;
   };
   const monthlyTrend = getMonthlyTrend();
-  const maxTrendCount = Math.max(...monthlyTrend.map(m => m.count), 1);
-  const maxTrendPoints = Math.max(...monthlyTrend.map(m => m.points), 1);
 
   return (
     <div className="space-y-6">
@@ -883,10 +1033,10 @@ function ReportsTab() {
       </div>
 
       {/* Top Charts */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Distribution */}
-        <div className="bg-white p-6 rounded-3xl border border-[#dbe6db] shadow-sm">
+        <div className="bg-white p-7 rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Reward Distribution
           </h3>
@@ -920,52 +1070,22 @@ function ReportsTab() {
         </div>
 
         {/* Trend (Redemption Count) */}
-        <div className="bg-white p-6 rounded-3xl border border-[#dbe6db] shadow-sm">
+        <div className="bg-white p-7 rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Redemption Count (Monthly)
           </h3>
 
-          <div className="h-[220px] flex items-end justify-between gap-3">
-            {monthlyTrend.map((month, idx) => (
-              <div key={idx} className="flex flex-col items-center flex-1">
-                <div
-                  className="w-full bg-[#7faa72] rounded-t-xl"
-                  style={{
-                    height: `${(month.count / maxTrendCount) * 200}px`,
-                    minHeight: '4px'
-                  }}
-                />
-                <span className="text-xs text-[#6f876f] mt-2">
-                  {month.label}
-                </span>
-              </div>
-            ))}
-          </div>
+          <RewardMiniBarChart data={monthlyTrend} valueKey="count" barColor="#7faa72" />
         </div>
       </div>
 
       {/* Bottom Chart (Points Redeemed Monthly) */}
-      <div className="bg-white p-6 rounded-3xl border border-[#dbe6db] shadow-sm">
+      <div className="bg-white p-7 rounded-3xl border border-[#dbe6db] shadow-sm min-h-[380px]">
         <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
           Points Redeemed (Monthly)
         </h3>
 
-        <div className="h-[260px] flex items-end justify-between gap-4">
-          {monthlyTrend.map((month, idx) => (
-            <div key={idx} className="flex flex-col items-center flex-1">
-              <div
-                className="w-full bg-[#3e5f44] rounded-t-xl"
-                style={{
-                  height: `${(month.points / maxTrendPoints) * 240}px`,
-                  minHeight: '4px'
-                }}
-              />
-              <span className="text-xs text-[#6f876f] mt-2">
-                {month.label}
-              </span>
-            </div>
-          ))}
-        </div>
+        <RewardMiniBarChart data={monthlyTrend} valueKey="points" valueSuffix=" pts" barColor="#3e5f44" />
       </div>
 
     </div>

@@ -137,22 +137,54 @@ function HorizontalBars({ data, labelKey, valueKey, colors = [COLORS.dark, '#7ea
 }
 
 function SevenDayBars({ data, valueKey, label = 'Count', color = COLORS.dark }) {
-  const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
+  const values = data.map((item) => Number(item[valueKey] || 0));
+  const max = Math.max(...values, 1);
 
   return (
-    <div>
-      <div style={{ height: '225px', display: 'flex', alignItems: 'flex-end', gap: '12px', borderBottom: `1px solid ${COLORS.mintLight}`, padding: '0 4px 8px' }}>
-        {data.map((item, index) => {
-          const value = Number(item[valueKey] || 0);
-          const height = value > 0 ? Math.max((value / max) * 170, 8) : 3;
-          return (
-            <div key={`${item.date}-${index}`} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', height: '100%' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: COLORS.dark }}>{value}</span>
-              <div style={{ width: '70%', maxWidth: '50px', height: `${height}px`, borderRadius: '9px 9px 3px 3px', background: color, opacity: value > 0 ? 1 : .18 }} />
-              <span style={{ fontSize: '10px', color: COLORS.muted, whiteSpace: 'nowrap' }}>{formatDate(item.date)}</span>
-            </div>
-          );
-        })}
+    <div style={{ minWidth: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '38px minmax(0, 1fr)', gap: '10px' }}>
+        <div style={{ height: '230px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '4px 0 30px', color: COLORS.muted, fontSize: '10px', textAlign: 'right' }}>
+          <span>{max}</span>
+          <span>{Math.round(max / 2)}</span>
+          <span>0</span>
+        </div>
+
+        <div style={{ position: 'relative', height: '230px', borderLeft: `1px solid ${COLORS.mintLight}`, borderBottom: `1px solid ${COLORS.mintLight}`, padding: '8px 8px 30px' }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: `1px dashed ${COLORS.mintLight}` }} />
+          <div style={{ position: 'absolute', left: '8px', right: '8px', top: '8px', bottom: '30px', display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+            {data.map((item, index) => {
+              const value = Number(item[valueKey] || 0);
+              const height = value > 0 ? Math.max((value / max) * 100, 5) : 1.5;
+
+              return (
+                <div key={`${item.date}-${index}`} style={{ flex: 1, height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: COLORS.dark }}>{value}</span>
+                  <div
+                    title={`${formatDate(item.date)}: ${value}`}
+                    style={{
+                      width: '68%',
+                      maxWidth: '52px',
+                      height: `${height}%`,
+                      minHeight: value > 0 ? '8px' : '3px',
+                      borderRadius: '9px 9px 3px 3px',
+                      background: color,
+                      opacity: value > 0 ? 1 : .16,
+                      transition: 'height .25s ease',
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ position: 'absolute', left: '8px', right: '8px', bottom: '6px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0,1fr))`, gap: '12px' }}>
+            {data.map((item, index) => (
+              <span key={`${item.date}-label-${index}`} style={{ textAlign: 'center', fontSize: '10px', color: COLORS.muted, whiteSpace: 'nowrap' }}>
+                {formatDate(item.date)}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
       <div style={{ textAlign: 'center', fontSize: '11px', color: COLORS.muted, marginTop: '10px' }}>{label}</div>
     </div>

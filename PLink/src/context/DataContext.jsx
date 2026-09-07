@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import api from '../api';
 
 const DataContext = createContext(null);
@@ -95,24 +95,39 @@ const normalizeReward = (reward) => ({
   /* PRICE ADD END */
 });
 
-const normalizePlasticType = (item) => ({
-  ...item,
-  id: item.plastic_type_id ?? item.id,
-  plastic_type_id: item.plastic_type_id ?? item.id,
-  name: item.name || item.plastic_type || 'Unnamed Type',
-  code: item.code || '',
-  points: Number(item.points_value ?? 0),
-  points_value: Number(item.points_value ?? 0),
-  is_accepted: Boolean(item.is_accepted),
-  is_active: item.is_active !== false,
-  raw: item,
-});
+const normalizePlasticType = (item) => {
+  // The current backend uses recyclable_type_id as the primary key.
+  // Older frontend versions expected plastic_type_id, which caused every
+  // material to receive an undefined id and therefore share the same
+  // pointValues[undefined] state entry in Settings.
+  const id =
+    item.recyclable_type_id ??
+    item.plastic_type_id ??
+    item.id;
+
+  return {
+    ...item,
+    id,
+    recyclable_type_id: id,
+    plastic_type_id: id, // compatibility alias for older UI code
+    name: item.name || item.plastic_type || 'Unnamed Type',
+    code: item.code || '',
+    points: Number(item.points_value ?? 0),
+    points_value: Number(item.points_value ?? 0),
+    is_accepted: Boolean(item.is_accepted),
+    is_active: item.is_active !== false,
+    raw: item,
+  };
+};
 
 const normalizeSection = (section) => ({
   ...section,
   id: section.section_id ?? section.id,
   section_id: section.section_id ?? section.id,
   name: section.name || section.section_name || 'Unnamed Section',
+  students: Number(section.students ?? section.student_count ?? section.students_count ?? 0),
+  student_count: Number(section.student_count ?? section.students_count ?? section.students ?? 0),
+  students_count: Number(section.students_count ?? section.student_count ?? section.students ?? 0),
 });
 
 // Smart Bin presentation model. Fullness is calculated from HC-SR04 distance
@@ -230,7 +245,13 @@ export const DataProvider = ({ children }) => {
     rewards: [],
     /* INVENTORY TAB START - dedicated inventory list fed from /rewards/inventory */
     inventory: [],
+    inventoryLoaded: false,
     /* INVENTORY TAB END */
+    logs: [],
+    logsLoaded: false,
+    reportsCache: {},
+    reportsLoading: false,
+    reportsError: null,
     redemptions: [],
     sections: [],
     sectionsRanking: [],
@@ -242,6 +263,8 @@ export const DataProvider = ({ children }) => {
     isLoading: true,
     error: null,
   });
+
+  const reportsCacheRef = useRef({});
 
   const refreshDashboard = useCallback(async () => {
     const res = await api.getDashboard();
@@ -286,10 +309,56 @@ export const DataProvider = ({ children }) => {
       )),
       variance: Number(item.variance ?? 0),
     }));
-    setData((prev) => ({ ...prev, inventory: rows }));
+    setData((prev) => ({ ...prev, inventory: rows, inventoryLoaded: true }));
     return res;
   }, []);
   /* INVENTORY TAB END */
+
+  const refreshLogs = useCallback(async () => {
+    const res = await api.getLogs();
+    setData((prev) => ({
+      ...prev,
+      logs: arrayFrom(res.data),
+      logsLoaded: true,
+    }));
+    return res;
+  }, []);
+
+  const loadReports = useCallback(async (days = 30, force = false) => {
+    const cacheKey = String(days);
+    if (!force && reportsCacheRef.current[cacheKey]) {
+      return reportsCacheRef.current[cacheKey];
+    }
+
+    setData((prev) => ({ ...prev, reportsLoading: true, reportsError: null }));
+    try {
+      const res = await api.getReportsAnalytics({ days });
+      const payload = res.data;
+      reportsCacheRef.current = {
+        ...reportsCacheRef.current,
+        [cacheKey]: payload,
+      };
+      setData((prev) => ({
+        ...prev,
+        reportsCache: {
+          ...prev.reportsCache,
+          [cacheKey]: payload,
+        },
+        reportsLoading: false,
+        reportsError: null,
+      }));
+      return payload;
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to load reports and analytics.';
+      setData((prev) => ({ ...prev, reportsLoading: false, reportsError: message }));
+      throw error;
+    }
+  }, []);
+
+  const refreshReports = useCallback((days = 30) => loadReports(days, true), [loadReports]);
 
   const refreshRedemptions = useCallback(async () => {
     const res = await api.getRedemptions();
@@ -301,7 +370,7 @@ export const DataProvider = ({ children }) => {
   }, []);
 
   const refreshSections = useCallback(async () => {
-    const res = await api.getSectionsList();
+    const res = await api.getSections();
     setData((prev) => ({ ...prev, sections: arrayFrom(res.data).map(normalizeSection) }));
     return res;
   }, []);
@@ -392,7 +461,7 @@ export const DataProvider = ({ children }) => {
 
   const addRedemption = async (payload) => {
     const res = await api.addRedemption(payload);
-    await Promise.all([refreshRedemptions(), refreshStudents(), refreshRewards()]);
+    await Promise.all([refreshRedemptions(), refreshStudents(), refreshRewards(), refreshInventory()]);
     return res;
   };
   const initiateRedemption = (studentId, rewardId) => api.initiateRedemption(studentId, rewardId);
@@ -423,6 +492,9 @@ export const DataProvider = ({ children }) => {
       /* INVENTORY TAB START - expose inventory data + refresh fn to pages */
       refreshInventory,
       /* INVENTORY TAB END */
+      refreshLogs,
+      loadReports,
+      refreshReports,
       refreshRedemptions,
       refreshSections,
       refreshSectionsRanking,

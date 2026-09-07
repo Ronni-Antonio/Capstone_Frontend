@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api.jsx';
+import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
   white: '#ffffff',
@@ -286,44 +287,42 @@ function MiniMetric({ label, value }) {
 
 export default function Reports() {
   const [period, setPeriod] = useState(30);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [forecasting, setForecasting] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [forecastMessage, setForecastMessage] = useState('');
+  const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('historical');
+  const {
+    reportsCache,
+    reportsLoading,
+    reportsError,
+    loadReports,
+    refreshReports,
+  } = useData();
 
-  const loadData = useCallback(async (days) => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await api.getReportsAnalytics({ days });
-      setData(response.data);
-    } catch (err) {
-      console.error('Reports analytics error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to load reports and analytics.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const data = reportsCache?.[String(period)] ?? reportsCache?.[period] ?? null;
+  const loading = reportsLoading && !data;
+  const error = localError || reportsError || '';
 
   useEffect(() => {
-    // Loading remote report data is an intentional effect.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadData(period);
-  }, [period, loadData]);
+    if (!data) {
+      void Promise.resolve().then(() => loadReports(period)).catch((err) => {
+        console.error('Reports analytics error:', err);
+      });
+    }
+  }, [data, period, loadReports]);
 
   const runForecast = async () => {
     setForecasting(true);
     setForecastMessage('');
-    setError('');
+    setLocalError('');
     try {
       const response = await api.runProphetForecast({ periods: 7 });
       setForecastMessage(response.data?.message || 'Forecast generated successfully.');
-      await loadData(period);
+      await refreshReports(period);
     } catch (err) {
       console.error('Prophet forecast error:', err);
-      setError(
+      setLocalError(
         err.response?.data?.details ||
         err.response?.data?.message ||
         err.message ||
@@ -336,7 +335,7 @@ export default function Reports() {
 
   const downloadPdf = async () => {
     setDownloading(true);
-    setError('');
+    setLocalError('');
     try {
       const response = await api.downloadSustainabilityReport({ days: period });
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -352,7 +351,7 @@ export default function Reports() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('PDF download error:', err);
-      setError(err.response?.data?.message || err.message || 'Unable to download the PDF report.');
+      setLocalError(err.response?.data?.message || err.message || 'Unable to download the PDF report.');
     } finally {
       setDownloading(false);
     }
@@ -391,12 +390,6 @@ export default function Reports() {
           gap: '14px',
         }}
       >
-        <div>
-          <h2 style={{ margin: 0, color: COLORS.dark, fontSize: '26px' }}>Reports & Analytics</h2>
-          <div style={{ color: COLORS.muted, fontSize: '13px', marginTop: '5px' }}>
-            Historical performance, Prophet forecasts, and downloadable sustainability reporting
-          </div>
-        </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <select
             value={period}
@@ -434,6 +427,30 @@ export default function Reports() {
         </div>
       )}
 
+      <div style={{ display: 'inline-flex', width: 'fit-content', gap: '6px', padding: '6px', borderRadius: '14px', background: '#f4f8ef', border: `1px solid ${COLORS.border}` }}>
+        {[['historical', 'Historical Analytics'], ['predictive', 'Predictive Analytics']].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveAnalyticsTab(key)}
+            style={{
+              border: 'none',
+              borderRadius: '10px',
+              padding: '9px 14px',
+              background: activeAnalyticsTab === key ? COLORS.dark : 'transparent',
+              color: activeAnalyticsTab === key ? '#fff' : COLORS.dark,
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeAnalyticsTab === 'historical' && (
+        <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: '14px' }}>
         {summaryCards.map(([title, value, subtitle]) => (
           <Card key={title} style={{ padding: '18px' }}>
@@ -451,7 +468,7 @@ export default function Reports() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.45fr) minmax(300px,0.85fr)', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
         <Card>
           <SectionTitle title="Recycling Collection Trend" subtitle="Items collected per day" />
           <TrendChart history={(data?.daily_collection || []).map((row) => ({ ds: row.ds, y: row.items }))} />
@@ -462,7 +479,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
         <Card>
           <SectionTitle title="Student Participation" subtitle="Unique students recycling each day" />
           <TrendChart history={(data?.participation_trend || []).map((row) => ({ ds: row.ds, y: row.students }))} />
@@ -473,7 +490,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
         <Card>
           <SectionTitle title="Top 5 Recyclers" subtitle="Ranked by points earned during the reporting period" />
           {topRecyclers.length ? (
@@ -537,12 +554,11 @@ export default function Reports() {
         ) : <EmptyState />}
       </Card>
 
-      <div style={{ marginTop: '8px' }}>
-        <h3 style={groupTitleStyle}>Predictive Analytics — Prophet</h3>
-        <div style={groupSubtitleStyle}>
-          Forecasts are stored in Laravel so the system can later compare predicted values with actual outcomes
-        </div>
-      </div>
+        </>
+      )}
+
+      {activeAnalyticsTab === 'predictive' && (
+        <>
 
       {!Object.values(predictive).some((metric) => metric?.forecast?.length) && (
         <div style={{ background: '#f2f7df', color: COLORS.dark, borderRadius: '16px', padding: '14px 16px', fontSize: '12px' }}>
@@ -552,15 +568,18 @@ export default function Reports() {
 
       <ForecastPanel metric={predictive.recycling_volume} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
         <ForecastPanel metric={predictive.student_participation} />
         <ForecastPanel metric={predictive.reward_redemptions} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
         <ForecastPanel metric={predictive.plastic_fullness} />
         <ForecastPanel metric={predictive.paper_fullness} />
       </div>
+
+        </>
+      )}
 
       <Card>
         <SectionTitle

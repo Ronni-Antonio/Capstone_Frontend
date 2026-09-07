@@ -79,7 +79,7 @@ api.updateSmartBinCompartmentSensor = (machineId, compartmentId, data) =>
 api.getSmartBinLogs = () => api.get('/machine-logs');
 
 // Rewards
-api.getRewards = () => api.get('/rewards');
+api.getRewards = () => api.get('/rewards', { params: { include_inactive: 1 } });
 api.addReward = (data) => api.post('/rewards', data);
 api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
@@ -96,6 +96,11 @@ api.getPlasticTypes = () => api.get('/plastictypes');
 api.addPlasticType = (data) => api.post('/plastictypes', data);
 api.updatePlasticType = (id, data) => api.put(`/plastictypes/${id}`, data);
 api.deletePlasticType = (id) => api.delete(`/plastictypes/${id}`);
+
+// ESP32 controller configuration (admin UI)
+api.getIotDeviceConfigs = () => api.get('/iot-device-configs');
+api.updateIotDeviceConfig = (controllerCode, data) =>
+  api.put(`/iot-device-configs/${controllerCode}`, data);
 
 // Sections / grade levels
 api.getSections = () => api.get('/sections');
