@@ -806,27 +806,29 @@ export default function StudentPoints() {
                   </td>
 
                   <td style={td}>
-                    <button style={actionBtn}>
-                      <EyeIcon className="w-4 h-4" />
-                    </button>
-
-                    <button style={actionBtn}>
-                      <PencilIcon className="w-4 h-4" />
-                    </button>
-
-                    {!student.has_active_rfid_card && (
-                      <button
-                        onClick={() => handleAssignCard(student)}
-                        style={{
-                          ...actionBtn,
-                          background: '#3e5f44',
-                          color: '#fff'
-                        }}
-                        title="Assign RFID Card"
-                      >
-                        <CreditCardIcon className="w-4 h-4" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap' }}>
+                      <button style={actionBtn} title="View student">
+                        <EyeIcon className="w-4 h-4" />
                       </button>
-                    )}
+
+                      <button style={actionBtn} title="Edit student">
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+
+                      {!student.has_active_rfid_card && (
+                        <button
+                          onClick={() => handleAssignCard(student)}
+                          style={{
+                            ...actionBtn,
+                            background: '#3e5f44',
+                            color: '#fff'
+                          }}
+                          title="Assign RFID Card"
+                        >
+                          <CreditCardIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

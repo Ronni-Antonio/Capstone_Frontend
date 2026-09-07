@@ -14,7 +14,6 @@ import {
   AlertCircleIcon,
   RefreshCwIcon,
 } from 'lucide-react'
-import api from '../api';
 import { useData } from '../context/DataContext.jsx';
 
 const PAGE_SIZE = 8
@@ -106,17 +105,13 @@ const normalizeLog = (log, idx) => {
   };
 };
 
-const requestNormalizedLogs = async () => {
-  const res = await api.getLogs();
-  const raw = arrayFrom(res.data);
-  const normalized = raw.map((log, index) => normalizeLog(log, index));
-
+const normalizeLogs = (rawLogs) => {
+  const normalized = arrayFrom(rawLogs).map((log, index) => normalizeLog(log, index));
   normalized.sort((a, b) => {
     const ta = a.timestamp ? new Date(a.timestamp.replace(' ', 'T')).getTime() : 0;
     const tb = b.timestamp ? new Date(b.timestamp.replace(' ', 'T')).getTime() : 0;
     return tb - ta;
   });
-
   return normalized;
 };
 
@@ -140,47 +135,27 @@ function ActivityLogsTab() {
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
   const [viewing, setViewing] = useState(null);
-  const [logs, setLogs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { logs: rawLogs, logsLoaded, refreshLogs } = useData();
+
+  const logs = useMemo(() => normalizeLogs(rawLogs), [rawLogs]);
+  const isLoading = !logsLoaded;
 
   const fetchLogs = useCallback(async () => {
     try {
-      const normalized = await requestNormalizedLogs();
-      setLogs(normalized);
+      await refreshLogs();
       setError(null);
     } catch (err) {
       console.error('❌ Error fetching activity logs:', err);
       setError(getLogErrorMessage(err));
-      setLogs([]);
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+  }, [refreshLogs]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    requestNormalizedLogs()
-      .then((normalized) => {
-        if (cancelled) return;
-        setLogs(normalized);
-        setError(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error('❌ Error fetching activity logs:', err);
-        setError(getLogErrorMessage(err));
-        setLogs([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!logsLoaded) {
+      void Promise.resolve().then(fetchLogs);
+    }
+  }, [fetchLogs, logsLoaded]);
 
   const filtered = useMemo(() => {
     return logs.filter((log) => {
@@ -237,9 +212,8 @@ function ActivityLogsTab() {
         <p className="text-sm text-[#6f876f] mb-5 max-w-md mx-auto">{error}</p>
         <button
           onClick={() => {
-            setIsLoading(true);
             setError(null);
-            fetchLogs();
+            void fetchLogs();
           }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
         >

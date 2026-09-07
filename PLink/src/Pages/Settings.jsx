@@ -16,6 +16,9 @@ import {
   PencilIcon,
   TrashIcon,
   XIcon,
+  WifiIcon,
+  RouterIcon,
+  RefreshCwIcon,
 } from 'lucide-react';
 
 export function Settings() {
@@ -44,16 +47,13 @@ export function Settings() {
     email: 'PLP@gmail.com',
   });
 
-  const [conversion, setConversion] = useState(5);
-  const [penalties, setPenalties] = useState({
-    rejected: 1, // contaminated PET points
-    nonPet: 0, // invalid/non-accepted items earn 0 points
-  });
-  const [plasticTypeConfig, setPlasticTypeConfig] = useState({
-    pet: null,
-    contaminated: null,
-    nonPet: null,
-  });
+  const [pointValues, setPointValues] = useState({});
+
+  // Two ESP32 controllers. Passwords are intentionally not loaded back into
+  // the browser; an empty password means "keep the currently stored password".
+  const [iotDevices, setIotDevices] = useState([]);
+  const [iotLoading, setIotLoading] = useState(false);
+  const [iotSaving, setIotSaving] = useState(null);
 
   const [notifications, setNotifications] = useState({
     machineFull: true,
@@ -70,20 +70,6 @@ export function Settings() {
   const showToast = (msg, done = true) => {
     setToast({ show: true, msg, done });
     if (done) setTimeout(() => setToast(null), 3000);
-  };
-
-  const mapPlasticTypesToConfig = (plasticTypes) => {
-    const findByKeywords = (keywords) =>
-      plasticTypes.find((item) => {
-        const name = item.name.toLowerCase();
-        return keywords.some((keyword) => name.includes(keyword));
-      }) || null;
-
-    return {
-      pet: findByKeywords(['pet bottle', 'pet']),
-      contaminated: findByKeywords(['contaminated']),
-      nonPet: findByKeywords(['invalid', 'non-pet', 'non pet', 'other plastics', 'aluminum']),
-    };
   };
 
   // CONTROLLER 1: System Settings Loader - Initialize from context
@@ -107,22 +93,95 @@ export function Settings() {
     }
   }, [settings]);
 
-  // Update plastic type config when plasticTypes from context changes!
+  // Keep one editable point value for every recyclable type returned by the backend.
+  // This includes PET, HDPE, PVC, LDPE, PP, PS, PC, PLA, White Paper,
+  // contaminated/dirty material, and invalid material.
   useEffect(() => {
-    if (plasticTypes && plasticTypes.length > 0) {
-      const mappedConfig = mapPlasticTypesToConfig(plasticTypes);
+    if (!plasticTypes?.length) return;
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPlasticTypeConfig(mappedConfig);
-      if (mappedConfig.pet) {
-        setConversion(mappedConfig.pet.points);
-      }
-      setPenalties({
-        rejected: mappedConfig.contaminated?.points ?? 1,
-        nonPet: mappedConfig.nonPet?.points ?? 0,
-      });
-    }
+    const next = {};
+    plasticTypes.forEach((type) => {
+      const typeId =
+        type.recyclable_type_id ??
+        type.plastic_type_id ??
+        type.id;
+
+      if (typeId === undefined || typeId === null) return;
+
+      next[typeId] = Number(
+        type.points_value ??
+        type.points ??
+        0
+      );
+    });
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPointValues(next);
   }, [plasticTypes]);
+
+  const loadIotDevices = async () => {
+    setIotLoading(true);
+    try {
+      const res = await api.getIotDeviceConfigs();
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setIotDevices(rows.map((device) => ({
+        ...device,
+        wifi_password: '',
+      })));
+    } catch (error) {
+      console.error('Failed to load IoT controller settings', error);
+      showToast('Unable to load ESP32 controller settings');
+    } finally {
+      setIotLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadIotDevices();
+    // load once; later refreshes are user initiated
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateIotDraft = (controllerCode, key, value) => {
+    setIotDevices((current) => current.map((device) =>
+      device.controller_code === controllerCode
+        ? { ...device, [key]: value }
+        : device
+    ));
+  };
+
+  const saveIotDevice = async (device) => {
+    if (!device.wifi_ssid?.trim()) {
+      showToast('SSID is required');
+      return;
+    }
+
+    setIotSaving(device.controller_code);
+    try {
+      const payload = {
+        device_name: device.device_name,
+        wifi_ssid: device.wifi_ssid.trim(),
+      };
+      if (device.wifi_password) payload.wifi_password = device.wifi_password;
+
+      const res = await api.updateIotDeviceConfig(device.controller_code, payload);
+      const saved = res.data?.device;
+      if (saved) {
+        setIotDevices((current) => current.map((row) =>
+          row.controller_code === saved.controller_code
+            ? { ...saved, wifi_password: '' }
+            : row
+        ));
+      }
+      showToast('ESP32 Wi-Fi configuration queued');
+    } catch (error) {
+      console.error(error);
+      showToast(error.response?.data?.message || 'Unable to save ESP32 configuration');
+    } finally {
+      setIotSaving(null);
+    }
+  };
 
   // CONTROLLER 1: System Settings Updater
   const handleSaveAll = async () => {
@@ -142,34 +201,29 @@ export function Settings() {
     };
 
     try {
-      const plasticTypeUpdates = [];
+      const plasticTypeUpdates = (plasticTypes || [])
+        .map((type) => {
+          const typeId =
+            type.recyclable_type_id ??
+            type.plastic_type_id ??
+            type.id;
 
-      if (plasticTypeConfig.pet?.id) {
-        plasticTypeUpdates.push(
-          api.updatePlasticType(plasticTypeConfig.pet.id, {
-            ...plasticTypeConfig.pet.raw,
-            points_value: Number(conversion),
-          })
-        );
-      }
+          if (typeId === undefined || typeId === null) {
+            return null;
+          }
 
-      if (plasticTypeConfig.contaminated?.id) {
-        plasticTypeUpdates.push(
-          api.updatePlasticType(plasticTypeConfig.contaminated.id, {
-            ...plasticTypeConfig.contaminated.raw,
-            points_value: Number(penalties.rejected),
-          })
-        );
-      }
-
-      if (plasticTypeConfig.nonPet?.id) {
-        plasticTypeUpdates.push(
-          api.updatePlasticType(plasticTypeConfig.nonPet.id, {
-            ...plasticTypeConfig.nonPet.raw,
-            points_value: Number(penalties.nonPet),
-          })
-        );
-      }
+          return api.updatePlasticType(typeId, {
+            points_value: Math.max(
+              0,
+              Number(
+                pointValues[typeId] ??
+                type.points_value ??
+                0
+              )
+            ),
+          });
+        })
+        .filter(Boolean);
 
       await Promise.all([
         api.updateSettings(payload),
@@ -201,12 +255,48 @@ export function Settings() {
           </div>
         </SettingsCard>
 
-        {/* Point Conversion & Penalties */}
-        <SettingsCard icon={SparklesIcon} title="Point Conversion & Rules" desc="Configure points awarded for accepted and non-accepted items">
-          <div className="space-y-3">
-            <PointRule label="Accepted PET Bottle" desc="Points awarded for a valid, accepted bottle" value={conversion} onChange={setConversion} min={1} />
-            <PointRule label="Contaminated Bottle Points" desc="Points awarded for a contaminated PET bottle" value={penalties.rejected} onChange={(v) => setPenalties({ ...penalties, rejected: v })} min={0} />
-            <PointRule label="Invalid Item Points" desc="Points awarded for invalid or non-accepted items" value={penalties.nonPet} onChange={(v) => setPenalties({ ...penalties, nonPet: v })} min={0} />
+        {/* Point conversion for every recyclable category */}
+        <SettingsCard icon={SparklesIcon} title="Point Conversion by Material" desc="Set points for every CNN recyclable class, including dirty/damaged material">
+          <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
+            {(plasticTypes || []).length === 0 ? (
+              <div className="text-sm text-[#7a947e] py-4">No recyclable categories are available.</div>
+            ) : (
+              plasticTypes.map((type) => {
+                const typeId =
+                  type.recyclable_type_id ??
+                  type.plastic_type_id ??
+                  type.id;
+
+                const dirty =
+                  /contaminated|dirty|damaged|demolished/i.test(type.name);
+
+                const label = dirty
+                  ? `Dirty / Damaged Recyclable — ${type.name}`
+                  : type.name;
+
+                const acceptedText = type.is_accepted
+                  ? 'Accepted material'
+                  : 'Rejected / non-accepted material';
+
+                return (
+                  <PointRule
+                    key={typeId ?? `${type.code}-${type.name}`}
+                    label={label}
+                    desc={`${acceptedText} • ${String(type.material_category || 'other').toUpperCase()} • ${type.code || 'No code'}`}
+                    value={Number(pointValues[typeId] ?? type.points_value ?? 0)}
+                    onChange={(value) => {
+                      if (typeId === undefined || typeId === null) return;
+
+                      setPointValues((current) => ({
+                        ...current,
+                        [typeId]: Math.max(0, Number(value)),
+                      }));
+                    }}
+                    min={0}
+                  />
+                );
+              })
+            )}
           </div>
         </SettingsCard>
 
@@ -258,6 +348,64 @@ export function Settings() {
         </SettingsCard>
       </div>
 
+      {/* ESP32 controller Wi-Fi configuration */}
+      <SettingsCard icon={WifiIcon} title="ESP32 Controller Wi-Fi" desc="Queue Wi-Fi credentials for the two ESP32 controllers. Each controller must poll the backend to receive changes.">
+        <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
+          The website cannot directly push a new SSID to an ESP32 behind a router. Saving here stores the desired configuration in Laravel. Each ESP32 should periodically call its device-config endpoint, save newer credentials to NVS/Preferences, acknowledge the version, then reconnect/restart. Keep a local AP/fallback provisioning method in case new credentials are wrong.
+        </div>
+
+        <div className="flex justify-end mb-3">
+          <button type="button" onClick={loadIotDevices} disabled={iotLoading} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#dbe6db] bg-white text-sm font-semibold text-[#2d4a33] disabled:opacity-50">
+            <RefreshCwIcon className={`w-4 h-4 ${iotLoading ? 'animate-spin' : ''}`} /> Refresh controllers
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {iotDevices.map((device) => (
+            <div key={device.controller_code} className="rounded-2xl border border-[#dbe6db] bg-[#f8faf7] p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <RouterIcon className="w-5 h-5 text-[#3e5f44] shrink-0" />
+                  <div>
+                    <div className="font-bold text-[#2d4a33]">{device.device_name}</div>
+                    <div className="text-[11px] text-[#7a947e]">{device.controller_code}</div>
+                  </div>
+                </div>
+                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${device.pending ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-700'}`}>
+                  {device.pending ? 'Pending apply' : 'Applied'}
+                </span>
+              </div>
+
+              <Field label="Wi-Fi SSID" value={device.wifi_ssid} onChange={(value) => updateIotDraft(device.controller_code, 'wifi_ssid', value)} />
+              <PasswordField
+                label="Wi-Fi Password"
+                value={device.wifi_password}
+                placeholder={device.has_wifi_password ? 'Leave blank to keep current password' : 'Enter Wi-Fi password'}
+                onChange={(value) => updateIotDraft(device.controller_code, 'wifi_password', value)}
+              />
+
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#7a947e]">
+                <span>Desired version: {device.config_version ?? 0}</span>
+                <span>Applied version: {device.applied_version ?? 0}</span>
+                <span>Last seen: {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : 'Never'}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => saveIotDevice(device)}
+                disabled={iotSaving === device.controller_code}
+                className="w-full py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm disabled:opacity-60"
+              >
+                {iotSaving === device.controller_code ? 'Saving…' : 'Queue Wi-Fi Configuration'}
+              </button>
+            </div>
+          ))}
+          {!iotLoading && iotDevices.length === 0 && (
+            <div className="text-sm text-[#7a947e]">No ESP32 controller records found. Run the latest Laravel migrations.</div>
+          )}
+        </div>
+      </SettingsCard>
+
       {/* Action Footer */}
       <div className="flex items-center justify-end gap-3 bg-white rounded-3xl p-4 shadow-sm border border-[#dbe6db]/60 sticky bottom-4">
         <button className="px-5 py-2.5 bg-[#e8f5bd]/60 text-[#2d4a33] border-none rounded-xl font-semibold text-sm cursor-pointer">Discard</button>
@@ -299,6 +447,15 @@ function Field({ label, value, onChange }) {
     <label className="block">
       <span className="text-xs font-semibold text-[#2d4a33] mb-1.5 block">{label}</span>
       <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#f4f6f3] border border-[#dbe6db] rounded-xl px-3.5 py-2.5 text-sm text-[#2d4a33] focus:outline-none focus:border-[#5a7c61] transition-colors" />
+    </label>
+  );
+}
+
+function PasswordField({ label, value, onChange, placeholder }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold text-[#2d4a33] mb-1.5 block">{label}</span>
+      <input type="password" autoComplete="new-password" value={value || ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#f4f6f3] border border-[#dbe6db] rounded-xl px-3.5 py-2.5 text-sm text-[#2d4a33] focus:outline-none focus:border-[#5a7c61] transition-colors" />
     </label>
   );
 }
@@ -432,7 +589,7 @@ function SectionsManager({
               filtered.map((s, idx) => (
                 <tr key={idx} className="hover:bg-[#f4f6f3]">
                   <td className="px-4 py-3 text-sm font-semibold text-[#2d4a33]">{s.name}</td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#2d4a33]">{s.students || 0}</td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#2d4a33]">{Number(s.students ?? s.student_count ?? s.students_count ?? 0)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => { setEditing(s); setForm({ name: s.name }); setShowModal(true); }} className="w-8 h-8 rounded-lg bg-[#e8f5bd]/60 text-[#2d4a33] flex items-center justify-center border-none cursor-pointer"><PencilIcon className="w-3.5 h-3.5" /></button>
