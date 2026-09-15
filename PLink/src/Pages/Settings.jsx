@@ -5,9 +5,6 @@ import {
   SchoolIcon,
   SparklesIcon,
   BellIcon,
-  DatabaseIcon,
-  DownloadIcon,
-  UploadIcon,
   MinusIcon,
   PlusIcon,
   CheckIcon,
@@ -64,7 +61,6 @@ export function Settings() {
     milestones: true,
   });
 
-  const [autoBackup, setAutoBackup] = useState(true);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, done = true) => {
