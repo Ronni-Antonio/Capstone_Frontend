@@ -52,6 +52,7 @@ export function Settings() {
   const [iotLoading, setIotLoading] = useState(false);
   const [iotSaving, setIotSaving] = useState(null);
 
+  
   const [notifications, setNotifications] = useState({
     machineFull: true,
     scannerErrors: true,
