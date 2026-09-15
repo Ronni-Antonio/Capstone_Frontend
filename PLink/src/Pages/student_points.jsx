@@ -6,7 +6,6 @@ import {
   LayersIcon,
   PlusIcon,
   CircleCheckIcon,
-  EyeIcon,
   PencilIcon,
   CreditCardIcon,
 } from 'lucide-react';
@@ -805,12 +804,8 @@ export default function StudentPoints() {
                     {student.points} pts
                   </td>
 
-                  <td style={td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap' }}>
-                      <button style={actionBtn} title="View student">
-                        <EyeIcon className="w-4 h-4" />
-                      </button>
-
+                  <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px', flexWrap: 'nowrap' }}>
                       <button style={actionBtn} title="Edit student">
                         <PencilIcon className="w-4 h-4" />
                       </button>
@@ -1397,7 +1392,6 @@ const actionBtn = {
   height: '36px',
   borderRadius: '10px',
   border: 'none',
-  marginRight: '8px',
   cursor: 'pointer',
   background: '#c7eabb',
   color: '#3e5f44'

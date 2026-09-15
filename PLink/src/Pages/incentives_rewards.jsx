@@ -1027,9 +1027,6 @@ function ReportsTab() {
           </p>
         </div>
 
-        <button className="bg-[#3e5f44] text-white px-5 py-2 rounded-xl text-sm font-semibold">
-          ⬇ Export All Data
-        </button>
       </div>
 
       {/* Top Charts */}
