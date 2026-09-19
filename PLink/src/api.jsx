@@ -84,6 +84,11 @@ api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
 /* INVENTORY TAB START - new dedicated inventory endpoint for purchase tracking + columns */
 api.getInventory = () => api.get('/rewards/inventory');
+api.searchInventory = (params = {}) => api.get('/rewards/inventory', { params });
+api.exportInventory = (params = {}) =>
+  api.get('/rewards/inventory/pdf-data', {
+    params,
+  });
 /* INVENTORY TAB END */
 
 // Settings
@@ -149,5 +154,10 @@ api.updateUser = (id, data) => api.put(`/users/${id}`, data);
 api.requestEmailChange = (id, email) => api.post(`/user/${id}/request-email-change`, { email });
 api.verifyEmailChange = (id, data) => api.post(`/user/${id}/verify-email-change`, data);
 api.changePassword = (id, data) => api.put(`/users/${id}/password`, data);
+
+// Password change OTP flow (OTP sent to authenticated user's email)
+api.requestPasswordChangeOtp = () => api.post('/user/password/request-otp');
+api.verifyPasswordChangeOtp = (data) => api.post('/user/password/verify-otp', data);
+api.completePasswordChangeWithOtp = (data) => api.post('/user/password/change', data);
 
 export default api;

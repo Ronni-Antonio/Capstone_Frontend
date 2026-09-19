@@ -16,6 +16,8 @@ import {
   AlertCircleIcon,
   RefreshCwIcon,
   Loader2Icon,
+  SearchIcon,
+  CalendarIcon,
 } from 'lucide-react';
 
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -471,8 +473,14 @@ function RewardsTab() {
 
 /* ===================== INVENTORY TAB START ===================== */
 function InventoryTab() {
-  const { inventory, inventoryLoaded, refreshInventory } = useData();
+  const { inventory, inventoryLoaded, refreshInventory, searchInventory, exportInventory } = useData();
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const formatLastStock = (timestamp) => {
     if (!timestamp) return '—';
@@ -495,21 +503,94 @@ function InventoryTab() {
     }
   };
 
-  useEffect(() => {
-    if (!inventoryLoaded) {
-      void Promise.resolve().then(refreshInventory).catch((err) => {
-        console.error('❌ Error loading inventory data:', err);
-        setError(
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          err?.message ||
-          'Failed to load inventory data'
-        );
-      });
-    }
-  }, [inventoryLoaded, refreshInventory]);
+  const buildParams = () => {
+    const params = {};
+    if (searchTerm.trim()) params.search = searchTerm.trim();
+    if (sortOrder === 'name_asc') params.sort = 'name_asc';
+    if (sortOrder === 'name_desc') params.sort = 'name_desc';
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+    return params;
+  };
 
-  const isLoading = !inventoryLoaded && !error;
+  const handleSearch = async () => {
+    setIsApplying(true);
+    setError(null);
+    try {
+      await searchInventory(buildParams());
+    } catch (err) {
+      console.error('❌ Error searching inventory:', err);
+      setError(
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to search inventory'
+      );
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await exportInventory(buildParams());
+    } catch (err) {
+      console.error('❌ Error exporting inventory:', err);
+      setError(
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to export inventory'
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleResetFilters = async () => {
+    setSearchTerm('');
+    setSortOrder('');
+    setDateFrom('');
+    setDateTo('');
+    setIsApplying(true);
+    setError(null);
+    try {
+      await refreshInventory();
+    } catch (err) {
+      console.error('❌ Error resetting inventory:', err);
+      setError(
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to load inventory data'
+      );
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!inventoryLoaded && !error) {
+      void Promise.resolve()
+        .then(() => setIsApplying(true))
+        .then(refreshInventory)
+        .catch((err) => {
+          console.error('❌ Error loading inventory data:', err);
+          setError(
+            err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.message ||
+            'Failed to load inventory data'
+          );
+        })
+        .finally(() => {
+          setIsApplying(false);
+        });
+    }
+  }, [inventoryLoaded, refreshInventory, error]);
+
+  const isLoading = (!inventoryLoaded && !error) || isApplying;
 
   const inventoryItems = inventory.map((item, idx) => {
     const stocksInHand = Number(item.remaining_stocks ?? item.stock_quantity ?? item.stock ?? 0);
@@ -555,6 +636,12 @@ function InventoryTab() {
     (sum, i) => sum + i.totalPrice,
     0
   );
+
+  const hasActiveFilters =
+    searchTerm.trim() !== '' ||
+    sortOrder !== '' ||
+    dateFrom !== '' ||
+    dateTo !== '';
 
   if (error) {
     return (
@@ -664,22 +751,105 @@ function InventoryTab() {
               Stock levels synced from rewards catalog
             </p>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+        {/* Search and Filter controls row */}
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          <div className="flex items-center gap-2 bg-[#fcfcf7] rounded-xl px-4 py-2 border border-[#dbe6db] focus-within:border-[#5a7c61] transition-colors">
+            <SearchIcon className="w-4 h-4 text-[#3e5f44]/50" />
             <input
               type="text"
               placeholder="Search inventory..."
-              className="border border-[#dbe6db] rounded-xl px-4 py-2 outline-none text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleSearch();
+              }}
+              className="bg-transparent outline-none text-sm flex-1 placeholder:text-[#3e5f44]/40 text-[#3e5f44] w-56"
             />
+          </div>
 
-            <select className="border border-[#dbe6db] rounded-xl px-4 py-2 outline-none text-sm text-[#3e5f44] bg-white">
-              <option>All Categories</option>
-              <option>Reward Items</option>
-              <option>School Supplies</option>
-            </select>
+          <button
+            onClick={handleSearch}
+            disabled={isLoading}
+            className="bg-[#3e5f44] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#5a7c61] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+          >
+            {isApplying ? (
+              <Loader2Icon className="w-4 h-4 animate-spin" />
+            ) : (
+              <SearchIcon className="w-4 h-4" />
+            )}
+            Search
+          </button>
 
-            <button className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold">
-              <DownloadIcon className="w-4 h-4 inline mr-2" />
+          <select
+            value={sortOrder}
+            onChange={(e) => {
+              setSortOrder(e.target.value);
+              void Promise.resolve().then(() => {
+                if (e.target.value) void handleSearch();
+              });
+            }}
+            className="border border-[#dbe6db] rounded-xl px-4 py-2 outline-none text-sm text-[#3e5f44] bg-white hover:bg-[#fcfcf7] transition-colors"
+          >
+            <option value="">Sort by Name</option>
+            <option value="name_asc">Ascending (A–Z)</option>
+            <option value="name_desc">Descending (Z–A)</option>
+          </select>
+
+          <div className="flex items-center gap-2">
+            <div className="pt-0.5">
+              <label className="text-xs font-semibold text-[#3e5f44] mb-1 flex items-center gap-1.5">
+                <CalendarIcon className="w-3.5 h-3.5" /> From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                onBlur={() => {
+                  if (dateFrom || dateTo) void handleSearch();
+                }}
+                className="bg-[#fcfcf7] border border-[#dbe6db] rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+              />
+            </div>
+            <div className="pt-0.5">
+              <label className="text-xs font-semibold text-[#3e5f44] mb-1 flex items-center gap-1.5">
+                <CalendarIcon className="w-3.5 h-3.5" /> To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                onBlur={() => {
+                  if (dateFrom || dateTo) void handleSearch();
+                }}
+                className="bg-[#fcfcf7] border border-[#dbe6db] rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+              />
+            </div>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={handleResetFilters}
+              disabled={isLoading}
+              className="px-4 py-2 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold text-xs hover:bg-[#e8f5bd] hover:text-[#3e5f44] hover:border-[#A2CB8B] transition-colors disabled:opacity-40 inline-flex items-center gap-2 mt-6"
+            >
+              <RefreshCwIcon className="w-3.5 h-3.5" />
+              Reset Filters
+            </button>
+          )}
+
+          <div className="ml-auto">
+            <button
+              onClick={handleExport}
+              disabled={isExporting || isLoading}
+              className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#d9efa2] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+            >
+              {isExporting ? (
+                <Loader2Icon className="w-4 h-4 animate-spin" />
+              ) : (
+                <DownloadIcon className="w-4 h-4" />
+              )}
               Export
             </button>
           </div>
