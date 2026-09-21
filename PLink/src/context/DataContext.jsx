@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import api from '../api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const DataContext = createContext(null);
 
@@ -291,27 +293,237 @@ export const DataProvider = ({ children }) => {
   }, []);
 
   /* INVENTORY TAB START - refreshInventory calls /rewards/inventory and normalizes numbers for UI */
+  const normalizeInventoryRow = (item) => ({
+  ...item,
+
+  id: item.reward_id ?? item.id,
+
+  reward_id: item.reward_id ?? item.id,
+
+  name: item.reward_name || item.name || 'Unnamed Item',
+
+  // Use unit_price from the backend first
+  unit_price: Number(
+    item.unit_price ??
+    item.item_price ??
+    item.price ??
+    0
+  ),
+
+  // Keep item_price as a frontend alias
+  item_price: Number(
+    item.unit_price ??
+    item.item_price ??
+    item.price ??
+    0
+  ),
+
+  purchased_item: Number(
+    item.purchased_item ??
+    item.purchased_item_count ??
+    item.purchased_count ??
+    0
+  ),
+
+  date_purchased:
+    item.date_purchased ??
+    item.created_at ??
+    null,
+
+  remaining_stocks: Number(
+    item.remaining_stocks ??
+    item.stock_quantity ??
+    item.stock ??
+    0
+  ),
+
+  total_stocks_on_hand: Number(
+    item.total_stocks_on_hand ??
+    item.total_stocks ??
+    item.stock_quantity ??
+    item.stock ??
+    0
+  ),
+
+  total_price: Number(
+    item.total_price ??
+    (
+      Number(
+        item.remaining_stocks ??
+        item.stock_quantity ??
+        item.stock ??
+        0
+      ) *
+      Number(
+        item.unit_price ??
+        item.item_price ??
+        item.price ??
+        0
+      )
+    )
+  ),
+
+  variance: Number(item.variance ?? 0),
+});
+
   const refreshInventory = useCallback(async () => {
     const res = await api.getInventory();
-    const rows = arrayFrom(res.data).map((item) => ({
-      ...item,
-      id: item.reward_id ?? item.id,
-      reward_id: item.reward_id ?? item.id,
-      name: item.reward_name || item.name || 'Unnamed Item',
-      item_price: Number(item.item_price ?? item.price ?? 0),
-      purchased_item: Number(item.purchased_item ?? item.purchased_item_count ?? item.purchased_count ?? 0),
-      date_purchased: item.date_purchased ?? item.created_at ?? null,
-      remaining_stocks: Number(item.remaining_stocks ?? item.stock_quantity ?? item.stock ?? 0),
-      total_stocks_on_hand: Number(item.total_stocks_on_hand ?? item.total_stocks ?? 0),
-      total_price: Number(item.total_price ?? (
-        (Number(item.total_stocks_on_hand ?? item.total_stocks ?? 0)) *
-        (Number(item.item_price ?? item.price ?? 0))
-      )),
-      variance: Number(item.variance ?? 0),
-    }));
+    const rows = arrayFrom(res.data).map(normalizeInventoryRow);
     setData((prev) => ({ ...prev, inventory: rows, inventoryLoaded: true }));
     return res;
   }, []);
+
+  const searchInventory = useCallback(async (params = {}) => {
+    const res = await api.searchInventory(params);
+    const rows = arrayFrom(res.data).map(normalizeInventoryRow);
+    setData((prev) => ({ ...prev, inventory: rows, inventoryLoaded: true }));
+    return res;
+  }, []);
+
+ const exportInventory = useCallback(async (params = {}) => {
+  const res = await api.exportInventory(params);
+
+  const rawRows = Array.isArray(res.data?.rows)
+    ? res.data.rows
+    : [];
+
+  const rows = rawRows.map(normalizeInventoryRow);
+
+  const totalItems = rows.length;
+
+  const totalUnits = rows.reduce((sum, row) => {
+    return sum + Number(
+      row.remaining_stocks ??
+      row.stock_quantity ??
+      row.stock ??
+      0
+    );
+  }, 0);
+
+  const totalValue = rows.reduce((sum, row) => {
+    const stocks = Number(
+      row.remaining_stocks ??
+      row.stock_quantity ??
+      row.stock ??
+      0
+    );
+
+    const price = Number(
+      row.item_price ??
+      row.unit_price ??
+      row.price ??
+      0
+    );
+
+    const total = Number(
+      row.total_price ?? (stocks * price)
+    );
+
+    return sum + total;
+  }, 0);
+
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  doc.setFontSize(18);
+  doc.text('Inventory Report', 14, 15);
+
+  doc.setFontSize(10);
+  doc.text(
+    `Generated: ${new Date().toLocaleString('en-PH')}`,
+    14,
+    22
+  );
+
+  doc.setFontSize(11);
+  doc.text(`Total Items: ${totalItems}`, 14, 31);
+  doc.text(`Total Units in Stock: ${totalUnits}`, 75, 31);
+  doc.text(
+    `Total Value: ₱${totalValue.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`,
+    155,
+    31
+  );
+
+  const tableRows = rows.map((row, index) => {
+    const stocks = Number(
+      row.remaining_stocks ??
+      row.stock_quantity ??
+      row.stock ??
+      0
+    );
+
+    const unitPrice = Number(
+      row.item_price ??
+      row.unit_price ??
+      row.price ??
+      0
+    );
+
+    const totalPrice = Number(
+      row.total_price ?? (stocks * unitPrice)
+    );
+
+    const pointsValue = Number(
+      row.points_value ??
+      row.points_cost ??
+      row.points ??
+      0
+    );
+
+    return [
+      index + 1,
+      row.name || row.reward_name || 'Unnamed Item',
+      stocks,
+      `₱${unitPrice.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      `₱${totalPrice.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      pointsValue,
+      row.status || 'N/A',
+      row.last_restock
+        ? new Date(row.last_restock).toLocaleString('en-PH')
+        : 'N/A',
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 38,
+    head: [[
+      '#',
+      'Reward Name',
+      'Stocks',
+      'Unit Price',
+      'Total Price',
+      'Points Value',
+      'Status',
+      'Last Restock',
+    ]],
+    body: tableRows,
+    theme: 'grid',
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+    },
+    headStyles: {
+      fontSize: 8,
+      fontStyle: 'bold',
+    },
+  });
+
+  doc.save(`inventory_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+  return res;
+}, []);
   /* INVENTORY TAB END */
 
   const refreshLogs = useCallback(async () => {
@@ -491,6 +703,8 @@ export const DataProvider = ({ children }) => {
       refreshRewards,
       /* INVENTORY TAB START - expose inventory data + refresh fn to pages */
       refreshInventory,
+      searchInventory,
+      exportInventory,
       /* INVENTORY TAB END */
       refreshLogs,
       loadReports,

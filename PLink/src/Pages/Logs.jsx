@@ -60,17 +60,34 @@ const formatDateTime = (timestamp) => {
 const normalizeLog = (log, idx) => {
   const timestamp = log.created_at || log.timestamp || log.date_time || log.date || null;
   const dt = formatDateTime(timestamp);
-  const actor = log.user || log.actor || log.user_name || log.performed_by || log.employee_name || 'System';
-  const action = log.action || log.activity_type || log.type || '';
+  const actor = log.user || log.actor || log.user_name || log.performed_by || log.employee_name ||
+    (log.causer ? (typeof log.causer === 'string' ? log.causer : (log.causer?.name || log.causer?.email || null)) : null) ||
+    'System';
+  const action = log.action || log.activity_type || log.type || log.event || '';
+
+  const rawCategory = log.category || log.log_type || log.logCategory || log.activity_category || log.module;
   const description = log.description || log.message || log.activity || log.details || action || '';
-  const category = log.category || log.module || log.activity_category ||
-    (action && /redempt|redeem/i.test(action) ? 'Redemption' :
-     action && /collect|deposit|drop/i.test(action) ? 'Collection' :
-     action && /inventor|stock|restock|reward/i.test(action) ? 'Inventory' :
-     action && /user|profile|account|login|admin/i.test(action) ? 'User Activity' :
-     action && /system|sync|cron|job|machine|bin/i.test(action) ? 'System' :
-     action && typeof actor === 'string' && /system|sync|cron/i.test(actor) ? 'System' :
-     'Info');
+
+  const textForDetection = `${String(rawCategory || '')} ${String(action || '')} ${String(description || '')} ${String(log.module || '')}`.toLowerCase();
+
+  let category;
+  if (rawCategory && typeof rawCategory === 'string') {
+    const r = rawCategory.trim().toLowerCase();
+    if (/redempt|redeem/.test(r)) category = 'Redemption';
+    else if (/(user|profile|account|login|logout|auth|admin|employee|staff)/.test(r)) category = 'User Activity';
+    else if (/(collect|deposit|drop|recycl|plastic|bottle|scan|transaction|dispose)/.test(r)) category = 'Collection';
+    else if (/(inventor|stock|restock|reward|sku|supply)/.test(r)) category = 'Inventory';
+    else if (/(system|sync|cron|job|machine|bin|iot|alert|notification|health)/.test(r)) category = 'System';
+  }
+  if (!category) {
+    if (/redempt|redeem/.test(textForDetection)) category = 'Redemption';
+    else if (/(user|profile|account|login|logout|auth|admin|employee|staff|password|otp|email change)/.test(textForDetection)) category = 'User Activity';
+    else if (/(collect|deposit|drop|recycl|plastic|bottle|scan|dispose|smart bin|bin|weight|points awarded|awarded|transaction)/.test(textForDetection)) category = 'Collection';
+    else if (/(inventor|stock|restock|reward|sku|supply)/.test(textForDetection)) category = 'Inventory';
+    else if (/(system|sync|cron|job|machine|iot|alert|notification|health|offline|maintenance|restart|backup)/.test(textForDetection)) category = 'System';
+    else category = 'System';
+  }
+
   const pointsUsed = log.points_used ?? log.points_spent ?? log.points ?? undefined;
   const quantity = log.quantity ?? undefined;
   const status = log.status ||
@@ -79,10 +96,10 @@ const normalizeLog = (log, idx) => {
      action && /info|log|synced/i.test(action + description) ? 'Info' :
      'Completed');
   const processedBy = log.processed_by || log.approved_by || log.handled_by || log.admin_name ||
-    (typeof actor === 'string' && actor.includes('Admin') ? actor : 'Admin');
+    (typeof actor === 'string' && /admin/i.test(actor) ? actor : 'Admin');
   const section = log.section || log.section_name || null;
   const reward = log.reward || log.reward_name || null;
-  const moduleField = log.module || category;
+  const moduleField = log.module || (log.log_type && typeof log.log_type === 'string' ? log.log_type : category);
 
   return {
     id: log.id ?? log.activity_log_id ?? log.log_id ?? idx,

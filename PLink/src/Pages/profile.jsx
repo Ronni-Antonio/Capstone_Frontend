@@ -39,6 +39,14 @@ export default function Profile() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); // Success Modal
   const [isPasswordSuccessModalOpen, setIsPasswordSuccessModalOpen] = useState(false); // Password Success Modal
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);     // Error Modal
+
+  // --- PASSWORD CHANGE OTP FLOW STATES ---
+  const [isPasswordOtpModalOpen, setIsPasswordOtpModalOpen] = useState(false);
+  const [passwordOtpCode, setPasswordOtpCode] = useState('');
+  const [isPasswordOtpLoading, setIsPasswordOtpLoading] = useState(false);
+  const [passwordOtpError, setPasswordOtpError] = useState('');
+  // We need to stash the password payload while waiting for OTP verification
+  const [pendingPasswordChange, setPendingPasswordChange] = useState(null);
   
   const [newEmailInput, setNewEmailInput] = useState('');
   const [emailOtpCode, setEmailOtpCode] = useState('');
@@ -183,7 +191,94 @@ export default function Profile() {
     if (actionType === 'profile') {
       saveProfile();
     } else if (actionType === 'password') {
-      executePasswordUpdate();
+      initiatePasswordChangeWithOtp();
+    }
+  };
+
+  // --- PASSWORD CHANGE OTP WORKFLOW HANDLERS ---
+
+  // Step 1: After user confirms password change -> Request OTP to be sent, stash payload, open OTP modal
+  const initiatePasswordChangeWithOtp = async () => {
+    setIsPasswordOtpLoading(true);
+    setPasswordOtpError('');
+    try {
+      const response = await api.requestPasswordChangeOtp();
+      if (response.data?.success || response.status === 200) {
+        if (response.data?.debug_otp) {
+          console.log('DEBUG PASSWORD OTP (DEVELOPMENT ONLY):', response.data.debug_otp);
+        }
+        setPendingPasswordChange({
+          current: password.current,
+          newPass: password.newPass,
+          confirmPass: password.confirmPass,
+        });
+        setPasswordOtpCode('');
+        setIsPasswordOtpModalOpen(true);
+      } else {
+        setMessageType('error');
+        setMessage(response.data?.message || 'Failed to send verification code.');
+        setTimeout(() => setMessage(''), 3500);
+      }
+    } catch (error) {
+      console.error('Password OTP request error:', error);
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to send verification code. Please try again.';
+      setMessageType('error');
+      setMessage(msg);
+      setTimeout(() => setMessage(''), 3500);
+    } finally {
+      setIsPasswordOtpLoading(false);
+    }
+  };
+
+  // Step 2: User enters OTP and clicks Confirm -> Verify OTP + complete password change in one call
+  const handleConfirmPasswordOtp = async () => {
+    if (!passwordOtpCode.trim()) {
+      setPasswordOtpError('Please enter the verification code.');
+      return;
+    }
+    if (!pendingPasswordChange) {
+      setPasswordOtpError('No pending password change. Please try again.');
+      return;
+    }
+
+    setIsPasswordOtpLoading(true);
+    setPasswordOtpError('');
+    try {
+      const response = await api.completePasswordChangeWithOtp({
+        otp: passwordOtpCode.trim(),
+        current: pendingPasswordChange.current,
+        newPass: pendingPasswordChange.newPass,
+        newPass_confirmation: pendingPasswordChange.confirmPass,
+      });
+
+      if (response.data?.success) {
+        setIsPasswordOtpModalOpen(false);
+        setPendingPasswordChange(null);
+        setPassword({ current: '', newPass: '', confirmPass: '' });
+        setPasswordOtpCode('');
+        setMessage('');
+        setIsPasswordSuccessModalOpen(true);
+      } else {
+        setPasswordOtpError(response.data?.message || 'Failed to verify code.');
+      }
+    } catch (error) {
+      console.error('Password OTP verify error:', error);
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+
+      if (status === 422 && data?.errors) {
+        const validationMessages = Object.values(data.errors).flat().join(' ');
+        setPasswordOtpError(validationMessages || 'Validation error. Please check your inputs.');
+      } else if (status === 401 || (data && /expired|invalid|incorrect|wrong/i.test(data.message || ''))) {
+        setPasswordOtpError(data?.message || 'The verification code is incorrect or has expired.');
+      } else {
+        setPasswordOtpError(data?.message || error?.message || 'Verification failed. Please try again.');
+      }
+    } finally {
+      setIsPasswordOtpLoading(false);
     }
   };
 
@@ -324,39 +419,6 @@ export default function Profile() {
     setIsPasswordSuccessModalOpen(false);
     localStorage.clear();
     window.location.href = '/login';
-  };
-
-  // Actual Password Update API call
-  const executePasswordUpdate = async () => {
-    try {
-      const response = await api.changePassword(userId, {
-        current: password.current,
-        newPass: password.newPass,
-        newPass_confirmation: password.confirmPass
-      });
-
-      if (response.data.success) {
-        setPassword({ current: '', newPass: '', confirmPass: '' });
-        setMessage('');
-        setIsPasswordSuccessModalOpen(true);
-      } else {
-        setMessage(response.data.message || 'Error updating password.');
-        setMessageType('error');
-      }
-    } catch (error) {
-      console.error("Password change error:", error);
-      // Handle Laravel validation errors (422)
-      if (error.response && error.response.status === 422) {
-        const validationErrors = error.response.data.errors;
-        const errorMessages = Object.values(validationErrors).flat().join(' ');
-        setMessage(errorMessages || 'Validation error. Please check your inputs.');
-      } else if (error.response && error.response.data && error.response.data.message) {
-        setMessage(error.response.data.message);
-      } else {
-        setMessage('Server error changing password.');
-      }
-      setMessageType('error');
-    }
   };
 
   const toggleSecurity = (setting) => {
@@ -881,6 +943,94 @@ export default function Profile() {
                 Your password has been updated successfully. Please log in again with your new password.
               </p>
               <button onClick={triggerPasswordChangeLogout} style={{ ...buttonStyle, width: '100%' }}>Proceed to Login</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 7: PASSWORD CHANGE OTP VERIFICATION */}
+      {isPasswordOtpModalOpen && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalBoxStyle, position: 'relative' }}>
+            <button
+              onClick={() => {
+                setIsPasswordOtpModalOpen(false);
+                setPendingPasswordChange(null);
+                setPasswordOtpCode('');
+                setPasswordOtpError('');
+              }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+            >
+              &times;
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: COLORS.dark, textAlign: 'left' }}>Verify Your Identity</h3>
+              <p style={{ margin: '0 0 6px 0', color: COLORS.darkMuted, fontSize: '13px', textAlign: 'left', lineHeight: '1.5' }}>
+                For your security, a verification code has been sent to your registered email address.
+              </p>
+              <p style={{ margin: '0 0 20px 0', color: COLORS.dark, fontSize: '13px', fontWeight: 600, textAlign: 'left' }}>
+                {profile.email || originalEmail || 'your email'}
+              </p>
+
+              {passwordOtpError && (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: COLORS.dangerBg,
+                  color: COLORS.danger,
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  marginBottom: '18px',
+                  textAlign: 'left',
+                  lineHeight: '1.4',
+                }}>
+                  {passwordOtpError}
+                </div>
+              )}
+
+              <input
+                type="text"
+                maxLength={6}
+                value={passwordOtpCode}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9]/g, '');
+                  setPasswordOtpCode(v);
+                  if (passwordOtpError) setPasswordOtpError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isPasswordOtpLoading) {
+                    void handleConfirmPasswordOtp();
+                  }
+                }}
+                placeholder="000000"
+                style={{ ...inputStyle, textAlign: 'center', letterSpacing: '6px', fontSize: '22px', fontWeight: 'bold', fontFamily: 'monospace', marginBottom: '20px', paddingRight: '12px' }}
+              />
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    setIsPasswordOtpModalOpen(false);
+                    setPendingPasswordChange(null);
+                    setPasswordOtpCode('');
+                    setPasswordOtpError('');
+                  }}
+                  style={{ ...cancelButtonStyle, flex: 1 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmPasswordOtp}
+                  disabled={isPasswordOtpLoading}
+                  style={{
+                    ...buttonStyle,
+                    flex: 1,
+                    opacity: isPasswordOtpLoading ? 0.5 : 1,
+                    cursor: isPasswordOtpLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {isPasswordOtpLoading ? 'Verifying…' : 'Confirm'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
