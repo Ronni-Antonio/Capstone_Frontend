@@ -22,8 +22,6 @@ const formatDate = (date) => {
   });
 };
 
-const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
-
 const getCompartmentFill = (compartment) => {
   const value = Number(compartment?.current_fill_percentage);
   return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
