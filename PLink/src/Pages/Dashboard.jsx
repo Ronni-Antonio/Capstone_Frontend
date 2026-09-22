@@ -22,18 +22,9 @@ const formatDate = (date) => {
   });
 };
 
-const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
-
-const calculateCompartmentFill = (compartment) => {
-  const stored = Number(compartment?.current_fill_percentage);
-  if (Number.isFinite(stored)) return clamp(Math.round(stored));
-
-  const empty = Number(compartment?.empty_threshold_cm ?? 80);
-  const full = Number(compartment?.full_threshold_cm ?? 20);
-  const distance = Number(compartment?.current_distance_cm ?? empty);
-  const range = empty - full;
-  if (range <= 0) return 0;
-  return clamp(Math.round(((empty - distance) / range) * 100));
+const getCompartmentFill = (compartment) => {
+  const value = Number(compartment?.current_fill_percentage);
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
 };
 
 const Card = ({ children, style = {} }) => (
@@ -60,11 +51,17 @@ const EmptyState = ({ children }) => (
 function CompartmentCard({ compartment, fallbackCategory }) {
   const category = compartment?.material_category || fallbackCategory;
   const isPaper = category === 'paper';
-  const fill = calculateCompartmentFill(compartment);
+  const fill = getCompartmentFill(compartment);
   const distance = compartment?.current_distance_cm;
   const label = compartment?.name || `${isPaper ? 'Paper' : 'Plastic'} Compartment`;
 
-  const status = fill >= 95 ? 'Full' : fill >= 80 ? 'Almost Full' : 'Normal';
+  const status = compartment?.fill_state === 'offline' || compartment?.sensor_online === false
+    ? 'Offline'
+    : compartment?.fill_state === 'full' || fill >= 100
+      ? 'Full'
+      : compartment?.fill_state === 'almost_full' || fill >= 80
+        ? 'Almost Full'
+        : 'Normal';
 
   return (
     <div
@@ -99,7 +96,7 @@ function CompartmentCard({ compartment, fallbackCategory }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', color: COLORS.muted }}>
-        <span>{distance != null ? `${Number(distance).toFixed(0)} cm` : 'No reading'}</span>
+        <span>{distance != null && Number.isFinite(Number(distance)) ? `${Number(distance).toFixed(1)} cm` : 'No reading'}</span>
         <span style={{ fontWeight: 700, color: fill >= 80 ? '#9a6a20' : COLORS.dark }}>{status}</span>
       </div>
     </div>

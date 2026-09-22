@@ -132,9 +132,8 @@ const normalizeSection = (section) => ({
   students_count: Number(section.students_count ?? section.student_count ?? section.students ?? 0),
 });
 
-// Smart Bin presentation model. Fullness is calculated from HC-SR04 distance
-// in the monitoring page; these values are normalized here so the frontend
-// consistently understands the revised backend schema.
+// Smart Bin presentation model. The backend is the single source of truth for
+// HC-SR04 distance -> fullness calculations; the frontend only displays those values.
 const normalizeCompartment = (compartment) => ({
   ...compartment,
   id: compartment.compartment_id ?? compartment.id,
@@ -146,10 +145,13 @@ const normalizeCompartment = (compartment) => ({
     compartment.current_distance_cm === null || compartment.current_distance_cm === undefined
       ? null
       : Number(compartment.current_distance_cm),
-  current_fill_percentage: Number(compartment.current_fill_percentage ?? 0),
+  current_fill_percentage: compartment.current_fill_percentage === null || compartment.current_fill_percentage === undefined
+    ? null
+    : Number(compartment.current_fill_percentage),
   full_threshold_cm: Number(compartment.full_threshold_cm ?? 20),
   empty_threshold_cm: Number(compartment.empty_threshold_cm ?? 80),
-  fill_state: compartment.fill_state || 'normal',
+  fill_state: compartment.fill_state || 'offline',
+  sensor_online: compartment.sensor_online !== false && compartment.fill_state !== 'offline',
   last_active_at: compartment.last_active_at || null,
 });
 
