@@ -53,6 +53,10 @@ function CompartmentCard({ compartment }) {
     ? null
     : Number(compartment.current_distance_cm);
   const fullness = getStoredFill(compartment);
+  const empty = Number(compartment?.empty_threshold_cm);
+  const full = Number(compartment?.full_threshold_cm);
+  const emptyDisplay = Number.isFinite(empty) ? `${empty.toFixed(1)} cm` : '—';
+  const fullDisplay = Number.isFinite(full) ? `${full.toFixed(1)} cm` : '—';
   const state = getCompartmentState(compartment, fullness);
   const styles = stateStyles[state.key] || stateStyles.offline;
   const circleDashOffset = 100 - fullness;
@@ -134,8 +138,8 @@ function CompartmentCard({ compartment }) {
           <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: '8px' }}>
             {[
               ['Distance', distance !== null && Number.isFinite(distance) ? `${distance.toFixed(1)} cm` : '—'],
-              ['Empty', `${empty} cm`],
-              ['Full', `${full} cm`],
+              ['Empty', emptyDisplay],
+              ['Full', fullDisplay],
             ].map(([label, value]) => (
               <div key={label} style={{ background: COLORS.white, border: `1px solid ${COLORS.mintLight}`, borderRadius: '12px', padding: '10px' }}>
                 <div style={{ fontSize: '9px', color: COLORS.darkMuted, textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
