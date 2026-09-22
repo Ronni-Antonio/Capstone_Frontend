@@ -17,17 +17,13 @@ const COLORS = {
   amberText: '#b45309',
 };
 
-const calculateFillFromDistance = (distance, emptyThreshold, fullThreshold) => {
-  const d = Number(distance);
-  const empty = Number(emptyThreshold);
-  const full = Number(fullThreshold);
-
-  if (![d, empty, full].every(Number.isFinite) || empty <= full) return 0;
-  return Math.max(0, Math.min(100, Math.round(((empty - d) / (empty - full)) * 100)));
+const getStoredFill = (compartment) => {
+  const value = Number(compartment?.current_fill_percentage);
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
 };
 
 const getCompartmentState = (compartment, fullness) => {
-  if (!compartment || compartment.status === 'offline') {
+  if (!compartment || compartment.status === 'offline' || compartment.fill_state === 'offline' || compartment.sensor_online === false) {
     return { key: 'offline', label: 'Offline', message: 'Sensor is offline.' };
   }
   if (fullness >= 100 || compartment.status === 'full') {
@@ -56,11 +52,7 @@ function CompartmentCard({ compartment }) {
   const distance = compartment?.current_distance_cm === null || compartment?.current_distance_cm === undefined
     ? null
     : Number(compartment.current_distance_cm);
-  const empty = Number(compartment?.empty_threshold_cm ?? 80);
-  const full = Number(compartment?.full_threshold_cm ?? 20);
-  const fullness = distance === null
-    ? Number(compartment?.current_fill_percentage ?? 0)
-    : calculateFillFromDistance(distance, empty, full);
+  const fullness = getStoredFill(compartment);
   const state = getCompartmentState(compartment, fullness);
   const styles = stateStyles[state.key] || stateStyles.offline;
   const circleDashOffset = 100 - fullness;
@@ -214,11 +206,7 @@ export function MachineMonitoring() {
   const maxRejectedValue = Math.max(...rejectedByHour.map((item) => item.v), 1);
 
   const fullestCompartment = compartments.reduce((best, compartment) => {
-    const fill = calculateFillFromDistance(
-      compartment.current_distance_cm,
-      compartment.empty_threshold_cm,
-      compartment.full_threshold_cm
-    );
+    const fill = getStoredFill(compartment);
     return !best || fill > best.fill ? { compartment, fill } : best;
   }, null);
 
@@ -331,12 +319,12 @@ export function MachineMonitoring() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 12 }}>
           {compartments.map((compartment) => {
-            const fill = calculateFillFromDistance(compartment.current_distance_cm, compartment.empty_threshold_cm, compartment.full_threshold_cm);
+            const fill = getStoredFill(compartment);
             return (
               <div key={compartment.compartment_id} style={{ background: COLORS.ivory, borderRadius: 14, padding: 15 }}>
                 <div style={{ fontSize: 11, color: COLORS.darkMuted, fontWeight: 800, textTransform: 'uppercase' }}>{compartment.name}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
-                  <span style={{ color: COLORS.dark }}>Distance</span><strong style={{ color: COLORS.dark }}>{compartment.current_distance_cm ?? '—'} cm</strong>
+                  <span style={{ color: COLORS.dark }}>Distance</span><strong style={{ color: COLORS.dark }}>{compartment.current_distance_cm != null ? `${Number(compartment.current_distance_cm).toFixed(1)} cm` : '—'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, gap: 8 }}>
                   <span style={{ color: COLORS.dark }}>Fullness</span><strong style={{ color: COLORS.dark }}>{fill}%</strong>
