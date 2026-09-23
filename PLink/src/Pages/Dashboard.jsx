@@ -238,7 +238,10 @@ export default function Dashboard() {
         @media (max-width: 980px) {
           .dashboard-grid-2 { grid-template-columns: 1fr !important; }
           .dashboard-grid-3 { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 560px) {
           .daily-summary-grid { grid-template-columns: 1fr !important; }
+          .dashboard-mobile-stack { flex-direction: column !important; align-items: flex-start !important; }
         }
       `}</style>
 
@@ -260,7 +263,7 @@ export default function Dashboard() {
 
       {/* Both compartments are shown because either can become full independently. */}
       <Card className="dashboard-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '18px' }}>
+        <div className="dashboard-mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '18px' }}>
           <div>
             <h3 style={{ margin: 0, color: COLORS.dark }}>Smart Bin Compartment Fullness</h3>
             <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>
@@ -280,7 +283,7 @@ export default function Dashboard() {
       {/* Daily report + categories */}
       <div className="dashboard-section dashboard-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: '20px' }}>
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="dashboard-mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
             <div>
               <h3 style={{ margin: 0, color: COLORS.dark }}>Daily Waste Collection Report</h3>
               <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>Last seven days of recycling activity</div>

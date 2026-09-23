@@ -678,9 +678,12 @@ export const DataProvider = ({ children }) => {
     await Promise.all([refreshRedemptions(), refreshStudents(), refreshRewards(), refreshInventory()]);
     return res;
   };
-  const initiateRedemption = (studentId, rewardId) => api.initiateRedemption(studentId, rewardId);
-  const getRedemptionStatus = async (studentId, rewardId) => (await api.getRedemptionStatus(studentId, rewardId)).data;
-  const cancelRedemption = (studentId, rewardId) => api.cancelRedemption(studentId, rewardId);
+  const initiateRedemption = async (studentId, rewardId) =>
+    (await api.initiateRedemption(studentId, rewardId)).data;
+  const getRedemptionStatus = async (studentId, rewardId, commandId) =>
+    (await api.getRedemptionStatus(studentId, rewardId, commandId)).data;
+  const cancelRedemption = async (commandId) =>
+    (await api.cancelRedemption(commandId)).data;
 
   const markNotificationRead = async (id) => {
     await api.markNotificationRead(id);

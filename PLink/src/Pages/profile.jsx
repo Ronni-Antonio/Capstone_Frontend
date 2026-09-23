@@ -435,7 +435,7 @@ export default function Profile() {
   const confirmButtonStyle = { ...buttonStyle, background: COLORS.dark };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'sans-serif' }}>
+    <div className="profile-responsive" style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'sans-serif', minWidth: 0 }}>
       <div>
         <h1 style={{ margin: 0, color: COLORS.dark, fontSize: '28px' }}>User Management</h1>
         <p style={{ marginTop: '6px', color: COLORS.darkMuted, fontSize: '14px' }}>
@@ -476,7 +476,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(400px,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 400px),1fr))', gap: '20px' }}>
         {/* EDIT PROFILE */}
         <div style={{
           background: COLORS.white,

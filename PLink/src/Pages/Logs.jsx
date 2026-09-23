@@ -244,7 +244,7 @@ function ActivityLogsTab() {
   return (
     <div className="space-y-6">
       {/* Category summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {categories
           .filter((c) => c !== 'All')
           .map((c) => (
@@ -315,7 +315,7 @@ function ActivityLogsTab() {
                 setFrom(e.target.value);
                 resetPage();
               }}
-              className="bg-[#fcfcf7] border border-[#c7eabb]/50 rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+              className="w-full sm:w-auto bg-[#fcfcf7] border border-[#c7eabb]/50 rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
             />
           </div>
           <div className="pt-3">
@@ -329,7 +329,7 @@ function ActivityLogsTab() {
                 setTo(e.target.value);
                 resetPage();
               }}
-              className="bg-[#fcfcf7] border border-[#c7eabb]/50 rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+              className="w-full sm:w-auto bg-[#fcfcf7] border border-[#c7eabb]/50 rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
             />
           </div>
           {(from || to) && (
@@ -346,7 +346,7 @@ function ActivityLogsTab() {
       {/* Log table */}
       <div className="bg-white rounded-3xl border border-[#c7eabb]/40 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[760px]">
             <thead className="bg-[#e8f5bd]/50 text-[#011400]">
               <tr>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
@@ -446,7 +446,7 @@ function ActivityLogsTab() {
           </table>
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[#c7eabb]/40 bg-[#fcfcf7]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-t border-[#c7eabb]/40 bg-[#fcfcf7]">
           <div className="text-xs text-[#011400]">
             Showing{' '}
             <span className="font-semibold text-[#011400]">
@@ -593,14 +593,14 @@ function RedemptionsTab() {
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db]" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#dbe6db] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
 
       <h2 className="text-xl font-bold text-[#3e5f44] mb-6">
         Redemption Logs
       </h2>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[620px]">
           <thead>
             <tr className="text-left text-[#6f876f] border-b">
               <th className="py-3">Student</th>
@@ -660,10 +660,12 @@ function RedemptionFlow() {
   const [selectedReward, setSelectedReward] = useState(null);
   const [error, setError] = useState(null);
   const [successToast, setSuccessToast] = useState(false);
+  const [redemptionCommandId, setRedemptionCommandId] = useState(null);
 
-  // Refs to hold interval IDs
+  // Refs to hold interval IDs and the exact backend redemption attempt.
   const identifyIntervalRef = useRef(null);
   const confirmIntervalRef = useRef(null);
+  const redemptionCommandRef = useRef(null);
 
   // Helper to get student's full name
   const getStudentFullName = (student) => {
@@ -842,29 +844,60 @@ function RedemptionFlow() {
     setIsConfirmingRedeem(true);
 
     try {
-      await initiateRedemption(studentId, rewardId);
+      const initiation = await initiateRedemption(studentId, rewardId);
+      const commandId = initiation?.command_id;
 
-      // Start polling for redemption completion using getRedemptionStatus
+      if (!commandId) {
+        throw new Error('Backend did not return a redemption command_id.');
+      }
+
+      // Tie this UI session to one exact backend command. We never determine
+      // success from a generic "recent redemption" anymore.
+      redemptionCommandRef.current = commandId;
+      setRedemptionCommandId(commandId);
+
+      // Start polling the exact command until Controller 2 completes it.
       confirmIntervalRef.current = setInterval(async () => {
         try {
-          const redemptionStatus = await getRedemptionStatus(studentId, rewardId);
-          console.log('🔄 Redemption status check:', redemptionStatus);
+          const redemptionStatus = await getRedemptionStatus(
+            studentId,
+            rewardId,
+            commandId
+          );
+          console.log('🔄 Redemption command status:', redemptionStatus);
 
-          if (redemptionStatus.completed === true || redemptionStatus.success === true) {
+          if (redemptionStatus.completed === true) {
             clearInterval(confirmIntervalRef.current);
             confirmIntervalRef.current = null;
+            redemptionCommandRef.current = null;
+            setRedemptionCommandId(null);
 
             setIsConfirmingRedeem(false);
             setSuccessToast(true);
 
-            await refreshRedemptions();
-            await refreshStudents();
-            await refreshRewards();
+            await Promise.all([
+              refreshRedemptions(),
+              refreshStudents(),
+              refreshRewards(),
+            ]);
 
             setTimeout(() => {
               setSuccessToast(false);
               resetFlow();
             }, 3000);
+            return;
+          }
+
+          if (redemptionStatus.failed === true) {
+            clearInterval(confirmIntervalRef.current);
+            confirmIntervalRef.current = null;
+            redemptionCommandRef.current = null;
+            setRedemptionCommandId(null);
+            setIsConfirmingRedeem(false);
+            setError(
+              redemptionStatus.message ||
+              `Redemption ${redemptionStatus.status || 'failed'}. Please try again.`
+            );
           }
         } catch (err) {
           console.error('Redemption polling error:', err);
@@ -872,24 +905,41 @@ function RedemptionFlow() {
       }, 2000);
     } catch (err) {
       console.error('❌ Error initiating redemption:', err);
-      setError(err.response?.data?.message || 'Failed to initiate redemption');
+      setError(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to initiate redemption'
+      );
       setIsConfirmingRedeem(false);
+      redemptionCommandRef.current = null;
+      setRedemptionCommandId(null);
     }
   };
 
-  // Cancel the redemption process
+  // Cancel the exact backend command as well as the local modal.
+  // This prevents a stale queued command from redeeming on a later RFID tap.
   const handleCancelRedemption = async () => {
     if (confirmIntervalRef.current) {
       clearInterval(confirmIntervalRef.current);
       confirmIntervalRef.current = null;
     }
-    if (selectedReward && activeStudent) {
+
+    const commandId = redemptionCommandRef.current || redemptionCommandId;
+
+    if (commandId) {
       try {
-        await cancelRedemption(getStudentId(activeStudent), getRewardId(selectedReward));
+        await cancelRedemption(commandId);
       } catch (err) {
-        console.error('Error canceling redemption:', err);
+        // A 409 can mean the RFID confirmation completed just before Cancel.
+        if (err.response?.status !== 409) {
+          console.error('Error canceling redemption command:', err);
+        }
       }
     }
+
+    redemptionCommandRef.current = null;
+    setRedemptionCommandId(null);
     setIsConfirmingRedeem(false);
     setSelectedReward(null);
   };
@@ -904,6 +954,8 @@ function RedemptionFlow() {
       clearInterval(confirmIntervalRef.current);
       confirmIntervalRef.current = null;
     }
+    redemptionCommandRef.current = null;
+    setRedemptionCommandId(null);
     setIsScanning(false);
     setIsConfirmingRedeem(false);
     setActiveStudent(null);
@@ -911,17 +963,28 @@ function RedemptionFlow() {
     setError(null);
   };
 
-  // Cleanup intervals on unmount
+  // Cleanup intervals on unmount. If the user navigates away while a
+  // confirmation is pending, also cancel the exact backend command so it
+  // cannot be consumed by an unrelated future card tap.
   useEffect(() => {
     return () => {
       if (identifyIntervalRef.current) clearInterval(identifyIntervalRef.current);
       if (confirmIntervalRef.current) clearInterval(confirmIntervalRef.current);
+
+      const commandId = redemptionCommandRef.current;
+      if (commandId) {
+        void cancelRedemption(commandId).catch((err) => {
+          if (err?.response?.status !== 409) {
+            console.error('Error cleaning up redemption command:', err);
+          }
+        });
+      }
     };
   }, []);
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#dbe6db]" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-      <div className="flex justify-between items-center mb-8">
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#dbe6db] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8">
         <h2 className="text-2xl font-bold text-[#3e5f44]">
           Redemption Terminal
         </h2>
@@ -951,9 +1014,9 @@ function RedemptionFlow() {
 
       {/* Step 1: Idle / Tap to Identify */}
       {!isScanning && !activeStudent && !isConfirmingRedeem && !successToast && (
-        <div className="text-center py-12">
-          <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-8">
-            <CreditCardIcon className="w-16 h-16 text-[#3e5f44]" />
+        <div className="text-center py-7 sm:py-12">
+          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-5 sm:mb-8">
+            <CreditCardIcon className="w-12 h-12 sm:w-16 sm:h-16 text-[#3e5f44]" />
           </div>
           <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
             Tap Student Card to Begin
@@ -963,7 +1026,7 @@ function RedemptionFlow() {
           </p>
           <button
             onClick={startIdentifyScan}
-            className="bg-[#3e5f44] text-white px-12 py-6 rounded-2xl font-semibold text-xl"
+            className="w-full sm:w-auto bg-[#3e5f44] text-white px-6 sm:px-12 py-4 sm:py-6 rounded-2xl font-semibold text-base sm:text-xl"
           >
             <CreditCardIcon className="w-5 h-5 inline mr-2" />
             Tap Card
@@ -973,8 +1036,8 @@ function RedemptionFlow() {
 
       {/* Step 1: Identifying (Scanning) */}
       {isScanning && !activeStudent && (
-        <div className="text-center py-12">
-          <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-8">
+        <div className="text-center py-7 sm:py-12">
+          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-5 sm:mb-8">
             <Loader2Icon className="w-16 h-16 animate-spin text-[#3e5f44]" />
           </div>
           <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
@@ -987,8 +1050,8 @@ function RedemptionFlow() {
       {activeStudent && !isConfirmingRedeem && !successToast && (
         <div>
           {/* Student Info Card */}
-          <div className="bg-[#e8f5bd] rounded-2xl p-6 mb-8">
-            <div className="flex items-center gap-4">
+          <div className="bg-[#e8f5bd] rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#3e5f44]">
                 {getStudentInitials(activeStudent)}
               </div>
@@ -1000,7 +1063,7 @@ function RedemptionFlow() {
                   {getStudentGradeLabel(activeStudent)} • {getStudentSectionName(activeStudent)}
                 </p>
               </div>
-              <div className="ml-auto text-right">
+              <div className="sm:ml-auto sm:text-right">
                 <div className="text-2xl font-bold text-[#3e5f44]">
                   {calculateStudentPoints(activeStudent)} points
                 </div>
@@ -1050,17 +1113,17 @@ function RedemptionFlow() {
 
       {/* Step 3: Confirming (Second Tap) Modal */}
       {isConfirmingRedeem && activeStudent && selectedReward && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <div className="text-center py-4">
-              <div className="w-40 h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
-                <Loader2Icon className="w-16 h-16 animate-spin text-[#3e5f44]" />
+              <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
+                <Loader2Icon className="w-12 h-12 sm:w-16 sm:h-16 animate-spin text-[#3e5f44]" />
               </div>
               <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
                 Confirming transaction for {selectedReward.name}
               </h3>
               <p className="text-[#6f876f] mb-8">
-                Cost: {selectedReward.points || selectedReward.points_cost || selectedReward.points_required} Points. Please have the student tap their card a SECOND time on the reader to complete purchase.
+                Cost: {selectedReward.points || selectedReward.points_cost || selectedReward.points_required} Points. Please have the same student tap their card once to confirm and complete this purchase. This confirmation can only be processed once.
               </p>
               <button
                 onClick={handleCancelRedemption}
@@ -1075,8 +1138,8 @@ function RedemptionFlow() {
 
       {/* Step 4: Success (Handled by success toast and auto-reset) */}
       {successToast && (
-        <div className="text-center py-12">
-          <div className="w-32 h-32 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
+        <div className="text-center py-7 sm:py-12">
+          <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
             <CheckIcon className="w-12 h-12 text-green-700" />
           </div>
           <h3 className="text-2xl font-bold text-[#3e5f44] mb-3">
@@ -1101,10 +1164,10 @@ export function Logs() {
   }, [refreshRedemptions, refreshStudents, refreshRewards]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 min-w-0">
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl p-2 inline-flex gap-2 border border-[#dbe6db]" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-2xl p-2 flex sm:inline-flex gap-2 border border-[#dbe6db] overflow-x-auto max-w-full" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         {[
           { key: 'activity', label: 'Activity Logs' },
           { key: 'redeem', label: 'Redemption Terminal' },
@@ -1113,7 +1176,7 @@ export function Logs() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-2 text-sm rounded-xl ${activeTab === tab.key
+            className={`px-4 sm:px-5 py-2 text-sm rounded-xl whitespace-nowrap flex-1 sm:flex-none ${activeTab === tab.key
               ? 'bg-[#3e5f44] text-white font-semibold'
               : 'text-[#6f876f]'
             }`}

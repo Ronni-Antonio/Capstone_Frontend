@@ -119,10 +119,12 @@ api.getRedemptions = () => api.get('/redemptions');
 api.addRedemption = (data) => api.post('/redemptions', data);
 api.initiateRedemption = (studentId, rewardId) =>
   api.post(`/redemptions/initiate/${studentId}/${rewardId}`);
-api.getRedemptionStatus = (studentId, rewardId) =>
-  api.get(`/redemptions/initiate/${studentId}/${rewardId}/status`);
-// The revised backend intentionally makes redemptions immutable; cancellation is local UI state only.
-api.cancelRedemption = async () => ({ data: { success: true, message: 'Redemption cancelled before completion.' } });
+api.getRedemptionStatus = (studentId, rewardId, commandId) =>
+  api.get(`/redemptions/initiate/${studentId}/${rewardId}/status`, {
+    params: { command_id: commandId },
+  });
+api.cancelRedemption = (commandId) =>
+  api.post(`/redemptions/commands/${commandId}/cancel`);
 
 // Notifications
 api.getNotifications = () => api.get('/notifications');

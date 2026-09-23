@@ -204,9 +204,9 @@ function RewardsTab() {
   };
 
   return (
-    <div className="bg-white rounded-3xl p-8 border border-[#dbe6db] shadow-sm min-h-[520px]">
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-[#dbe6db] shadow-sm min-h-[520px]">
 
-      <div className="flex justify-between items-center mb-8 gap-5">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4 sm:gap-5">
         <input
           type="text"
           placeholder="Search rewards..."
@@ -223,8 +223,8 @@ function RewardsTab() {
 
       {/* Create Reward Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <h2 className="text-2xl font-bold text-[#3e5f44] mb-6">Create New Reward</h2>
             
             {modalError && (
@@ -328,8 +328,8 @@ function RewardsTab() {
 
       {/* Edit Reward Modal */}
       {editingReward && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <h2 className="text-2xl font-bold text-[#3e5f44] mb-2">Edit Reward</h2>
             <p className="text-sm text-[#8da28e] mb-6">
               Update the reward name and points requirement. Inventory uses the same reward record, so name changes are reflected there automatically.
@@ -670,7 +670,7 @@ function InventoryTab() {
   return (
     <div className="space-y-6">
       {/* Inventory summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
@@ -678,7 +678,7 @@ function InventoryTab() {
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Total Items</p>
-          <h2 className="text-4xl font-bold text-[#3e5f44]">
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
             ) : (
@@ -695,7 +695,7 @@ function InventoryTab() {
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Total Units</p>
-          <h2 className="text-4xl font-bold text-[#3e5f44]">
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
             ) : (
@@ -714,7 +714,7 @@ function InventoryTab() {
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Low Stock</p>
-          <h2 className="text-4xl font-bold text-amber-700">
+          <h2 className="text-3xl sm:text-4xl font-bold text-amber-700">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
             ) : (
@@ -731,7 +731,7 @@ function InventoryTab() {
             </div>
           </div>
           <p className="text-sm text-[#7a947e]">Out of Stock</p>
-          <h2 className="text-4xl font-bold text-red-700">
+          <h2 className="text-3xl sm:text-4xl font-bold text-red-700">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
             ) : (
@@ -940,7 +940,7 @@ function InventoryTab() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between pt-4 mt-4 border-t border-[#dbe6db]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 mt-4 border-t border-[#dbe6db]">
           <p className="text-xs text-[#011400]">
             Showing{' '}
             <span className="font-semibold text-[#011400]">{isLoading ? '—' : (inventoryItems.length ? 1 : 0)}</span> –{' '}
@@ -979,7 +979,7 @@ function InventoryTab() {
           <div className="flex items-end gap-4">
             <div>
               <p className="text-sm text-[#7a947e]">Total Points Value</p>
-              <p className="text-4xl font-bold text-[#3e5f44]">
+              <p className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
                 {isLoading ? (
                   <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
                 ) : (
@@ -1006,7 +1006,7 @@ function InventoryTab() {
           <div className="flex items-end gap-4">
             <div>
               <p className="text-sm text-[#7a947e]">Total Monetary Value</p>
-              <p className="text-4xl font-bold text-[#3e5f44]">
+              <p className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
                 {isLoading ? (
                   <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
                 ) : (
@@ -1187,7 +1187,7 @@ function ReportsTab() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
           <h2 className="text-2xl font-bold text-[#3e5f44]">
             Reports & Analytics
@@ -1203,7 +1203,7 @@ function ReportsTab() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Distribution */}
-        <div className="bg-white p-7 rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
+        <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Reward Distribution
           </h3>
@@ -1213,7 +1213,7 @@ function ReportsTab() {
               <p className="text-[#6f876f] text-sm">No redemption data yet</p>
             ) : (
               distribution.slice(0, 5).map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center">
+                <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                   <span className="text-sm text-[#3e5f44]">
                     {item.name}
                   </span>
@@ -1237,7 +1237,7 @@ function ReportsTab() {
         </div>
 
         {/* Trend (Redemption Count) */}
-        <div className="bg-white p-7 rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
+        <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
           <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
             Redemption Count (Monthly)
           </h3>
@@ -1247,7 +1247,7 @@ function ReportsTab() {
       </div>
 
       {/* Bottom Chart (Points Redeemed Monthly) */}
-      <div className="bg-white p-7 rounded-3xl border border-[#dbe6db] shadow-sm min-h-[380px]">
+      <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#dbe6db] shadow-sm min-h-[380px]">
         <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
           Points Redeemed (Monthly)
         </h3>
@@ -1380,7 +1380,7 @@ export default function IncentivesRewards() {
 
       {activeTab === 'dashboard' && (
         <>
-          <div className="grid grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
             {dashboardStats.map((card) => (
               <div
                 key={card.title}
@@ -1394,7 +1394,7 @@ export default function IncentivesRewards() {
 
                 <p className="text-sm text-[#7a947e]">{card.title}</p>
 
-                <h2 className="text-4xl font-bold text-[#3e5f44]">
+                <h2 className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
                   {card.value}
                 </h2>
 
@@ -1403,8 +1403,8 @@ export default function IncentivesRewards() {
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-5">
-            <div className="col-span-2 bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
+            <div className="xl:col-span-2 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#dbe6db] shadow-sm">
               <h3 className="text-2xl font-bold text-[#3e5f44]">
                 Reward Creation Trend
               </h3>

@@ -245,7 +245,7 @@ export function Settings() {
           <div className="space-y-4">
             <Field label="School Name" value={schoolInfo.name} onChange={(val) => setSchoolInfo({ ...schoolInfo, name: val })} />
             <Field label="Campus Address" value={schoolInfo.address} onChange={(val) => setSchoolInfo({ ...schoolInfo, address: val })} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="School Year" value={schoolInfo.year} onChange={(val) => setSchoolInfo({ ...schoolInfo, year: val })} />
               <Field label="Contact Email" value={schoolInfo.email} onChange={(val) => setSchoolInfo({ ...schoolInfo, email: val })} />
             </div>
@@ -390,7 +390,7 @@ export function Settings() {
 
       {/* Toast Popup HUD */}
       {toast && toast.show && (
-        <div className="fixed bottom-8 right-8 bg-[#3e5f44] text-white px-5 py-3.5 rounded-2xl shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-8 sm:right-8 bg-[#3e5f44] text-white px-5 py-3.5 rounded-2xl shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
           {toast.done ? <CheckIcon className="w-5 h-5 text-[#e8f5bd]" /> : <div className="w-5 h-5 border-2 border-white/30 border-t-[#e8f5bd] rounded-full animate-spin" />}
           <span className="text-sm font-semibold">{toast.msg}</span>
         </div>
@@ -579,7 +579,7 @@ function SectionsManager({
 
       {showModal && (
         <div className="fixed inset-0 z-50 bg-[#2d4a33]/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-3xl p-7 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 max-w-md w-full max-h-[calc(100dvh-32px)] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-5">
               <h3 className="font-bold text-[#2d4a33] text-xl">{editing ? 'Edit Section' : 'Add Section'}</h3>
               <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg hover:bg-[#f4f6f3] flex items-center justify-center border-none cursor-pointer"><XIcon className="w-4 h-4" /></button>
