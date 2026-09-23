@@ -51,6 +51,28 @@ const ecoStyles = `
     .login-container { padding: 2rem; }
   }
 
+  @media (max-width: 767px) {
+    .login-container {
+      align-items: flex-start;
+      overflow-y: auto;
+      padding: 0.75rem;
+    }
+
+    .main-card {
+      border-radius: 1.5rem;
+      margin: auto 0;
+    }
+
+    .left-panel {
+      min-height: 280px;
+      padding: 1.5rem;
+    }
+
+    .right-panel {
+      padding: 1.5rem;
+    }
+  }
+
   .main-card {
     position: relative;
     width: 100%;

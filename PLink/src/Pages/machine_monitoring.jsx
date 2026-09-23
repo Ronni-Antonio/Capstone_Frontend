@@ -296,7 +296,7 @@ export function MachineMonitoring() {
           </div>
         )}
 
-        <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px,1fr))', gap: '12px' }}>
+        <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px),1fr))', gap: '12px' }}>
           {[
             ['Accepted Today', acceptedToday, 'Items', COLORS.mintLight, COLORS.dark],
             ['Plastic Accepted', Number(acceptedByMaterial.plastic || 0), 'Today', COLORS.ivory, COLORS.dark],
@@ -321,7 +321,7 @@ export function MachineMonitoring() {
           </div>
           <span style={{ fontSize: 11, color: COLORS.darkMuted }}>{refreshing ? 'Updating…' : lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Waiting for sensor data'}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px),1fr))', gap: 12 }}>
           {compartments.map((compartment) => {
             const fill = getStoredFill(compartment);
             return (

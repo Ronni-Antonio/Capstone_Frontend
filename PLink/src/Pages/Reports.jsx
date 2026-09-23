@@ -427,7 +427,7 @@ export default function Reports() {
         </div>
       )}
 
-      <div style={{ display: 'inline-flex', width: 'fit-content', gap: '6px', padding: '6px', borderRadius: '14px', background: '#f4f8ef', border: `1px solid ${COLORS.border}` }}>
+      <div className="mobile-scroll-x" style={{ display: 'inline-flex', maxWidth: '100%', width: 'fit-content', gap: '6px', padding: '6px', borderRadius: '14px', background: '#f4f8ef', border: `1px solid ${COLORS.border}` }}>
         {[['historical', 'Historical Analytics'], ['predictive', 'Predictive Analytics']].map(([key, label]) => (
           <button
             key={key}
@@ -451,7 +451,7 @@ export default function Reports() {
 
       {activeAnalyticsTab === 'historical' && (
         <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 170px),1fr))', gap: '14px' }}>
         {summaryCards.map(([title, value, subtitle]) => (
           <Card key={title} style={{ padding: '18px' }}>
             <div style={{ fontSize: '11px', color: COLORS.muted }}>{title}</div>
@@ -468,7 +468,7 @@ export default function Reports() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 320px),1fr))', gap: '20px' }}>
         <Card>
           <SectionTitle title="Recycling Collection Trend" subtitle="Items collected per day" />
           <TrendChart history={(data?.daily_collection || []).map((row) => ({ ds: row.ds, y: row.items }))} />
@@ -479,7 +479,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 320px),1fr))', gap: '20px' }}>
         <Card>
           <SectionTitle title="Student Participation" subtitle="Unique students recycling each day" />
           <TrendChart history={(data?.participation_trend || []).map((row) => ({ ds: row.ds, y: row.students }))} />
@@ -490,7 +490,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 320px),1fr))', gap: '20px' }}>
         <Card>
           <SectionTitle title="Top 5 Recyclers" subtitle="Ranked by points earned during the reporting period" />
           {topRecyclers.length ? (
@@ -529,7 +529,7 @@ export default function Reports() {
       <Card>
         <SectionTitle title="Smart Bin Compartments" subtitle="Current fullness for each separately monitored compartment" />
         {compartments.length ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 230px),1fr))', gap: '14px' }}>
             {compartments.map((compartment) => (
               <div key={compartment.compartment_id} style={{ background: COLORS.light, borderRadius: '16px', padding: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
@@ -568,12 +568,12 @@ export default function Reports() {
 
       <ForecastPanel metric={predictive.recycling_volume} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 320px),1fr))', gap: '20px' }}>
         <ForecastPanel metric={predictive.student_participation} />
         <ForecastPanel metric={predictive.reward_redemptions} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 320px),1fr))', gap: '20px' }}>
         <ForecastPanel metric={predictive.plastic_fullness} />
         <ForecastPanel metric={predictive.paper_fullness} />
       </div>

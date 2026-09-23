@@ -2,3 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  overflow-x: hidden;
+  background: #f7f8f3;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Desktop content follows the collapsible fixed sidebar. */
+@media (min-width: 1024px) {
+  main {
+    margin-left: var(--desktop-sidebar-width, 260px);
+    width: calc(100% - var(--desktop-sidebar-width, 260px)) !important;
+  }
+}
+
+/* Shared helpers for pages that still use inline desktop-oriented styles. */
+.mobile-scroll-x {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-card-grid,
+.responsive-two-col,
+.responsive-three-col,
+.responsive-four-col {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .responsive-card-grid,
+  .responsive-two-col,
+  .responsive-three-col,
+  .responsive-four-col,
+  .student-summary-grid,
+  .profile-settings-grid,
+  .report-forecast-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-stack > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .mobile-full {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .mobile-card-padding {
+    padding: 18px !important;
+  }
+
+  .mobile-modal {
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto !important;
+    border-radius: 20px !important;
+  }
+
+  .mobile-table {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 479px) {
+  .app-shell {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

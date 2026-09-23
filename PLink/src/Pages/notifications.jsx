@@ -158,10 +158,10 @@ export function Notifications({ onNavigate }) {
   const unreadCount = items.filter((i) => !i.read).length;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 font-sans">
+    <div className="p-0 sm:p-2 lg:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 font-sans min-w-0">
       
       {/* Header Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-emerald-900 text-white rounded-2xl p-5 shadow flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -233,7 +233,7 @@ export function Notifications({ onNavigate }) {
                     <div
                       key={nid}
                       onClick={() => setSelectedNotif(n)}
-                      className="w-full text-left relative flex gap-4 p-5 rounded-xl border border-gray-100 bg-white shadow-sm hover:bg-gray-50 transition-colors cursor-pointer overflow-hidden"
+                      className="w-full text-left relative flex gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl border border-gray-100 bg-white shadow-sm hover:bg-gray-50 transition-colors cursor-pointer overflow-hidden"
                     >
                       <span className={`absolute left-0 top-0 bottom-0 w-1 ${s.bar}`} />
                       
@@ -305,7 +305,7 @@ export function Notifications({ onNavigate }) {
           onClick={() => setSelectedNotif(null)}
         >
           <div 
-            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl relative"
+            className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-xl relative max-h-[calc(100dvh-32px)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button

@@ -391,6 +391,7 @@ export default function StudentPoints() {
       {/* TOP CARDS */}
 
       <div
+        className="student-summary-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: '2fr 1fr 1fr',
@@ -590,7 +591,8 @@ export default function StudentPoints() {
           onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           style={{
             flex: 1,
-            minWidth: '250px',
+            minWidth: 'min(250px, 100%)',
+            width: '100%',
             border: `1px solid ${COLORS.mintLight}`,
             borderRadius: '999px',
             padding: '12px 18px',
@@ -643,7 +645,9 @@ export default function StudentPoints() {
           border: `1px solid ${COLORS.mintLight}`
         }}
       >
+        <div className="mobile-scroll-x">
         <table
+          className="mobile-table"
           style={{
             width: '100%',
             borderCollapse: 'collapse'
@@ -836,6 +840,7 @@ export default function StudentPoints() {
             )}
           </tbody>
         </table>
+        </div>
         
         {/* Pagination Controls */}
         {totalPages > 1 && (
@@ -913,13 +918,16 @@ export default function StudentPoints() {
           }}
         >
           <div
+            className="mobile-modal"
             style={{
               width: '750px',
               maxWidth: '95%',
               background: '#fff',
               borderRadius: '24px',
               padding: '24px',
-              border: `1px solid ${COLORS.mintLight}`
+              border: `1px solid ${COLORS.mintLight}`,
+              maxHeight: 'calc(100dvh - 24px)',
+              overflowY: 'auto'
             }}
           >
             <div
@@ -1110,6 +1118,7 @@ export default function StudentPoints() {
               )}
 
               <div
+                className="responsive-two-col"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
@@ -1204,6 +1213,7 @@ export default function StudentPoints() {
           }}
         >
           <div
+            className="mobile-modal"
             style={{
               width: '500px',
               maxWidth: '95%',
