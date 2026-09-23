@@ -687,6 +687,70 @@ function RedemptionFlow() {
     return 'S';
   };
 
+  // Laravel relationships such as grade_level and section may arrive as objects.
+  // Never render those objects directly in JSX because React throws error #31.
+  const getRelationName = (value, fallback = 'N/A') => {
+    if (value === null || value === undefined || value === '') return fallback;
+
+    if (typeof value === 'object') {
+      return (
+        value.name ||
+        value.grade_level_name ||
+        value.section_name ||
+        value.label ||
+        fallback
+      );
+    }
+
+    return String(value);
+  };
+
+  const getStudentGradeLabel = (student) => {
+    if (!student) return 'Grade N/A';
+
+    const rawGrade =
+      student.grade_level ??
+      student.gradeLevel ??
+      student.grade_level_relation ??
+      student.grade ??
+      null;
+
+    const gradeName = getRelationName(rawGrade, 'N/A');
+    if (gradeName === 'N/A') return 'Grade N/A';
+
+    return /^grade\b/i.test(gradeName) ? gradeName : `Grade ${gradeName}`;
+  };
+
+  const getStudentSectionName = (student) => {
+    if (!student) return 'N/A';
+
+    const rawSection =
+      student.section ??
+      student.section_relation ??
+      student.sectionRelation ??
+      null;
+
+    return getRelationName(rawSection, 'N/A');
+  };
+
+  // Normalize the student returned directly by the scan-session endpoint.
+  // Students loaded through DataContext are already normalized, but the scan
+  // endpoint returns the Laravel model/relationships directly.
+  const normalizeScannedStudent = (student) => {
+    if (!student || typeof student !== 'object') return student;
+
+    return {
+      ...student,
+      student_id: student.student_id ?? student.id ?? null,
+      id: student.id ?? student.student_id ?? null,
+      name: getStudentFullName(student),
+      grade_level: getStudentGradeLabel(student),
+      section: getStudentSectionName(student),
+      points_balance: Number(student.points_balance ?? student.points ?? 0),
+      points: Number(student.points_balance ?? student.points ?? 0),
+    };
+  };
+
   // Calculate total points for a student
   const calculateStudentPoints = (student) => {
     if (!student) return 0;
@@ -731,8 +795,8 @@ function RedemptionFlow() {
         }
         // 2. { success: true, student_id: 1, ... }
         else if (result.success === true && result.student_id) {
-          const studentFromContext = students.find(s =>
-            getStudentId(s) === result.student_id
+          const studentFromContext = students.find((s) =>
+            String(getStudentId(s)) === String(result.student_id)
           );
           foundStudent = studentFromContext || {
             student_id: result.student_id,
@@ -742,11 +806,14 @@ function RedemptionFlow() {
         }
 
         if (foundStudent) {
-          // Stop polling
+          // Stop polling as soon as the backend reports a student.
           clearInterval(identifyIntervalRef.current);
           identifyIntervalRef.current = null;
 
-          setActiveStudent(foundStudent);
+          const normalizedStudent = normalizeScannedStudent(foundStudent);
+          console.log('✅ Identified student:', normalizedStudent);
+
+          setActiveStudent(normalizedStudent);
           setIsScanning(false);
         }
       } catch (err) {
@@ -930,7 +997,7 @@ function RedemptionFlow() {
                   {getStudentFullName(activeStudent)}
                 </h4>
                 <p className="text-sm text-[#6f876f]">
-                  Grade {activeStudent.grade_level || '3'} • {activeStudent.section || 'N/A'}
+                  {getStudentGradeLabel(activeStudent)} • {getStudentSectionName(activeStudent)}
                 </p>
               </div>
               <div className="ml-auto text-right">
