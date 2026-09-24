@@ -18,6 +18,7 @@ import {
   Loader2Icon,
   SearchIcon,
   CalendarIcon,
+  PackagePlusIcon,
 } from 'lucide-react';
 
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -27,14 +28,15 @@ function RewardsTab() {
   const { rewards, refreshRewards, refreshInventory, refreshLogs } = useData();
   const [showModal, setShowModal] = useState(false);
   const [editingReward, setEditingReward] = useState(null);
-  const [editForm, setEditForm] = useState({ reward_name: '', points_cost: '' });
+  const [editForm, setEditForm] = useState({ reward_name: '', points_cost: '', low_stock_threshold: '10' });
   const [actionLoadingId, setActionLoadingId] = useState(null);
   /* PRICE ADD START - local price field added to newReward state */
   const [newReward, setNewReward] = useState({
     reward_name: '',
     points_cost: '',
     stock_quantity: '',
-    price: ''
+    price: '',
+    low_stock_threshold: '10'
   });
   /* PRICE ADD END */
   const [modalError, setModalError] = useState(null);
@@ -52,6 +54,7 @@ function RewardsTab() {
     setEditForm({
       reward_name: reward.name || reward.reward_name || '',
       points_cost: String(reward.points ?? reward.points_cost ?? ''),
+      low_stock_threshold: String(reward.low_stock_threshold ?? 10),
     });
     setModalError(null);
   };
@@ -71,6 +74,12 @@ function RewardsTab() {
       return;
     }
 
+    const threshold = Number(editForm.low_stock_threshold);
+    if (!Number.isInteger(threshold) || threshold < 0) {
+      setModalError('Low-stock threshold must be 0 or a positive whole number.');
+      return;
+    }
+
     const id = editingReward.reward_id ?? editingReward.id;
     setActionLoadingId(id);
     setModalError(null);
@@ -78,6 +87,7 @@ function RewardsTab() {
       await api.updateReward(id, {
         reward_name: name,
         points_cost: points,
+        low_stock_threshold: threshold,
       });
       await Promise.all([refreshRewards(), refreshInventory(), refreshLogs()]);
       setEditingReward(null);
@@ -169,6 +179,12 @@ function RewardsTab() {
         return;
       }
 
+      const threshold = Number(newReward.low_stock_threshold);
+      if (!Number.isInteger(threshold) || threshold < 0) {
+        setModalError('Low-stock threshold must be 0 or a positive whole number.');
+        return;
+      }
+
       // Send to API using backend-expected field names
       const rewardData = {
         reward_name: newReward.reward_name.trim(),
@@ -178,6 +194,7 @@ function RewardsTab() {
         stocks: Number(newReward.stock_quantity),
         unit_price: Number(newReward.price),
         price: Number(newReward.price),
+        low_stock_threshold: threshold,
       };
 
       await api.addReward(rewardData);
@@ -186,7 +203,7 @@ function RewardsTab() {
       // Reset form and close modal after a delay
       setTimeout(() => {
         setShowModal(false);
-        setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '' });
+        setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '', low_stock_threshold: '10' });
         setModalSuccess(null);
         Promise.allSettled([refreshRewards(), refreshInventory(), refreshLogs()]);
       }, 1500);
@@ -297,6 +314,24 @@ function RewardsTab() {
                 />
               </div>
               {/* PRICE ADD END */}
+
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                  Low-stock threshold
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={newReward.low_stock_threshold}
+                  onChange={(e) => setNewReward({ ...newReward, low_stock_threshold: e.target.value })}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  placeholder="10"
+                />
+                <p className="text-xs text-[#8da28e] mt-1">
+                  Admin is notified when stock reaches this amount or lower.
+                </p>
+              </div>
               
               <div className="flex gap-3 pt-4">
                 <button
@@ -304,7 +339,7 @@ function RewardsTab() {
                   onClick={() => {
                     setShowModal(false);
                     /* PRICE ADD START - reset price on cancel too */
-                    setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '' });
+                    setNewReward({ reward_name: '', points_cost: '', stock_quantity: '', price: '', low_stock_threshold: '10' });
                     /* PRICE ADD END */
                     setModalError(null);
                     setModalSuccess(null);
@@ -357,6 +392,17 @@ function RewardsTab() {
                   step="1"
                   value={editForm.points_cost}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, points_cost: e.target.value }))}
+                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#6f876f] mb-1">Low-stock threshold</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={editForm.low_stock_threshold}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, low_stock_threshold: e.target.value }))}
                   className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
                 />
               </div>
@@ -473,7 +519,7 @@ function RewardsTab() {
 
 /* ===================== INVENTORY TAB START ===================== */
 function InventoryTab() {
-  const { inventory, inventoryLoaded, refreshInventory, searchInventory, exportInventory } = useData();
+  const { inventory, inventoryLoaded, refreshInventory, searchInventory, exportInventory, addRewardStock } = useData();
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('');
@@ -481,6 +527,11 @@ function InventoryTab() {
   const [dateTo, setDateTo] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [restockItem, setRestockItem] = useState(null);
+  const [restockQuantity, setRestockQuantity] = useState('');
+  const [restockError, setRestockError] = useState(null);
+  const [isRestocking, setIsRestocking] = useState(false);
+  const [stockToast, setStockToast] = useState(null);
 
   const formatLastStock = (timestamp) => {
     if (!timestamp) return '—';
@@ -570,6 +621,38 @@ function InventoryTab() {
     }
   };
 
+  const handleAddStock = async (event) => {
+    event.preventDefault();
+    if (!restockItem) return;
+
+    const quantity = Number(restockQuantity);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      setRestockError('Enter a whole-number quantity of at least 1.');
+      return;
+    }
+
+    setIsRestocking(true);
+    setRestockError(null);
+    try {
+      const result = await addRewardStock(restockItem.id, quantity);
+      setStockToast(result?.message || `Added ${quantity} units to ${restockItem.name}.`);
+      setRestockItem(null);
+      setRestockQuantity('');
+      setTimeout(() => setStockToast(null), 3000);
+    } catch (err) {
+      const data = err?.response?.data;
+      setRestockError(
+        data?.message ||
+        (data?.errors && Object.values(data.errors).flat().join(' ')) ||
+        data?.error ||
+        err?.message ||
+        'Failed to add stock.'
+      );
+    } finally {
+      setIsRestocking(false);
+    }
+  };
+
   useEffect(() => {
     if (!inventoryLoaded && !error) {
       void Promise.resolve()
@@ -598,10 +681,21 @@ function InventoryTab() {
     const totalPrice = Number(item.total_price ?? (stocksInHand * unitPriceNum));
     const pointsValue = Number(item.points_value ?? item.points_cost ?? item.points ?? 0);
 
+    const lowStockThreshold = Number(item.low_stock_threshold ?? 10);
+    const inventoryStatus = item.inventory_status || (
+      stocksInHand === 0
+        ? 'out_of_stock'
+        : stocksInHand <= lowStockThreshold
+        ? 'low_stock'
+        : 'in_stock'
+    );
+
     return {
       id: item.reward_id ?? item.id ?? idx,
       name: item.reward_name || item.name || 'Unnamed Reward',
       stocksInHand,
+      lowStockThreshold,
+      inventoryStatus,
       unitPrice: unitPriceNum,
       unitPriceDisplay: unitPriceNum > 0
         ? `₱${unitPriceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -614,9 +708,9 @@ function InventoryTab() {
       lastStock: item.last_restock ?? item.date_purchased ?? null,
       lastStockFormatted: formatLastStock(item.last_restock ?? item.date_purchased ?? null),
       status:
-        stocksInHand === 0
+        inventoryStatus === 'out_of_stock'
           ? 'Out of Stock'
-          : stocksInHand < 10
+          : inventoryStatus === 'low_stock'
           ? 'Low Stock'
           : item.status === 'Inactive' || item.is_active === false
           ? 'Inactive'
@@ -625,9 +719,9 @@ function InventoryTab() {
   });
 
   const lowStockCount = inventoryItems.filter(
-    (i) => i.stocksInHand > 0 && i.stocksInHand < 10
+    (i) => i.inventoryStatus === 'low_stock'
   ).length;
-  const outOfStockCount = inventoryItems.filter((i) => i.stocksInHand === 0).length;
+  const outOfStockCount = inventoryItems.filter((i) => i.inventoryStatus === 'out_of_stock').length;
   const totalStockValue = inventoryItems.reduce(
     (sum, i) => sum + i.stocksInHand * i.pointsValue,
     0
@@ -865,6 +959,9 @@ function InventoryTab() {
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
                   Stocks in Hand
                 </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
+                  Stock Status
+                </th>
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
                   Unit Price
                 </th>
@@ -877,13 +974,16 @@ function InventoryTab() {
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider">
                   Last Stock
                 </th>
+                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                  Action
+                </th>
               </tr>
             </thead>
 
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan="6" className="py-16 text-center">
+                  <td colSpan="8" className="py-16 text-center">
                     <div className="inline-flex flex-col items-center gap-3">
                       <Loader2Icon className="w-8 h-8 animate-spin text-[#3e5f44]" />
                       <span className="text-sm text-[#011400]">Loading inventory…</span>
@@ -894,7 +994,7 @@ function InventoryTab() {
               {!isLoading && inventoryItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="8"
                     className="py-10 text-center text-[#011400]"
                   >
                     No inventory items found
@@ -913,12 +1013,32 @@ function InventoryTab() {
                       className={`py-3 text-right font-bold ${
                         item.stocksInHand === 0
                           ? 'text-red-700'
-                          : item.stocksInHand < 10
+                          : item.stocksInHand <= item.lowStockThreshold
                           ? 'text-amber-700'
                           : 'text-[#011400]'
                       }`}
                     >
                       {item.stocksInHand.toLocaleString()}
+                    </td>
+                    <td className="py-3 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          item.status === 'Out of Stock'
+                            ? 'bg-red-100 text-red-700'
+                            : item.status === 'Low Stock'
+                            ? 'bg-amber-100 text-amber-700'
+                            : item.status === 'Inactive'
+                            ? 'bg-gray-100 text-gray-600'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                      {(item.status === 'Low Stock' || item.status === 'Out of Stock') && (
+                        <div className="text-[10px] text-[#8da28e] mt-1">
+                          Alert threshold: {item.lowStockThreshold}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
                       {item.unitPriceDisplay}
@@ -931,6 +1051,19 @@ function InventoryTab() {
                     </td>
                     <td className="py-3 text-[#011400] text-xs whitespace-nowrap">
                       {item.lastStockFormatted}
+                    </td>
+                    <td className="py-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => {
+                          setRestockItem(item);
+                          setRestockQuantity('');
+                          setRestockError(null);
+                        }}
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#e8f5bd] text-[#3e5f44] text-xs font-bold hover:bg-[#d9efa2] transition-colors"
+                      >
+                        <PackagePlusIcon className="w-4 h-4" />
+                        Add Stock
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -966,6 +1099,88 @@ function InventoryTab() {
           </div>
         </div>
       </div>
+
+      {restockItem && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-4" onClick={() => !isRestocking && setRestockItem(null)}>
+          <div
+            className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 w-full max-w-md shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-11 h-11 rounded-xl bg-[#e8f5bd] flex items-center justify-center text-[#3e5f44] shrink-0">
+                <PackagePlusIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#3e5f44]">Add Stock</h3>
+                <p className="text-sm text-[#8da28e] mt-1">{restockItem.name}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="rounded-xl bg-[#f7faf5] border border-[#dbe6db] p-3">
+                <p className="text-xs text-[#8da28e]">Current stock</p>
+                <p className="text-xl font-bold text-[#3e5f44]">{restockItem.stocksInHand}</p>
+              </div>
+              <div className="rounded-xl bg-[#f7faf5] border border-[#dbe6db] p-3">
+                <p className="text-xs text-[#8da28e]">Low-stock threshold</p>
+                <p className="text-xl font-bold text-[#3e5f44]">{restockItem.lowStockThreshold}</p>
+              </div>
+            </div>
+
+            {restockError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                {restockError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddStock}>
+              <label className="block text-sm font-semibold text-[#3e5f44] mb-2">Quantity to add</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                autoFocus
+                value={restockQuantity}
+                onChange={(event) => setRestockQuantity(event.target.value)}
+                placeholder="e.g. 20"
+                className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+              />
+              {Number(restockQuantity) > 0 && (
+                <p className="text-xs text-[#6f876f] mt-2">
+                  New stock: <span className="font-bold">{restockItem.stocksInHand + Number(restockQuantity)}</span>
+                </p>
+              )}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  disabled={isRestocking}
+                  onClick={() => setRestockItem(null)}
+                  className="flex-1 py-3 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRestocking}
+                  className="flex-1 py-3 rounded-xl bg-[#3e5f44] text-white font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                >
+                  {isRestocking ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <PackagePlusIcon className="w-4 h-4" />}
+                  {isRestocking ? 'Adding…' : 'Add Stock'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {stockToast && (
+        <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 sm:max-w-sm">
+          <div className="px-5 py-3 rounded-xl shadow-lg border border-green-200 bg-green-50 text-green-800 text-sm font-semibold">
+            {stockToast}
+          </div>
+        </div>
+      )}
 
       {/* Stock value summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1261,8 +1476,12 @@ function ReportsTab() {
 
 /* ===================== MAIN COMPONENT ===================== */
 export default function IncentivesRewards() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => window.sessionStorage.getItem('plink.incentives.tab') || 'dashboard');
   const { rewards: dashboardRewards, refreshRewards, refreshRedemptions, refreshStudents } = useData();
+
+  useEffect(() => {
+    window.sessionStorage.removeItem('plink.incentives.tab');
+  }, []);
 
   useEffect(() => {
     Promise.allSettled([refreshRewards(), refreshRedemptions(), refreshStudents()]);
