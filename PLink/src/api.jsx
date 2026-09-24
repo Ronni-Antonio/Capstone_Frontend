@@ -82,6 +82,7 @@ api.getRewards = () => api.get('/rewards', { params: { include_inactive: 1 } });
 api.addReward = (data) => api.post('/rewards', data);
 api.updateReward = (id, data) => api.put(`/rewards/${id}`, data);
 api.deleteReward = (id) => api.delete(`/rewards/${id}`);
+api.addRewardStock = (id, quantity) => api.post(`/rewards/${id}/add-stock`, { quantity });
 /* INVENTORY TAB START - new dedicated inventory endpoint for purchase tracking + columns */
 api.getInventory = () => api.get('/rewards/inventory');
 api.searchInventory = (params = {}) => api.get('/rewards/inventory', { params });

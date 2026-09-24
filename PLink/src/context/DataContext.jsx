@@ -89,6 +89,7 @@ const normalizeReward = (reward) => ({
   points: Number(reward.points_value ?? reward.points_cost ?? reward.points_required ?? 0),
   points_value: Number(reward.points_value ?? reward.points_cost ?? 0),
   stock: Number(reward.stocks ?? reward.stock_quantity ?? reward.stock ?? 0),
+  low_stock_threshold: Number(reward.low_stock_threshold ?? 10),
   unit_price: reward.unit_price ?? reward.price ?? null,
   last_restock: reward.last_restock ?? reward.last_restocked ?? reward.updated_at ?? null,
   status: reward.is_active === false ? 'Inactive' : 'Active',
@@ -206,7 +207,12 @@ const normalizeNotification = (item) => {
   const type = item.notification_type || item.type || 'info';
   const title = item.title || 'Notification';
   const lower = `${type} ${title}`.toLowerCase();
-  const severity = lower.includes('full') || lower.includes('offline') ? 'warning' : lower.includes('error') ? 'critical' : 'info';
+  const severity =
+    type === 'reward_out_of_stock' || lower.includes('error')
+      ? 'critical'
+      : type === 'reward_low_stock' || lower.includes('full') || lower.includes('offline')
+      ? 'warning'
+      : 'info';
   return {
     ...item,
     id: item.notification_id ?? item.id,
@@ -338,6 +344,10 @@ export const DataProvider = ({ children }) => {
     item.stock ??
     0
   ),
+
+  low_stock_threshold: Number(item.low_stock_threshold ?? 10),
+
+  inventory_status: item.inventory_status ?? null,
 
   total_stocks_on_hand: Number(
     item.total_stocks_on_hand ??
@@ -685,6 +695,12 @@ export const DataProvider = ({ children }) => {
   const cancelRedemption = async (commandId) =>
     (await api.cancelRedemption(commandId)).data;
 
+  const addRewardStock = async (rewardId, quantity) => {
+    const res = await api.addRewardStock(rewardId, quantity);
+    await Promise.all([refreshRewards(), refreshInventory(), refreshNotifications(), refreshLogs()]);
+    return res.data;
+  };
+
   const markNotificationRead = async (id) => {
     await api.markNotificationRead(id);
     setData((prev) => ({ ...prev, notifications: prev.notifications.map((n) => n.notification_id === id ? { ...n, read: true } : n) }));
@@ -738,6 +754,7 @@ export const DataProvider = ({ children }) => {
       initiateRedemption,
       getRedemptionStatus,
       cancelRedemption,
+      addRewardStock,
       updateSettings,
       markNotificationRead,
       markAllNotificationsRead,

@@ -1,60 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 
-// Fallback notifications if API not implemented
-const fallbackNotifications = [
-  {
-    id: 1,
-    severity: 'critical',
-    title: 'EcoBot-04 Scanner Error',
-    message: 'AI scanner has stopped detecting bottles. Calibration required immediately.',
-    time: '22 min ago',
-    group: 'today',
-    read: false,
-    type: 'alert',
-  },
-  {
-    id: 2,
-    severity: 'warning',
-    title: 'EcoBot-02 Bin Almost Full',
-    message: 'Bin capacity at 87%. Estimated full in 8 hours.',
-    time: '5 min ago',
-    group: 'today',
-    read: false,
-    type: 'warning',
-  },
-  {
-    id: 3,
-    severity: 'warning',
-    title: 'EcoBot-05 Offline',
-    message: 'No internet connection detected for the past 1 hour.',
-    time: '1 hr ago',
-    group: 'today',
-    read: false,
-    type: 'wifi',
-  },
-  {
-    id: 4,
-    severity: 'info',
-    title: 'Daily AI accuracy report ready',
-    message: '96.8% accuracy across 1,000 scans today.',
-    time: '2 hr ago',
-    group: 'today',
-    read: true,
-    type: 'info',
-  },
-  {
-    id: 5,
-    severity: 'info',
-    title: '3-Sampaguita reached weekly goal',
-    message: 'Section completed 400 bottle milestone for the week.',
-    time: '3 hr ago',
-    group: 'today',
-    read: true,
-    type: 'info',
-  },
-];
-
 const SvgIcon = ({ type }) => {
   if (type === 'alert') {
     return (
@@ -75,6 +21,13 @@ const SvgIcon = ({ type }) => {
     return (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-3.536 4.978 4.978 0 011.414-3.536M3 3l18 18" />
+      </svg>
+    );
+  }
+  if (type === 'reward_low_stock' || type === 'reward_out_of_stock') {
+    return (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
     );
   }
@@ -117,7 +70,7 @@ const sevStyle = {
   },
 };
 
-const filters = ['All', 'Unread', 'Critical'];
+const filters = ['All', 'Unread', 'Critical', 'Inventory'];
 
 export function Notifications({ onNavigate }) {
   const { 
@@ -132,13 +85,8 @@ export function Notifications({ onNavigate }) {
     refreshNotifications().catch((error) => console.error('Unable to load notifications:', error));
   }, [refreshNotifications]);
   
-  // Use API notifications or fallback
-  const items = useMemo(() => {
-    if (notifications && notifications.length > 0) {
-      return notifications;
-    }
-    return fallbackNotifications;
-  }, [notifications]);
+  // Notifications are loaded from the backend. An empty array means there are no alerts.
+  const items = useMemo(() => notifications || [], [notifications]);
   
   const [filter, setFilter] = useState('All');
   const [selectedNotif, setSelectedNotif] = useState(null);
@@ -146,6 +94,7 @@ export function Notifications({ onNavigate }) {
   const filtered = items.filter((n) => {
     if (filter === 'Unread') return !n.read;
     if (filter === 'Critical') return n.severity === 'critical';
+    if (filter === 'Inventory') return n.type === 'reward_low_stock' || n.type === 'reward_out_of_stock';
     return true;
   });
 
@@ -333,6 +282,18 @@ export function Notifications({ onNavigate }) {
             <p className="text-sm text-gray-600 leading-relaxed mb-6">{selectedNotif.message}</p>
 
             <div className="flex flex-col gap-2">
+              {(selectedNotif.type === 'reward_low_stock' || selectedNotif.type === 'reward_out_of_stock') && onNavigate && (
+                <button
+                  onClick={() => {
+                    setSelectedNotif(null);
+                    window.sessionStorage.setItem('plink.incentives.tab', 'inventory');
+                    onNavigate('incentives');
+                  }}
+                  className="w-full py-2.5 bg-emerald-800 text-white rounded-xl font-semibold text-sm hover:bg-emerald-900 transition-colors"
+                >
+                  Open Rewards Inventory
+                </button>
+              )}
               {(selectedNotif.title.includes('EcoBot') || selectedNotif.message.includes('machine')) && onNavigate && (
                 <button
                   onClick={() => {
