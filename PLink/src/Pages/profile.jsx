@@ -233,10 +233,12 @@ export default function Profile() {
     }
   };
 
-  // Step 2: User enters OTP and clicks Confirm -> Verify OTP + complete password change in one call
+  // Step 2: Verify OTP, then submit the password change using the exact Laravel field names.
   const handleConfirmPasswordOtp = async () => {
-    if (!passwordOtpCode.trim()) {
-      setPasswordOtpError('Please enter the verification code.');
+    const otp = passwordOtpCode.trim();
+
+    if (otp.length !== 6) {
+      setPasswordOtpError('Please enter the 6-digit verification code.');
       return;
     }
     if (!pendingPasswordChange) {
@@ -246,12 +248,22 @@ export default function Profile() {
 
     setIsPasswordOtpLoading(true);
     setPasswordOtpError('');
+
     try {
+      // Verify the code first so the UI follows the intended OTP flow.
+      const verifyResponse = await api.verifyPasswordChangeOtp({ otp });
+      if (!verifyResponse.data?.verified && !verifyResponse.data?.success) {
+        setPasswordOtpError(verifyResponse.data?.message || 'Unable to verify the OTP.');
+        return;
+      }
+
+      // Laravel expects current_password, new_password and
+      // new_password_confirmation — not the old frontend key names.
       const response = await api.completePasswordChangeWithOtp({
-        otp: passwordOtpCode.trim(),
-        current: pendingPasswordChange.current,
-        newPass: pendingPasswordChange.newPass,
-        newPass_confirmation: pendingPasswordChange.confirmPass,
+        otp,
+        current_password: pendingPasswordChange.current,
+        new_password: pendingPasswordChange.newPass,
+        new_password_confirmation: pendingPasswordChange.confirmPass,
       });
 
       if (response.data?.success) {
@@ -262,20 +274,24 @@ export default function Profile() {
         setMessage('');
         setIsPasswordSuccessModalOpen(true);
       } else {
-        setPasswordOtpError(response.data?.message || 'Failed to verify code.');
+        setPasswordOtpError(response.data?.message || 'Password change failed.');
       }
     } catch (error) {
-      console.error('Password OTP verify error:', error);
+      console.error('Password change OTP error:', error);
       const status = error?.response?.status;
       const data = error?.response?.data;
 
       if (status === 422 && data?.errors) {
         const validationMessages = Object.values(data.errors).flat().join(' ');
         setPasswordOtpError(validationMessages || 'Validation error. Please check your inputs.');
-      } else if (status === 401 || (data && /expired|invalid|incorrect|wrong/i.test(data.message || ''))) {
+      } else if (
+        status === 400 ||
+        status === 401 ||
+        (data && /expired|invalid|incorrect|wrong/i.test(data.message || ''))
+      ) {
         setPasswordOtpError(data?.message || 'The verification code is incorrect or has expired.');
       } else {
-        setPasswordOtpError(data?.message || error?.message || 'Verification failed. Please try again.');
+        setPasswordOtpError(data?.message || error?.message || 'Password change failed. Please try again.');
       }
     } finally {
       setIsPasswordOtpLoading(false);
@@ -1020,12 +1036,12 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={handleConfirmPasswordOtp}
-                  disabled={isPasswordOtpLoading}
+                  disabled={isPasswordOtpLoading || passwordOtpCode.length !== 6}
                   style={{
                     ...buttonStyle,
                     flex: 1,
-                    opacity: isPasswordOtpLoading ? 0.5 : 1,
-                    cursor: isPasswordOtpLoading ? 'not-allowed' : 'pointer',
+                    opacity: (isPasswordOtpLoading || passwordOtpCode.length !== 6) ? 0.5 : 1,
+                    cursor: (isPasswordOtpLoading || passwordOtpCode.length !== 6) ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {isPasswordOtpLoading ? 'Verifying…' : 'Confirm'}

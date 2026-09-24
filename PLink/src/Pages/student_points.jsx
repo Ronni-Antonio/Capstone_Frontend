@@ -1404,7 +1404,13 @@ const actionBtn = {
   border: 'none',
   cursor: 'pointer',
   background: '#c7eabb',
-  color: '#3e5f44'
+  color: '#3e5f44',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
+  lineHeight: 0,
+  flexShrink: 0
 };
 
 const modalInput = {

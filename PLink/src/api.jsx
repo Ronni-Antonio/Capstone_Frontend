@@ -34,6 +34,14 @@ api.interceptors.response.use(
 api.login = (data) => api.post('/auth/login', data);
 api.logout = () => api.post('/auth/logout');
 
+// Forgot password OTP flow
+api.sendForgotPasswordOtp = (email) =>
+  api.post('/auth/forgot-password/send-otp', { email });
+api.verifyForgotPasswordOtp = (email, otp) =>
+  api.post('/auth/forgot-password/verify-otp', { email, otp });
+api.resetForgotPassword = (data) =>
+  api.post('/auth/forgot-password/reset', data);
+
 // Dashboard
 api.getDashboard = () => api.get('/dashboard');
 
@@ -159,8 +167,11 @@ api.verifyEmailChange = (id, data) => api.post(`/user/${id}/verify-email-change`
 api.changePassword = (id, data) => api.put(`/users/${id}/password`, data);
 
 // Password change OTP flow (OTP sent to authenticated user's email)
-api.requestPasswordChangeOtp = () => api.post('/user/password/request-otp');
-api.verifyPasswordChangeOtp = (data) => api.post('/user/password/verify-otp', data);
-api.completePasswordChangeWithOtp = (data) => api.post('/user/password/change', data);
+api.requestPasswordChangeOtp = () =>
+  api.post('/user/change-password/send-otp');
+api.verifyPasswordChangeOtp = (data) =>
+  api.post('/user/change-password/verify-otp', data);
+api.completePasswordChangeWithOtp = (data) =>
+  api.post('/user/change-password', data);
 
 export default api;

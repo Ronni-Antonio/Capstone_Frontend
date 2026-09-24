@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import api from '../api';
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -423,11 +423,27 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  // Forgot password state
+  // Forgot password OTP flow
   const [showForgotModal, setShowForgotModal] = useState(false)
-  const [forgotStep, setForgotStep] = useState('input')
+  const [forgotStep, setForgotStep] = useState('input') // input -> otp -> password -> success
   const [forgotEmail, setForgotEmail] = useState('')
-  const [countdown, setCountdown] = useState(30)
+  const [forgotOtp, setForgotOtp] = useState('')
+  const [forgotNewPassword, setForgotNewPassword] = useState('')
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+  const [forgotMessage, setForgotMessage] = useState('')
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (!showForgotModal || forgotStep !== 'otp' || countdown <= 0) return undefined
+
+    const timer = window.setTimeout(() => {
+      setCountdown((value) => Math.max(0, value - 1))
+    }, 1000)
+
+    return () => window.clearTimeout(timer)
+  }, [showForgotModal, forgotStep, countdown])
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -456,20 +472,140 @@ export default function Login({ onLogin }) {
     }
   }
 
-  const handleForgotSubmit = (e) => {
+  const resetForgotFlow = () => {
+    setForgotStep('input')
+    setForgotOtp('')
+    setForgotNewPassword('')
+    setForgotConfirmPassword('')
+    setForgotLoading(false)
+    setForgotError('')
+    setForgotMessage('')
+    setCountdown(0)
+  }
+
+  const openForgotPassword = () => {
+    resetForgotFlow()
+    setForgotEmail(email.trim())
+    setShowForgotModal(true)
+  }
+
+  const closeForgotPassword = () => {
+    setShowForgotModal(false)
+    resetForgotFlow()
+  }
+
+  const getApiErrorMessage = (err, fallback) => {
+    const validationErrors = err?.response?.data?.errors
+    if (validationErrors) {
+      const message = Object.values(validationErrors).flat().join(' ')
+      if (message) return message
+    }
+
+    return err?.response?.data?.message || err?.message || fallback
+  }
+
+  const sendForgotOtp = async ({ isResend = false } = {}) => {
+    const normalizedEmail = forgotEmail.trim()
+    if (!normalizedEmail) {
+      setForgotError('Please enter your email address.')
+      return false
+    }
+
+    setForgotLoading(true)
+    setForgotError('')
+    setForgotMessage('')
+
+    try {
+      const response = await api.sendForgotPasswordOtp(normalizedEmail)
+      setForgotEmail(normalizedEmail)
+      setForgotStep('otp')
+      setForgotOtp('')
+      setCountdown(30)
+      setForgotMessage(
+        response.data?.message ||
+          (isResend ? 'A new OTP has been sent.' : 'OTP sent successfully to your email.')
+      )
+      return true
+    } catch (err) {
+      console.error('Forgot password OTP request error:', err)
+      setForgotError(getApiErrorMessage(err, 'Unable to send the OTP. Please try again.'))
+      return false
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const handleForgotSubmit = async (e) => {
     e.preventDefault()
-    if (!forgotEmail) return
-    setForgotStep('sent')
-    setCountdown(30)
-    const timer = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(timer)
-          return 0
-        }
-        return c - 1
+    await sendForgotOtp()
+  }
+
+  const handleVerifyForgotOtp = async (e) => {
+    e?.preventDefault?.()
+
+    const otp = forgotOtp.trim()
+    if (otp.length !== 6) {
+      setForgotError('Please enter the 6-digit OTP sent to your email.')
+      return
+    }
+
+    setForgotLoading(true)
+    setForgotError('')
+    setForgotMessage('')
+
+    try {
+      const response = await api.verifyForgotPasswordOtp(forgotEmail.trim(), otp)
+      if (response.data?.verified || response.status === 200) {
+        setForgotStep('password')
+        setForgotMessage('OTP verified. Create your new password.')
+      } else {
+        setForgotError(response.data?.message || 'Unable to verify the OTP.')
+      }
+    } catch (err) {
+      console.error('Forgot password OTP verification error:', err)
+      setForgotError(getApiErrorMessage(err, 'The OTP is invalid or has expired.'))
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const handleResetForgotPassword = async (e) => {
+    e?.preventDefault?.()
+
+    if (forgotNewPassword.length < 8) {
+      setForgotError('Your new password must be at least 8 characters long.')
+      return
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('The new passwords do not match.')
+      return
+    }
+
+    setForgotLoading(true)
+    setForgotError('')
+    setForgotMessage('')
+
+    try {
+      const response = await api.resetForgotPassword({
+        email: forgotEmail.trim(),
+        otp: forgotOtp.trim(),
+        password: forgotNewPassword,
+        password_confirmation: forgotConfirmPassword,
       })
-    }, 1000)
+
+      if (response.status === 200) {
+        setForgotStep('success')
+        setForgotMessage(response.data?.message || 'Password reset successfully.')
+      } else {
+        setForgotError(response.data?.message || 'Unable to reset your password.')
+      }
+    } catch (err) {
+      console.error('Forgot password reset error:', err)
+      setForgotError(getApiErrorMessage(err, 'Unable to reset your password. Please try again.'))
+    } finally {
+      setForgotLoading(false)
+    }
   }
 
   return (
@@ -622,11 +758,7 @@ export default function Login({ onLogin }) {
                 </label>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowForgotModal(true)
-                    setForgotStep('input')
-                    setForgotEmail(email)
-                  }}
+                  onClick={openForgotPassword}
                   className="text-link"
                 >
                   Forgot password?
@@ -683,7 +815,7 @@ export default function Login({ onLogin }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="modal-overlay"
-            onClick={() => setShowForgotModal(false)}
+            onClick={closeForgotPassword}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -692,68 +824,190 @@ export default function Login({ onLogin }) {
               className="modal-card"
               onClick={(e) => e.stopPropagation()}
             >
-              <button onClick={() => setShowForgotModal(false)} className="modal-close">
+              <button onClick={closeForgotPassword} className="modal-close" aria-label="Close forgot password dialog">
                 <XIcon style={{ width: '1rem', height: '1rem' }} />
               </button>
 
-              {forgotStep === 'input' ? (
+              {forgotStep === 'input' && (
                 <div>
                   <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(199, 234, 187, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <LockIcon style={{ width: '1.5rem', height: '1.5rem', color: 'var(--eco-dark)' }} />
                   </div>
                   <h3 style={{ fontFamily: 'inherit', fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>
-                    Reset Password
+                    Forgot Password
                   </h3>
                   <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                    Enter your email address and we'll send you a link to reset your password.
+                    Enter your administrator email address. We&apos;ll send a 6-digit OTP to verify your identity.
                   </p>
+
+                  {forgotError && (
+                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.75rem', color: '#dc2626', fontSize: '0.8rem', border: '1px solid rgba(239, 68, 68, 0.25)', marginBottom: '1rem' }}>
+                      {forgotError}
+                    </div>
+                  )}
+
                   <form onSubmit={handleForgotSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <Field
                       label="Email Address"
                       icon={MailIcon}
                       type="email"
                       value={forgotEmail}
-                      onChange={setForgotEmail}
+                      onChange={(value) => { setForgotEmail(value); setForgotError(''); }}
                       placeholder="you@plinkschool.ph"
                     />
                     <button
                       type="submit"
-                      disabled={!forgotEmail}
+                      disabled={forgotLoading || !forgotEmail.trim()}
                       className="submit-btn"
                       style={{ padding: '0.625rem' }}
                     >
-                      Send reset link
+                      {forgotLoading ? 'Sending OTP…' : 'Send OTP'}
                     </button>
                   </form>
                 </div>
-              ) : (
+              )}
+
+              {forgotStep === 'otp' && (
+                <div>
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(199, 234, 187, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <MailIcon style={{ width: '1.5rem', height: '1.5rem', color: 'var(--eco-dark)' }} />
+                  </div>
+                  <h3 style={{ fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>
+                    Enter Verification Code
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.25rem', marginBottom: '0.4rem', lineHeight: '1.4' }}>
+                    Enter the 6-digit OTP sent to
+                  </p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--eco-dark)', margin: '0 0 1.25rem 0', wordBreak: 'break-word' }}>
+                    {forgotEmail}
+                  </p>
+
+                  {forgotMessage && (
+                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(22, 101, 52, 0.08)', borderRadius: '0.75rem', color: '#166534', fontSize: '0.8rem', border: '1px solid rgba(22, 101, 52, 0.18)', marginBottom: '1rem' }}>
+                      {forgotMessage}
+                    </div>
+                  )}
+                  {forgotError && (
+                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.75rem', color: '#dc2626', fontSize: '0.8rem', border: '1px solid rgba(239, 68, 68, 0.25)', marginBottom: '1rem' }}>
+                      {forgotError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleVerifyForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                    <label className="input-group-label">
+                      <span className="input-span">6-digit OTP</span>
+                      <div className="input-field-container">
+                        <ShieldCheckIcon style={{ width: '1rem', height: '1rem', color: 'rgba(62, 95, 68, 0.5)', flexShrink: 0 }} />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={6}
+                          value={forgotOtp}
+                          onChange={(e) => {
+                            setForgotOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+                            setForgotError('')
+                          }}
+                          placeholder="000000"
+                          className="custom-input"
+                          style={{ letterSpacing: '0.25rem', fontWeight: 700 }}
+                        />
+                      </div>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={forgotLoading || forgotOtp.length !== 6}
+                      className="submit-btn"
+                      style={{ padding: '0.625rem' }}
+                    >
+                      {forgotLoading ? 'Verifying…' : 'Verify OTP'}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={forgotLoading || countdown > 0}
+                      onClick={() => void sendForgotOtp({ isResend: true })}
+                      className="text-link"
+                      style={{ opacity: countdown > 0 ? 0.55 : 1 }}
+                    >
+                      {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {forgotStep === 'password' && (
+                <div>
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(199, 234, 187, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <LockIcon style={{ width: '1.5rem', height: '1.5rem', color: 'var(--eco-dark)' }} />
+                  </div>
+                  <h3 style={{ fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>
+                    Create New Password
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                    Your OTP has been verified. Enter and confirm your new password.
+                  </p>
+
+                  {forgotError && (
+                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.75rem', color: '#dc2626', fontSize: '0.8rem', border: '1px solid rgba(239, 68, 68, 0.25)', marginBottom: '1rem' }}>
+                      {forgotError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleResetForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <Field
+                      label="New Password"
+                      icon={LockIcon}
+                      type="password"
+                      value={forgotNewPassword}
+                      onChange={(value) => { setForgotNewPassword(value); setForgotError(''); }}
+                      placeholder="At least 8 characters"
+                    />
+                    <Field
+                      label="Confirm New Password"
+                      icon={LockIcon}
+                      type="password"
+                      value={forgotConfirmPassword}
+                      onChange={(value) => { setForgotConfirmPassword(value); setForgotError(''); }}
+                      placeholder="Re-enter new password"
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={forgotLoading || !forgotNewPassword || !forgotConfirmPassword}
+                      className="submit-btn"
+                      style={{ padding: '0.625rem' }}
+                    >
+                      {forgotLoading ? 'Resetting…' : 'Reset Password'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {forgotStep === 'success' && (
                 <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                   <div style={{ width: '4rem', height: '4rem', borderRadius: '9999px', backgroundColor: 'rgba(162, 203, 139, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', marginRight: 'auto', marginBottom: '1rem' }}>
-                    <MailIcon style={{ width: '2rem', height: '2rem', color: 'var(--eco-dark)' }} />
+                    <CheckIcon style={{ width: '2rem', height: '2rem', color: 'var(--eco-dark)' }} />
                   </div>
                   <h3 style={{ fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: 0 }}>
-                    Check your email
+                    Password Reset Successful
                   </h3>
                   <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.5rem', marginBottom: '1.5rem', lineHeight: '1.4' }}>
-                    We've sent a password reset link to <br />
-                    <span style={{ fontWeight: '600', color: 'var(--eco-dark)' }}>{forgotEmail}</span>
+                    You can now log in using your new password.
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <button
-                      disabled={countdown > 0}
-                      onClick={() => setCountdown(30)}
-                      className="submit-btn"
-                      style={{ backgroundColor: 'rgba(199, 234, 187, 0.6)', color: 'var(--eco-dark)', padding: '0.625rem' }}
-                    >
-                      {countdown > 0 ? `Resend in ${countdown}s` : 'Resend email'}
-                    </button>
-                    <button
-                      onClick={() => setShowForgotModal(false)}
-                      className="text-link"
-                    >
-                      Back to login
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail(forgotEmail)
+                      setPassword('')
+                      closeForgotPassword()
+                    }}
+                    className="submit-btn"
+                    style={{ padding: '0.625rem', width: '100%' }}
+                  >
+                    Back to Login
+                  </button>
                 </div>
               )}
             </motion.div>
