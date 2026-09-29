@@ -88,10 +88,10 @@ export default function SectionsRanking() {
 
       {/* Top Winner Card */}
       {topSection && (
-        <div className="bg-[#3e5f44] rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
+        <div className="bg-[#112d68] rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
           <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
-            <div className="w-14 h-14 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-              <TrophyIcon className="w-7 h-7 text-[#2F5D3A]" />
+            <div className="w-14 h-14 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+              <TrophyIcon className="w-7 h-7 text-[#112d68]" />
             </div>
 
             <div>
@@ -103,7 +103,7 @@ export default function SectionsRanking() {
                 {topSection.name}
               </h2>
 
-              <p className="mt-2 text-[#d9eac9]">
+              <p className="mt-2 text-[#bedef6]">
                 Leading with {topSection.points.toLocaleString()} points · {topSection.bottles.toLocaleString()} bottles recycled
               </p>
             </div>
@@ -125,7 +125,7 @@ export default function SectionsRanking() {
                 Growth
               </div>
 
-              <div className="text-3xl sm:text-4xl font-bold text-[#d8f0c1]">
+              <div className="text-3xl sm:text-4xl font-bold text-[#bedef6]">
                 {topSection.growth}
               </div>
             </div>
@@ -135,19 +135,19 @@ export default function SectionsRanking() {
 
       {/* Leaderboard Podium */}
       {podiumSections.length > 0 && (
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#dbe6db] shadow-sm">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#bedef6] shadow-sm">
 
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-            <h3 className="text-2xl font-bold text-[#3e5f44]">
+            <h3 className="text-2xl font-bold text-[#112d68]">
               Leaderboard
             </h3>
 
-            <div className="flex bg-[#f3f6ee] rounded-xl p-1">
-              <button className="px-5 py-2 rounded-xl bg-[#3e5f44] text-white text-sm font-semibold">
+            <div className="flex bg-[#f4fcfc] rounded-xl p-1">
+              <button className="px-5 py-2 rounded-xl bg-[#112d68] text-white text-sm font-semibold">
                 Weekly
               </button>
 
-              <button className="px-5 py-2 text-sm text-[#6f876f]">
+              <button className="px-5 py-2 text-sm text-[#4d6d85]">
                 Monthly
               </button>
             </div>
@@ -156,15 +156,15 @@ export default function SectionsRanking() {
           <div className="grid grid-cols-3 gap-2 sm:gap-8 items-end h-52">
             {podiumSections.length > 1 && (
               <div className="text-center">
-                <div className="text-sm sm:text-xl font-bold text-[#3e5f44] break-words">
+                <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[1].name}
                 </div>
 
-                <div className="text-sm text-[#7a947e] mb-3">
+                <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[1].points.toLocaleString()} pts
                 </div>
 
-                <div className="h-20 bg-[#88b07b] rounded-t-2xl flex items-center justify-center text-white text-3xl font-bold">
+                <div className="h-20 bg-[#2776c0] rounded-t-2xl flex items-center justify-center text-white text-3xl font-bold">
                   2
                 </div>
               </div>
@@ -172,15 +172,15 @@ export default function SectionsRanking() {
 
             {podiumSections.length > 0 && (
               <div className="text-center">
-                <div className="text-sm sm:text-xl font-bold text-[#3e5f44] break-words">
+                <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[0].name}
                 </div>
 
-                <div className="text-sm text-[#7a947e] mb-3">
+                <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[0].points.toLocaleString()} pts
                 </div>
 
-                <div className="h-28 bg-[#3e5f44] rounded-t-2xl flex items-center justify-center text-white text-3xl font-bold">
+                <div className="h-28 bg-[#112d68] rounded-t-2xl flex items-center justify-center text-white text-3xl font-bold">
                   1
                 </div>
               </div>
@@ -188,15 +188,15 @@ export default function SectionsRanking() {
 
             {podiumSections.length > 2 && (
               <div className="text-center">
-                <div className="text-sm sm:text-xl font-bold text-[#3e5f44] break-words">
+                <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[2].name}
                 </div>
 
-                <div className="text-sm text-[#7a947e] mb-3">
+                <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[2].points.toLocaleString()} pts
                 </div>
 
-                <div className="h-16 bg-[#9bc183] rounded-t-2xl flex items-center justify-center text-white text-3xl font-bold">
+                <div className="h-16 bg-[#2776c0] rounded-t-2xl flex items-center justify-center text-white text-3xl font-bold">
                   3
                 </div>
               </div>
@@ -206,10 +206,10 @@ export default function SectionsRanking() {
       )}
 
       {/* Full Rankings */}
-      <div className="bg-white rounded-3xl border border-[#dbe6db] overflow-hidden shadow-sm">
+      <div className="bg-white rounded-3xl border border-[#bedef6] overflow-hidden shadow-sm">
 
-        <div className="p-6 border-b border-[#edf2ea]">
-          <h3 className="text-sm sm:text-xl font-bold text-[#3e5f44] break-words">
+        <div className="p-6 border-b border-[#f4fcfc]">
+          <h3 className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
             Full Rankings · This Week
           </h3>
         </div>
@@ -217,38 +217,38 @@ export default function SectionsRanking() {
         {sectionsData.map((section) => (
           <div
             key={section.rank}
-            className="p-4 sm:p-6 border-b border-[#edf2ea] last:border-b-0"
+            className="p-4 sm:p-6 border-b border-[#f4fcfc] last:border-b-0"
           >
             <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
 
               <div className="flex gap-4 flex-1">
 
-                <div className="w-12 h-12 rounded-2xl bg-[#8cb07e] text-white font-bold flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#2776c0] text-white font-bold flex items-center justify-center">
                   {section.rank}
                 </div>
 
                 <div className="flex-1">
 
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-[#3e5f44]">
+                    <h4 className="font-bold text-[#112d68]">
                       {section.name}
                     </h4>
 
                     {section.badge && (
-                      <span className="bg-[#e8f5bd] text-[#3e5f44] text-xs px-2 py-1 rounded-full">
+                      <span className="bg-[#bedef6] text-[#112d68] text-xs px-2 py-1 rounded-full">
                         {section.badge}
                       </span>
                     )}
                   </div>
 
-                  <p className="text-sm text-[#7a947e]">
+                  <p className="text-sm text-[#8fa6b9]">
                     {section.students} students · {section.bottles} bottles recycled
                   </p>
 
                   {section.width && (
-                    <div className="w-full h-2 bg-[#edf2ea] rounded-full mt-3">
+                    <div className="w-full h-2 bg-[#f4fcfc] rounded-full mt-3">
                       <div
-                        className="h-2 bg-[#7faa72] rounded-full"
+                        className="h-2 bg-[#2776c0] rounded-full"
                         style={{ width: section.width }}
                       />
                     </div>
@@ -258,11 +258,11 @@ export default function SectionsRanking() {
               </div>
 
               <div className="sm:text-right">
-                <div className="text-2xl sm:text-3xl font-bold text-[#3e5f44]">
+                <div className="text-2xl sm:text-3xl font-bold text-[#112d68]">
                   {section.points.toLocaleString()}
                 </div>
 
-                <div className="text-sm text-[#7a947e]">
+                <div className="text-sm text-[#8fa6b9]">
                   points
                 </div>
 
@@ -284,7 +284,7 @@ export default function SectionsRanking() {
         ))}
 
         {sectionsData.length === 0 && (
-          <div className="p-8 text-center text-[#7a947e]">
+          <div className="p-8 text-center text-[#8fa6b9]">
             <p>No sections data available yet.</p>
           </div>
         )}

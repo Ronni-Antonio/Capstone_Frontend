@@ -221,18 +221,18 @@ function ActivityLogsTab() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-3xl border border-[#c7eabb]/40 p-12 text-center" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-3xl border border-[#bedef6]/40 p-12 text-center" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
           <AlertCircleIcon className="w-8 h-8 text-red-500" />
         </div>
-        <h3 className="text-lg font-bold text-[#3e5f44] mb-2">Unable to load activity logs</h3>
-        <p className="text-sm text-[#6f876f] mb-5 max-w-md mx-auto">{error}</p>
+        <h3 className="text-lg font-bold text-[#112d68] mb-2">Unable to load activity logs</h3>
+        <p className="text-sm text-[#4d6d85] mb-5 max-w-md mx-auto">{error}</p>
         <button
           onClick={() => {
             setError(null);
             void fetchLogs();
           }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#112d68] text-white font-semibold text-sm hover:bg-[#2776c0] transition-colors"
         >
           <RefreshCwIcon className="w-4 h-4" />
           Try Again
@@ -254,17 +254,17 @@ function ActivityLogsTab() {
                 setCategory(c);
                 resetPage();
               }}
-              className={`text-left bg-white rounded-3xl p-5 border transition-colors ${category === c ? 'border-[#5a7c61] bg-[#fcfcf7]' : 'border-[#c7eabb]/40 hover:bg-[#fcfcf7]'}`}
+              className={`text-left bg-white rounded-3xl p-5 border transition-colors ${category === c ? 'border-[#2776c0] bg-[#f4fcfc]' : 'border-[#bedef6]/40 hover:bg-[#f4fcfc]'}`}
               style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
             >
-              <div className="text-2xl font-bold text-[#3e5f44] leading-none">
+              <div className="text-2xl font-bold text-[#112d68] leading-none">
                 {isLoading ? (
                   <Loader2Icon className="w-6 h-6 animate-spin opacity-50" />
                 ) : (
                   countFor(c)
                 )}
               </div>
-              <div className="text-xs font-semibold text-[#3e5f44]/80 mt-1.5">
+              <div className="text-xs font-semibold text-[#112d68]/80 mt-1.5">
                 {c} Logs
               </div>
             </button>
@@ -272,10 +272,10 @@ function ActivityLogsTab() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-3xl p-5 border border-[#c7eabb]/40 space-y-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-3xl p-5 border border-[#bedef6]/40 space-y-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          <div className="flex items-center gap-2 bg-[#fcfcf7] rounded-2xl px-4 py-2.5 flex-1 max-w-md border border-[#c7eabb]/50 focus-within:border-[#5a7c61] transition-colors">
-            <SearchIcon className="w-4 h-4 text-[#3e5f44]/50" />
+          <div className="flex items-center gap-2 bg-[#f4fcfc] rounded-2xl px-4 py-2.5 flex-1 max-w-md border border-[#bedef6]/50 focus-within:border-[#2776c0] transition-colors">
+            <SearchIcon className="w-4 h-4 text-[#112d68]/50" />
             <input
               type="text"
               value={search}
@@ -284,7 +284,7 @@ function ActivityLogsTab() {
                 resetPage();
               }}
               placeholder="Search logs by user, reward, or activity…"
-              className="bg-transparent outline-none text-sm flex-1 placeholder:text-[#3e5f44]/40 text-[#3e5f44]"
+              className="bg-transparent outline-none text-sm flex-1 placeholder:text-[#112d68]/40 text-[#112d68]"
             />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -295,7 +295,7 @@ function ActivityLogsTab() {
                   setCategory(c);
                   resetPage();
                 }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${category === c ? 'bg-[#3e5f44] text-white' : 'bg-[#e8f5bd]/60 text-[#3e5f44] hover:bg-[#c7eabb]'}`}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${category === c ? 'bg-[#112d68] text-white' : 'bg-[#bedef6]/60 text-[#112d68] hover:bg-[#bedef6]'}`}
               >
                 {c}
               </button>
@@ -303,9 +303,9 @@ function ActivityLogsTab() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-[#c7eabb]/40">
+        <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-[#bedef6]/40">
           <div className="pt-3">
-            <label className="text-xs font-semibold text-[#3e5f44] mb-1.5 flex items-center gap-1.5">
+            <label className="text-xs font-semibold text-[#112d68] mb-1.5 flex items-center gap-1.5">
               <CalendarIcon className="w-3.5 h-3.5" /> From
             </label>
             <input
@@ -315,11 +315,11 @@ function ActivityLogsTab() {
                 setFrom(e.target.value);
                 resetPage();
               }}
-              className="w-full sm:w-auto bg-[#fcfcf7] border border-[#c7eabb]/50 rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+              className="w-full sm:w-auto bg-[#f4fcfc] border border-[#bedef6]/50 rounded-xl px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
             />
           </div>
           <div className="pt-3">
-            <label className="text-xs font-semibold text-[#3e5f44] mb-1.5 flex items-center gap-1.5">
+            <label className="text-xs font-semibold text-[#112d68] mb-1.5 flex items-center gap-1.5">
               <CalendarIcon className="w-3.5 h-3.5" /> To
             </label>
             <input
@@ -329,13 +329,13 @@ function ActivityLogsTab() {
                 setTo(e.target.value);
                 resetPage();
               }}
-              className="w-full sm:w-auto bg-[#fcfcf7] border border-[#c7eabb]/50 rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+              className="w-full sm:w-auto bg-[#f4fcfc] border border-[#bedef6]/50 rounded-xl px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
             />
           </div>
           {(from || to) && (
             <button
               onClick={clearDates}
-              className="mt-3 px-4 py-2 rounded-xl bg-[#e8f5bd]/60 text-[#3e5f44] font-semibold text-xs hover:bg-[#c7eabb] transition-colors"
+              className="mt-3 px-4 py-2 rounded-xl bg-[#bedef6]/60 text-[#112d68] font-semibold text-xs hover:bg-[#bedef6] transition-colors"
             >
               Clear dates
             </button>
@@ -344,10 +344,10 @@ function ActivityLogsTab() {
       </div>
 
       {/* Log table */}
-      <div className="bg-white rounded-3xl border border-[#c7eabb]/40 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-3xl border border-[#bedef6]/40 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px]">
-            <thead className="bg-[#e8f5bd]/50 text-[#011400]">
+            <thead className="bg-[#bedef6]/50 text-[#040f36]">
               <tr>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
                   Date & Time
@@ -369,13 +369,13 @@ function ActivityLogsTab() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#c7eabb]/40">
+            <tbody className="divide-y divide-[#bedef6]/40">
               {isLoading && (
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center gap-3">
-                      <Loader2Icon className="w-8 h-8 animate-spin text-[#3e5f44]" />
-                      <span className="text-sm text-[#011400]">Loading activity logs…</span>
+                      <Loader2Icon className="w-8 h-8 animate-spin text-[#112d68]" />
+                      <span className="text-sm text-[#040f36]">Loading activity logs…</span>
                     </div>
                   </td>
                 </tr>
@@ -383,36 +383,36 @@ function ActivityLogsTab() {
               {!isLoading && pageData.map((log) => (
                 <tr
                   key={log.id}
-                  className="hover:bg-[#fcfcf7] transition-colors"
+                  className="hover:bg-[#f4fcfc] transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-[#011400]">
+                    <div className="text-sm font-semibold text-[#040f36]">
                       {log.dateFormatted}
                     </div>
-                    <div className="text-xs text-[#011400]">{log.timeFormatted}</div>
+                    <div className="text-xs text-[#040f36]">{log.timeFormatted}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#fcfcf7] text-[#011400] whitespace-nowrap">
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#f4fcfc] text-[#040f36] whitespace-nowrap">
                       {log.category}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-[#011400] whitespace-nowrap">
+                    <div className="text-sm font-semibold text-[#040f36] whitespace-nowrap">
                       {log.actor}
                     </div>
                     {log.section && (
-                      <div className="text-xs text-[#011400]">
+                      <div className="text-xs text-[#040f36]">
                         {log.section}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-[#011400] max-w-xs">
+                    <div className="text-sm text-[#040f36] max-w-xs">
                       {log.description}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-semibold text-[#011400] whitespace-nowrap">
+                    <span className="text-xs font-semibold text-[#040f36] whitespace-nowrap">
                       {log.module}
                     </span>
                   </td>
@@ -420,7 +420,7 @@ function ActivityLogsTab() {
                     <div className="flex justify-end">
                       <button
                         onClick={() => setViewing(log)}
-                        className="w-8 h-8 rounded-lg bg-[#e8f5bd]/60 text-[#3e5f44] hover:bg-[#c7eabb] flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-[#bedef6]/60 text-[#112d68] hover:bg-[#bedef6] flex items-center justify-center transition-colors"
                         aria-label={`View log for ${log.actor}`}
                         title="View log details"
                       >
@@ -434,7 +434,7 @@ function ActivityLogsTab() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-center text-[#011400] text-sm"
+                    className="px-6 py-12 text-center text-[#040f36] text-sm"
                   >
                     {logs.length === 0
                       ? 'No activity logs available.'
@@ -446,18 +446,18 @@ function ActivityLogsTab() {
           </table>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-t border-[#c7eabb]/40 bg-[#fcfcf7]">
-          <div className="text-xs text-[#011400]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-t border-[#bedef6]/40 bg-[#f4fcfc]">
+          <div className="text-xs text-[#040f36]">
             Showing{' '}
-            <span className="font-semibold text-[#011400]">
+            <span className="font-semibold text-[#040f36]">
               {isLoading || filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}
             </span>
             –
-            <span className="font-semibold text-[#011400]">
+            <span className="font-semibold text-[#040f36]">
               {isLoading ? 0 : Math.min(safePage * PAGE_SIZE, filtered.length)}
             </span>{' '}
             of{' '}
-            <span className="font-semibold text-[#011400]">
+            <span className="font-semibold text-[#040f36]">
               {isLoading ? '—' : filtered.length}
             </span>{' '}
             log entries
@@ -466,18 +466,18 @@ function ActivityLogsTab() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage === 1 || isLoading}
-              className="w-8 h-8 rounded-lg bg-white border border-[#c7eabb]/50 text-[#3e5f44] hover:bg-[#e8f5bd] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-lg bg-white border border-[#bedef6]/50 text-[#112d68] hover:bg-[#bedef6] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
               aria-label="Previous page"
             >
               <ChevronLeftIcon className="w-4 h-4" />
             </button>
-            <span className="text-sm font-semibold text-[#011400] px-2">
+            <span className="text-sm font-semibold text-[#040f36] px-2">
               Page {safePage} of {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage === totalPages || isLoading}
-              className="w-8 h-8 rounded-lg bg-white border border-[#c7eabb]/50 text-[#3e5f44] hover:bg-[#e8f5bd] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-lg bg-white border border-[#bedef6]/50 text-[#112d68] hover:bg-[#bedef6] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
               aria-label="Next page"
             >
               <ChevronRightIcon className="w-4 h-4" />
@@ -493,7 +493,7 @@ function ActivityLogsTab() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[#3e5f44]/40 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-[#112d68]/40 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setViewing(null)}
           >
             <motion.div
@@ -506,25 +506,25 @@ function ActivityLogsTab() {
             >
               <div className="flex items-start justify-between mb-5">
                 <div>
-                  <h3 className="font-bold text-[#3e5f44] text-xl">
+                  <h3 className="font-bold text-[#112d68] text-xl">
                     {viewing.category} Log
                   </h3>
-                  <p className="text-sm text-[#3e5f44]/60 mt-1">
+                  <p className="text-sm text-[#112d68]/60 mt-1">
                     {viewing.fullDateTime}
                   </p>
                 </div>
                 <button
                   onClick={() => setViewing(null)}
-                  className="w-8 h-8 rounded-lg hover:bg-[#e8f5bd] flex items-center justify-center text-[#3e5f44]"
+                  className="w-8 h-8 rounded-lg hover:bg-[#bedef6] flex items-center justify-center text-[#112d68]"
                   aria-label="Close"
                 >
                   <XIcon className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="bg-[#e8f5bd]/40 rounded-2xl p-4 mb-5">
-                <div className="text-xs text-[#3e5f44]/60">Activity</div>
-                <div className="text-sm font-semibold text-[#3e5f44] mt-1">
+              <div className="bg-[#bedef6]/40 rounded-2xl p-4 mb-5">
+                <div className="text-xs text-[#112d68]/60">Activity</div>
+                <div className="text-sm font-semibold text-[#112d68] mt-1">
                   {viewing.description}
                 </div>
               </div>
@@ -547,10 +547,10 @@ function ActivityLogsTab() {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className="flex items-center justify-between gap-4 border-b border-[#c7eabb]/30 pb-2 last:border-0"
+                    className="flex items-center justify-between gap-4 border-b border-[#bedef6]/30 pb-2 last:border-0"
                   >
-                    <dt className="text-[#3e5f44]/60 shrink-0">{label}</dt>
-                    <dd className="font-semibold text-[#3e5f44] text-right">
+                    <dt className="text-[#112d68]/60 shrink-0">{label}</dt>
+                    <dd className="font-semibold text-[#112d68] text-right">
                       {value}
                     </dd>
                   </div>
@@ -559,7 +559,7 @@ function ActivityLogsTab() {
 
               <button
                 onClick={() => setViewing(null)}
-                className="w-full mt-6 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
+                className="w-full mt-6 py-2.5 rounded-xl bg-[#112d68] text-white font-semibold text-sm hover:bg-[#2776c0] transition-colors"
               >
                 Close
               </button>
@@ -593,16 +593,16 @@ function RedemptionsTab() {
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#dbe6db] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
 
-      <h2 className="text-xl font-bold text-[#3e5f44] mb-6">
+      <h2 className="text-xl font-bold text-[#112d68] mb-6">
         Redemption Logs
       </h2>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[620px]">
           <thead>
-            <tr className="text-left text-[#6f876f] border-b">
+            <tr className="text-left text-[#4d6d85] border-b">
               <th className="py-3">Student</th>
               <th>Reward</th>
               <th>Points</th>
@@ -613,7 +613,7 @@ function RedemptionsTab() {
           <tbody>
             {redemptions.length === 0 ? (
               <tr>
-                <td colSpan="4" className="py-6 text-center text-[#6f876f]">
+                <td colSpan="4" className="py-6 text-center text-[#4d6d85]">
                   No redemptions found
                 </td>
               </tr>
@@ -621,7 +621,7 @@ function RedemptionsTab() {
               redemptions.map((r, idx) => (
                 <tr key={r.id || idx} className="border-b">
 
-                  <td className="py-3 text-[#3e5f44] font-medium">
+                  <td className="py-3 text-[#112d68] font-medium">
                     {r.student}
                   </td>
 
@@ -983,15 +983,15 @@ function RedemptionFlow() {
   }, []);
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#dbe6db] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8">
-        <h2 className="text-2xl font-bold text-[#3e5f44]">
+        <h2 className="text-2xl font-bold text-[#112d68]">
           Redemption Terminal
         </h2>
         {(isScanning || activeStudent || isConfirmingRedeem) && !successToast && (
           <button
             onClick={isConfirmingRedeem ? handleCancelRedemption : resetFlow}
-            className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold"
+            className="bg-[#bedef6] text-[#112d68] px-4 py-2 rounded-xl text-sm font-semibold"
           >
             ← Cancel
           </button>
@@ -1015,18 +1015,18 @@ function RedemptionFlow() {
       {/* Step 1: Idle / Tap to Identify */}
       {!isScanning && !activeStudent && !isConfirmingRedeem && !successToast && (
         <div className="text-center py-7 sm:py-12">
-          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-5 sm:mb-8">
-            <CreditCardIcon className="w-12 h-12 sm:w-16 sm:h-16 text-[#3e5f44]" />
+          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#bedef6] rounded-full flex items-center justify-center mb-5 sm:mb-8">
+            <CreditCardIcon className="w-12 h-12 sm:w-16 sm:h-16 text-[#112d68]" />
           </div>
-          <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
+          <h3 className="text-2xl font-bold text-[#112d68] mb-4">
             Tap Student Card to Begin
           </h3>
-          <p className="text-[#6f876f] mb-8 max-w-md mx-auto">
+          <p className="text-[#4d6d85] mb-8 max-w-md mx-auto">
             Have the student tap their RFID card on the reader to start the redemption process
           </p>
           <button
             onClick={startIdentifyScan}
-            className="w-full sm:w-auto bg-[#3e5f44] text-white px-6 sm:px-12 py-4 sm:py-6 rounded-2xl font-semibold text-base sm:text-xl"
+            className="w-full sm:w-auto bg-[#112d68] text-white px-6 sm:px-12 py-4 sm:py-6 rounded-2xl font-semibold text-base sm:text-xl"
           >
             <CreditCardIcon className="w-5 h-5 inline mr-2" />
             Tap Card
@@ -1037,10 +1037,10 @@ function RedemptionFlow() {
       {/* Step 1: Identifying (Scanning) */}
       {isScanning && !activeStudent && (
         <div className="text-center py-7 sm:py-12">
-          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-5 sm:mb-8">
-            <Loader2Icon className="w-16 h-16 animate-spin text-[#3e5f44]" />
+          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#bedef6] rounded-full flex items-center justify-center mb-5 sm:mb-8">
+            <Loader2Icon className="w-16 h-16 animate-spin text-[#112d68]" />
           </div>
-          <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
+          <h3 className="text-2xl font-bold text-[#112d68] mb-4">
             Waiting for student card tap on reader...
           </h3>
         </div>
@@ -1050,29 +1050,29 @@ function RedemptionFlow() {
       {activeStudent && !isConfirmingRedeem && !successToast && (
         <div>
           {/* Student Info Card */}
-          <div className="bg-[#e8f5bd] rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="bg-[#bedef6] rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#3e5f44]">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#112d68]">
                 {getStudentInitials(activeStudent)}
               </div>
               <div>
-                <h4 className="text-lg font-bold text-[#3e5f44]">
+                <h4 className="text-lg font-bold text-[#112d68]">
                   {getStudentFullName(activeStudent)}
                 </h4>
-                <p className="text-sm text-[#6f876f]">
+                <p className="text-sm text-[#4d6d85]">
                   {getStudentGradeLabel(activeStudent)} • {getStudentSectionName(activeStudent)}
                 </p>
               </div>
               <div className="sm:ml-auto sm:text-right">
-                <div className="text-2xl font-bold text-[#3e5f44]">
+                <div className="text-2xl font-bold text-[#112d68]">
                   {calculateStudentPoints(activeStudent)} points
                 </div>
-                <div className="text-xs text-[#6f876f]">Available Balance</div>
+                <div className="text-xs text-[#4d6d85]">Available Balance</div>
               </div>
             </div>
           </div>
 
-          <h3 className="text-xl font-bold text-[#3e5f44] mb-4">Select a Reward</h3>
+          <h3 className="text-xl font-bold text-[#112d68] mb-4">Select a Reward</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rewards
               .filter(r => r.status === 'Active' && r.stock > 0)
@@ -1087,15 +1087,15 @@ function RedemptionFlow() {
                     onClick={() => canAfford && handleSelectReward(reward)}
                     className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${!canAfford
                       ? 'border-[#e0e0e0] bg-gray-50 opacity-60 cursor-not-allowed'
-                      : 'border-[#dbe6db] hover:border-[#3e5f44]'
+                      : 'border-[#bedef6] hover:border-[#112d68]'
                     }`}
                   >
-                    <h4 className="font-bold text-[#3e5f44] mb-1">{reward.name}</h4>
+                    <h4 className="font-bold text-[#112d68] mb-1">{reward.name}</h4>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#6f876f]">
+                      <span className="text-sm text-[#4d6d85]">
                         <CoinsIcon className="w-3.5 h-3.5 inline mr-1" /> {rewardPoints} points
                       </span>
-                      <span className="text-xs text-[#6f876f]">
+                      <span className="text-xs text-[#4d6d85]">
                         Stock: {reward.stock}
                       </span>
                     </div>
@@ -1116,18 +1116,18 @@ function RedemptionFlow() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
             <div className="text-center py-4">
-              <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#e8f5bd] rounded-full flex items-center justify-center mb-6">
-                <Loader2Icon className="w-12 h-12 sm:w-16 sm:h-16 animate-spin text-[#3e5f44]" />
+              <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto bg-[#bedef6] rounded-full flex items-center justify-center mb-6">
+                <Loader2Icon className="w-12 h-12 sm:w-16 sm:h-16 animate-spin text-[#112d68]" />
               </div>
-              <h3 className="text-2xl font-bold text-[#3e5f44] mb-4">
+              <h3 className="text-2xl font-bold text-[#112d68] mb-4">
                 Confirming transaction for {selectedReward.name}
               </h3>
-              <p className="text-[#6f876f] mb-8">
+              <p className="text-[#4d6d85] mb-8">
                 Cost: {selectedReward.points || selectedReward.points_cost || selectedReward.points_required} Points. Please have the same student tap their card once to confirm and complete this purchase. This confirmation can only be processed once.
               </p>
               <button
                 onClick={handleCancelRedemption}
-                className="w-full py-3 rounded-xl border border-[#3e5f44] text-[#3e5f44] font-semibold"
+                className="w-full py-3 rounded-xl border border-[#112d68] text-[#112d68] font-semibold"
               >
                 Cancel
               </button>
@@ -1142,10 +1142,10 @@ function RedemptionFlow() {
           <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
             <CheckIcon className="w-12 h-12 text-green-700" />
           </div>
-          <h3 className="text-2xl font-bold text-[#3e5f44] mb-3">
+          <h3 className="text-2xl font-bold text-[#112d68] mb-3">
             Redemption Complete!
           </h3>
-          <p className="text-[#6f876f] mb-8">
+          <p className="text-[#4d6d85] mb-8">
             {getStudentFullName(activeStudent)} has redeemed {selectedReward?.name}
           </p>
         </div>
@@ -1167,7 +1167,7 @@ export function Logs() {
     <div className="space-y-4 sm:space-y-6 min-w-0">
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl p-2 flex sm:inline-flex gap-2 border border-[#dbe6db] overflow-x-auto max-w-full" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-2xl p-2 flex sm:inline-flex gap-2 border border-[#bedef6] overflow-x-auto max-w-full" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         {[
           { key: 'activity', label: 'Activity Logs' },
           { key: 'redeem', label: 'Redemption Terminal' },
@@ -1177,8 +1177,8 @@ export function Logs() {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 sm:px-5 py-2 text-sm rounded-xl whitespace-nowrap flex-1 sm:flex-none ${activeTab === tab.key
-              ? 'bg-[#3e5f44] text-white font-semibold'
-              : 'text-[#6f876f]'
+              ? 'bg-[#112d68] text-white font-semibold'
+              : 'text-[#4d6d85]'
             }`}
           >
             {tab.label}

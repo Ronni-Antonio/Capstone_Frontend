@@ -4,16 +4,16 @@ import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
 const COLORS = {
   white: '#ffffff',
-  dark: '#3e5f44',
-  darkMuted: 'rgba(62,95,68,0.6)',
-  mintLight: 'rgba(199,234,187,0.4)',
-  mintMuted: 'rgba(199,234,187,0.6)',
-  limeLight: 'rgba(232,245,189,0.6)',
-  ivory: '#fcfcf7',
-  sage: '#5a7c61',
-  bg: '#f7f8f3',
-  success: '#166534',
-  successBg: '#dcfce7',
+  dark: '#112d68',
+  darkMuted: 'rgba(17,45,104,0.6)',
+  mintLight: 'rgba(190,222,246,0.4)',
+  mintMuted: 'rgba(190,222,246,0.6)',
+  limeLight: 'rgba(190,222,246,0.6)',
+  ivory: '#f4fcfc',
+  sage: '#2776c0',
+  bg: '#f4fcfc',
+  success: '#2776c0',
+  successBg: '#bedef6',
   danger: '#b91c1c',
   dangerBg: '#fef2f2'
 };
@@ -447,7 +447,7 @@ export default function Profile() {
   };
 
   // Pre-compiled style layouts for component layout rendering setup logic
-  const cancelButtonStyle = { padding: '10px 16px', borderRadius: '12px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: '500', fontSize: '14px' };
+  const cancelButtonStyle = { padding: '10px 16px', borderRadius: '12px', border: '1px solid #bedef6', background: '#fff', cursor: 'pointer', fontWeight: '500', fontSize: '14px' };
   const confirmButtonStyle = { ...buttonStyle, background: COLORS.dark };
 
   return (
@@ -521,7 +521,7 @@ export default function Profile() {
                 value={profile.email}
                 disabled
                 placeholder="Email Address"
-                style={{ ...inputStyle, paddingRight: '85px', backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                style={{ ...inputStyle, paddingRight: '85px', backgroundColor: '#f4fcfc', cursor: 'not-allowed' }}
               />
               <button 
                 type="button"
@@ -623,24 +623,24 @@ export default function Profile() {
               </div>
 
               {/* Password complexity and match indication */}
-              <div style={{ background: '#f9fafb', padding: '14px', borderRadius: '12px', marginTop: '12px', marginBottom: '12px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ background: '#f4fcfc', padding: '14px', borderRadius: '12px', marginTop: '12px', marginBottom: '12px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #bedef6' }}>
                 <div style={{ fontWeight: '600', color: COLORS.dark, marginBottom: '2px' }}>Password complexity requirements:</div>
-                <div style={{ color: changePasswordRules.minLength ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: changePasswordRules.minLength ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{changePasswordRules.minLength ? '✓' : '○'}</span> Has Minimum of 12 characters
                 </div>
-                <div style={{ color: changePasswordRules.hasLower ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: changePasswordRules.hasLower ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{changePasswordRules.hasLower ? '✓' : '○'}</span> Has At least one small character
                 </div>
-                <div style={{ color: changePasswordRules.hasUpper ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: changePasswordRules.hasUpper ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{changePasswordRules.hasUpper ? '✓' : '○'}</span> Has At least one capital character
                 </div>
-                <div style={{ color: changePasswordRules.hasNumber ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: changePasswordRules.hasNumber ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{changePasswordRules.hasNumber ? '✓' : '○'}</span> Has At least one number
                 </div>
-                <div style={{ color: changePasswordRules.hasSpecial ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: changePasswordRules.hasSpecial ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{changePasswordRules.hasSpecial ? '✓' : '○'}</span> Has Special characters
                 </div>
-                <div style={{ color: (password.newPass === password.confirmPass && password.newPass.length > 0) ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: (password.newPass === password.confirmPass && password.newPass.length > 0) ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{(password.newPass === password.confirmPass && password.newPass.length > 0) ? '✓' : '○'}</span> Passwords match
                 </div>
               </div>
@@ -689,7 +689,7 @@ export default function Profile() {
                     border: 'none',
                     borderRadius: '999px',
                     cursor: 'pointer',
-                    background: security[item.key] ? COLORS.sage : '#d1d5db',
+                    background: security[item.key] ? COLORS.sage : '#bedef6',
                     position: 'relative',
                     transition: '.2s'
                   }}
@@ -743,7 +743,7 @@ export default function Profile() {
           <div style={{ ...modalBoxStyle, position: 'relative' }}>
             <button 
               onClick={() => setIsEmailModalOpen(false)}
-              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#8fa6b9' }}
             >
               &times;
             </button>
@@ -789,7 +789,7 @@ export default function Profile() {
           <div style={{ ...modalBoxStyle, position: 'relative' }}>
             <button 
               onClick={() => setIsOtpModalOpen(false)}
-              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#8fa6b9' }}
             >
               &times;
             </button>
@@ -823,7 +823,7 @@ export default function Profile() {
           <div style={{ ...modalBoxStyle, position: 'relative' }}>
             <button 
               onClick={() => setIsNewPasswordModalOpen(false)}
-              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#8fa6b9' }}
             >
               &times;
             </button>
@@ -867,24 +867,24 @@ export default function Profile() {
                 </button>
               </div>
 
-              <div style={{ background: '#f9fafb', padding: '14px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ background: '#f4fcfc', padding: '14px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #bedef6' }}>
                 <div style={{ fontWeight: '600', color: COLORS.dark, marginBottom: '2px' }}>Password complexity requirements:</div>
-                <div style={{ color: rules.minLength ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: rules.minLength ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{rules.minLength ? '✓' : '○'}</span> Has Minimum of 12 characters
                 </div>
-                <div style={{ color: rules.hasLower ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: rules.hasLower ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{rules.hasLower ? '✓' : '○'}</span> Has At least one small character
                 </div>
-                <div style={{ color: rules.hasUpper ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: rules.hasUpper ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{rules.hasUpper ? '✓' : '○'}</span> Has At least one capital character
                 </div>
-                <div style={{ color: rules.hasNumber ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: rules.hasNumber ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{rules.hasNumber ? '✓' : '○'}</span> Has At least one number
                 </div>
-                <div style={{ color: rules.hasSpecial ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: rules.hasSpecial ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{rules.hasSpecial ? '✓' : '○'}</span> Has Special characters
                 </div>
-                <div style={{ color: (newPasswordInput === confirmNewPasswordInput && newPasswordInput.length > 0) ? COLORS.success : '#6b7280', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ color: (newPasswordInput === confirmNewPasswordInput && newPasswordInput.length > 0) ? COLORS.success : '#8fa6b9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{(newPasswordInput === confirmNewPasswordInput && newPasswordInput.length > 0) ? '✓' : '○'}</span> Passwords match
                 </div>
               </div>
@@ -975,7 +975,7 @@ export default function Profile() {
                 setPasswordOtpCode('');
                 setPasswordOtpError('');
               }}
-              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#8fa6b9' }}
             >
               &times;
             </button>
@@ -1061,14 +1061,14 @@ const inputStyle = {
   padding: '12px',
   paddingRight: '40px', 
   borderRadius: '12px',
-  border: '1px solid rgba(199,234,187,.8)',
+  border: '1px solid rgba(190,222,246,.8)',
   outline: 'none',
   boxSizing: 'border-box',
   fontSize: '14px'
 };
 
 const buttonStyle = {
-  background: '#3e5f44',
+  background: '#112d68',
   color: '#fff',
   border: 'none',
   padding: '12px',

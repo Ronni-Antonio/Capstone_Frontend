@@ -52,10 +52,10 @@ function AppContent({ activePage, setActivePage, handleLogout, renderPageContent
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f7f8f3] px-5 text-center font-sans">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 border-[6px] border-[#c7eabb] border-t-[#3e5f44] rounded-full animate-spin mb-6" />
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#3e5f44]">Loading Plink...</h2>
-        <p className="text-sm text-[#3e5f44]/70 mt-2">Getting your recycling data ready</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4fcfc] px-5 text-center font-sans">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 border-[6px] border-[#bedef6] border-t-[#112d68] rounded-full animate-spin mb-6" />
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#112d68]">Loading Plink...</h2>
+        <p className="text-sm text-[#112d68]/70 mt-2">Getting your recycling data ready</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ function AppContent({ activePage, setActivePage, handleLogout, renderPageContent
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f8f3]">
+    <div className="min-h-screen bg-[#f4fcfc]">
       <Sidebar
         activePage={activePage}
         setActivePage={navigate}
@@ -96,7 +96,7 @@ function AppContent({ activePage, setActivePage, handleLogout, renderPageContent
           />
 
           <div className="flex-1 mt-4 sm:mt-5 min-w-0">
-            <Suspense fallback={<div className="p-6 sm:p-8 text-[#3e5f44]/70">Loading page...</div>}>
+            <Suspense fallback={<div className="p-6 sm:p-8 text-[#112d68]/70">Loading page...</div>}>
               {renderPageContent()}
             </Suspense>
           </div>
@@ -141,9 +141,9 @@ function App() {
         return <Logs />;
       default:
         return (
-          <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-[rgba(199,234,187,0.4)] shadow-sm">
-            <h2 className="text-xl font-bold capitalize text-[#3e5f44]">{activePage}</h2>
-            <p className="mt-2 text-sm text-[#3e5f44]/70">This screen tab view is successfully linked!</p>
+          <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-[rgba(190,222,246,0.4)] shadow-sm">
+            <h2 className="text-xl font-bold capitalize text-[#112d68]">{activePage}</h2>
+            <p className="mt-2 text-sm text-[#112d68]/70">This screen tab view is successfully linked!</p>
           </div>
         );
     }

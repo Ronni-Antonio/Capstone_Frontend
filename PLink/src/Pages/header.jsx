@@ -22,17 +22,17 @@ export function Header({ activePage, setActivePage, onOpenMobile }) {
         <button
           type="button"
           onClick={onOpenMobile}
-          className="lg:hidden w-10 h-10 shrink-0 rounded-xl border border-[#dbe6db] bg-white flex items-center justify-center shadow-sm active:scale-95 transition"
+          className="lg:hidden w-10 h-10 shrink-0 rounded-xl border border-[#bedef6] bg-white flex items-center justify-center shadow-sm active:scale-95 transition"
           aria-label="Open navigation"
         >
-          <MenuIcon className="w-5 h-5 text-[#2d4a33]" />
+          <MenuIcon className="w-5 h-5 text-[#040f36]" />
         </button>
 
         <div className="min-w-0">
-          <h1 className="m-0 text-xl sm:text-2xl lg:text-3xl font-bold text-[#2d4a33] tracking-tight break-words">
+          <h1 className="m-0 text-xl sm:text-2xl lg:text-3xl font-bold text-[#040f36] tracking-tight break-words">
             {meta.title}
           </h1>
-          <p className="m-0 mt-1 text-xs sm:text-sm font-medium text-[#7a947e] leading-snug">
+          <p className="m-0 mt-1 text-xs sm:text-sm font-medium text-[#8fa6b9] leading-snug">
             {meta.subtitle}
           </p>
         </div>
@@ -40,10 +40,10 @@ export function Header({ activePage, setActivePage, onOpenMobile }) {
 
       <button
         onClick={() => setActivePage('notifications')}
-        className="relative w-10 h-10 shrink-0 rounded-xl border border-[#dbe6db] bg-white flex items-center justify-center cursor-pointer shadow-sm hover:bg-gray-50 active:scale-95 transition"
+        className="relative w-10 h-10 shrink-0 rounded-xl border border-[#bedef6] bg-white flex items-center justify-center cursor-pointer shadow-sm hover:bg-gray-50 active:scale-95 transition"
         aria-label="Notifications"
       >
-        <BellIcon className="w-5 h-5 text-[#2d4a33]" />
+        <BellIcon className="w-5 h-5 text-[#040f36]" />
         <span className="absolute -top-1.5 -right-1.5 bg-[#f04444] text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[14px] text-center">
           3
         </span>

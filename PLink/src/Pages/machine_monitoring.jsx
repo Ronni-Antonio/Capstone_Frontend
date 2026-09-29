@@ -4,13 +4,13 @@ import { RecycleIcon } from 'lucide-react';
 
 const COLORS = {
   white: '#ffffff',
-  dark: '#3e5f44',
-  darkMuted: 'rgba(62,95,68,0.62)',
-  mintLight: 'rgba(199,234,187,0.42)',
-  mintMuted: 'rgba(199,234,187,0.62)',
-  limeLight: 'rgba(232,245,189,0.72)',
-  ivory: '#fcfcf7',
-  sage: '#5a7c61',
+  dark: '#112d68',
+  darkMuted: 'rgba(17,45,104,0.62)',
+  mintLight: 'rgba(190,222,246,0.42)',
+  mintMuted: 'rgba(190,222,246,0.62)',
+  limeLight: 'rgba(190,222,246,0.72)',
+  ivory: '#f4fcfc',
+  sage: '#2776c0',
   redBg: '#fef2f2',
   redText: '#b91c1c',
   amberBg: '#fffbeb',
@@ -39,7 +39,7 @@ const stateStyles = {
   normal: { bg: COLORS.mintMuted, text: COLORS.dark, accent: COLORS.sage },
   almost_full: { bg: COLORS.amberBg, text: COLORS.amberText, accent: '#f59e0b' },
   full: { bg: COLORS.redBg, text: COLORS.redText, accent: '#dc2626' },
-  offline: { bg: '#f1f5f9', text: '#475569', accent: '#64748b' },
+  offline: { bg: '#f4fcfc', text: '#4d6d85', accent: '#4d6d85' },
 };
 
 const compartmentIcon = (category) => category === 'paper' ? '📄' : '♻️';
@@ -105,7 +105,7 @@ function CompartmentCard({ compartment }) {
           <svg width="100%" height="100%" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none" stroke="#e8f5bd" strokeWidth="3"
+              fill="none" stroke="#bedef6" strokeWidth="3"
             />
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -129,7 +129,7 @@ function CompartmentCard({ compartment }) {
           </div>
           <div style={{ height: '18px', background: COLORS.limeLight, borderRadius: '999px', overflow: 'hidden', position: 'relative' }}>
             <div style={{ width: `${fullness}%`, height: '100%', background: styles.accent, borderRadius: '999px', transition: 'width .4s ease' }} />
-            <div style={{ position: 'absolute', left: '80%', top: 0, bottom: 0, width: 1, background: 'rgba(62,95,68,.35)' }} />
+            <div style={{ position: 'absolute', left: '80%', top: 0, bottom: 0, width: 1, background: 'rgba(17,45,104,.35)' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: COLORS.darkMuted, marginTop: '5px' }}>
             <span>0% Empty</span><span>80% Almost Full</span><span>100% Full</span>
@@ -259,14 +259,14 @@ export function MachineMonitoring() {
                 width: '56px',
                 height: '56px',
                 borderRadius: '12px',
-                background: '#EBF5E4',
-                border: '2px solid #A2CB8B',
+                background: '#f4fcfc',
+                border: '2px solid #148bf0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <RecycleIcon className="w-5 h-5 text-[#2F5D3A]" />
+              <RecycleIcon className="w-5 h-5 text-[#112d68]" />
             </div>
 
             <div>
@@ -348,7 +348,7 @@ export function MachineMonitoring() {
             return (
               <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
                 {item.v > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.redText, marginBottom: 2 }}>{item.v}</div>}
-                <div style={{ width: '70%', minWidth: 12, height: item.v === 0 ? 2 : `${heightPercent}%`, background: item.v === 0 ? '#e2e8f0' : '#dc2626', borderRadius: '4px 4px 0 0' }} title={`${item.h}: ${item.v} rejections`} />
+                <div style={{ width: '70%', minWidth: 12, height: item.v === 0 ? 2 : `${heightPercent}%`, background: item.v === 0 ? '#bedef6' : '#dc2626', borderRadius: '4px 4px 0 0' }} title={`${item.h}: ${item.v} rejections`} />
                 <div style={{ fontSize: 10, color: COLORS.dark, marginTop: 6, whiteSpace: 'nowrap' }}>{item.h}</div>
               </div>
             );
