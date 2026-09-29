@@ -256,7 +256,7 @@ export function Settings() {
         <SettingsCard icon={SparklesIcon} title="Point Conversion by Material" desc="Set points for every CNN recyclable class, including dirty/damaged material">
           <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
             {(plasticTypes || []).length === 0 ? (
-              <div className="text-sm text-[#7a947e] py-4">No recyclable categories are available.</div>
+              <div className="text-sm text-[#8fa6b9] py-4">No recyclable categories are available.</div>
             ) : (
               plasticTypes.map((type) => {
                 const typeId =
@@ -329,20 +329,20 @@ export function Settings() {
         </div>
 
         <div className="flex justify-end mb-3">
-          <button type="button" onClick={loadIotDevices} disabled={iotLoading} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#dbe6db] bg-white text-sm font-semibold text-[#2d4a33] disabled:opacity-50">
+          <button type="button" onClick={loadIotDevices} disabled={iotLoading} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#bedef6] bg-white text-sm font-semibold text-[#040f36] disabled:opacity-50">
             <RefreshCwIcon className={`w-4 h-4 ${iotLoading ? 'animate-spin' : ''}`} /> Refresh controllers
           </button>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {iotDevices.map((device) => (
-            <div key={device.controller_code} className="rounded-2xl border border-[#dbe6db] bg-[#f8faf7] p-4 space-y-3">
+            <div key={device.controller_code} className="rounded-2xl border border-[#bedef6] bg-[#f4fcfc] p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <RouterIcon className="w-5 h-5 text-[#3e5f44] shrink-0" />
+                  <RouterIcon className="w-5 h-5 text-[#112d68] shrink-0" />
                   <div>
-                    <div className="font-bold text-[#2d4a33]">{device.device_name}</div>
-                    <div className="text-[11px] text-[#7a947e]">{device.controller_code}</div>
+                    <div className="font-bold text-[#040f36]">{device.device_name}</div>
+                    <div className="text-[11px] text-[#8fa6b9]">{device.controller_code}</div>
                   </div>
                 </div>
                 <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${device.pending ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-700'}`}>
@@ -358,7 +358,7 @@ export function Settings() {
                 onChange={(value) => updateIotDraft(device.controller_code, 'wifi_password', value)}
               />
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#7a947e]">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#8fa6b9]">
                 <span>Desired version: {device.config_version ?? 0}</span>
                 <span>Applied version: {device.applied_version ?? 0}</span>
                 <span>Last seen: {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : 'Never'}</span>
@@ -368,30 +368,30 @@ export function Settings() {
                 type="button"
                 onClick={() => saveIotDevice(device)}
                 disabled={iotSaving === device.controller_code}
-                className="w-full py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm disabled:opacity-60"
+                className="w-full py-2.5 rounded-xl bg-[#112d68] text-white font-semibold text-sm disabled:opacity-60"
               >
                 {iotSaving === device.controller_code ? 'Saving…' : 'Queue Wi-Fi Configuration'}
               </button>
             </div>
           ))}
           {!iotLoading && iotDevices.length === 0 && (
-            <div className="text-sm text-[#7a947e]">No ESP32 controller records found. Run the latest Laravel migrations.</div>
+            <div className="text-sm text-[#8fa6b9]">No ESP32 controller records found. Run the latest Laravel migrations.</div>
           )}
         </div>
       </SettingsCard>
 
       {/* Action Footer */}
-      <div className="flex items-center justify-end gap-3 bg-white rounded-3xl p-4 shadow-sm border border-[#dbe6db]/60 sticky bottom-4">
-        <button className="px-5 py-2.5 bg-[#e8f5bd]/60 text-[#2d4a33] border-none rounded-xl font-semibold text-sm cursor-pointer">Discard</button>
-        <button onClick={handleSaveAll} className="px-6 py-2.5 bg-[#3e5f44] text-white border-none rounded-xl font-semibold text-sm inline-flex items-center gap-2 cursor-pointer">
+      <div className="flex items-center justify-end gap-3 bg-white rounded-3xl p-4 shadow-sm border border-[#bedef6]/60 sticky bottom-4">
+        <button className="px-5 py-2.5 bg-[#bedef6]/60 text-[#040f36] border-none rounded-xl font-semibold text-sm cursor-pointer">Discard</button>
+        <button onClick={handleSaveAll} className="px-6 py-2.5 bg-[#112d68] text-white border-none rounded-xl font-semibold text-sm inline-flex items-center gap-2 cursor-pointer">
           <CheckIcon className="w-4 h-4" /> Save All Settings
         </button>
       </div>
 
       {/* Toast Popup HUD */}
       {toast && toast.show && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-8 sm:right-8 bg-[#3e5f44] text-white px-5 py-3.5 rounded-2xl shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
-          {toast.done ? <CheckIcon className="w-5 h-5 text-[#e8f5bd]" /> : <div className="w-5 h-5 border-2 border-white/30 border-t-[#e8f5bd] rounded-full animate-spin" />}
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-8 sm:right-8 bg-[#112d68] text-white px-5 py-3.5 rounded-2xl shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
+          {toast.done ? <CheckIcon className="w-5 h-5 text-[#bedef6]" /> : <div className="w-5 h-5 border-2 border-white/30 border-t-[#bedef6] rounded-full animate-spin" />}
           <span className="text-sm font-semibold">{toast.msg}</span>
         </div>
       )}
@@ -401,14 +401,14 @@ export function Settings() {
 
 function SettingsCard({ icon: Icon, title, desc, children }) {
   return (
-    <section className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]/60 transition-all duration-300 hover:shadow-md">
+    <section className="bg-white rounded-3xl p-6 shadow-sm border border-[#bedef6]/60 transition-all duration-300 hover:shadow-md">
       <div className="flex items-start gap-3 mb-5">
-        <div className="w-10 h-10 rounded-2xl bg-[#c7eabb]/30 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-[#3e5f44]" />
+        <div className="w-10 h-10 rounded-2xl bg-[#bedef6]/30 flex items-center justify-center shrink-0">
+          <Icon className="w-5 h-5 text-[#112d68]" />
         </div>
         <div>
-          <h3 className="font-bold text-[#2d4a33] text-lg leading-tight">{title}</h3>
-          <p className="text-xs text-[#7a947e] mt-1">{desc}</p>
+          <h3 className="font-bold text-[#040f36] text-lg leading-tight">{title}</h3>
+          <p className="text-xs text-[#8fa6b9] mt-1">{desc}</p>
         </div>
       </div>
       {children}
@@ -419,8 +419,8 @@ function SettingsCard({ icon: Icon, title, desc, children }) {
 function Field({ label, value, onChange }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-[#2d4a33] mb-1.5 block">{label}</span>
-      <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#f4f6f3] border border-[#dbe6db] rounded-xl px-3.5 py-2.5 text-sm text-[#2d4a33] focus:outline-none focus:border-[#5a7c61] transition-colors" />
+      <span className="text-xs font-semibold text-[#040f36] mb-1.5 block">{label}</span>
+      <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-3.5 py-2.5 text-sm text-[#040f36] focus:outline-none focus:border-[#2776c0] transition-colors" />
     </label>
   );
 }
@@ -428,20 +428,20 @@ function Field({ label, value, onChange }) {
 function PasswordField({ label, value, onChange, placeholder }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-[#2d4a33] mb-1.5 block">{label}</span>
-      <input type="password" autoComplete="new-password" value={value || ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#f4f6f3] border border-[#dbe6db] rounded-xl px-3.5 py-2.5 text-sm text-[#2d4a33] focus:outline-none focus:border-[#5a7c61] transition-colors" />
+      <span className="text-xs font-semibold text-[#040f36] mb-1.5 block">{label}</span>
+      <input type="password" autoComplete="new-password" value={value || ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-full bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-3.5 py-2.5 text-sm text-[#040f36] focus:outline-none focus:border-[#2776c0] transition-colors" />
     </label>
   );
 }
 
 function ToggleRow({ label, desc, isOn, onChange }) {
   return (
-    <div className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-[#f4f6f3] transition-colors">
+    <div className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-[#f4fcfc] transition-colors">
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-[#2d4a33]">{label}</div>
-        <div className="text-xs text-[#7a947e]">{desc}</div>
+        <div className="text-sm font-semibold text-[#040f36]">{label}</div>
+        <div className="text-xs text-[#8fa6b9]">{desc}</div>
       </div>
-      <button onClick={() => onChange(!isOn)} role="switch" aria-checked={isOn} className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 cursor-pointer border-none ${isOn ? 'bg-[#5a7c61]' : 'bg-[#c7eabb]/60'}`}>
+      <button onClick={() => onChange(!isOn)} role="switch" aria-checked={isOn} className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 cursor-pointer border-none ${isOn ? 'bg-[#2776c0]' : 'bg-[#bedef6]/60'}`}>
         <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${isOn ? 'left-[22px]' : 'left-0.5'}`} />
       </button>
     </div>
@@ -450,15 +450,15 @@ function ToggleRow({ label, desc, isOn, onChange }) {
 
 function PointRule({ label, desc, value, onChange, min, max }) {
   return (
-    <div className="bg-[#e8f5bd]/20 rounded-2xl p-4 flex items-center justify-between border border-[#dbe6db]/60">
+    <div className="bg-[#bedef6]/20 rounded-2xl p-4 flex items-center justify-between border border-[#bedef6]/60">
       <div className="pr-4">
-        <div className="text-sm font-semibold text-[#2d4a33]">{label}</div>
-        <div className="text-xs text-[#7a947e] mt-0.5">{desc}</div>
+        <div className="text-sm font-semibold text-[#040f36]">{label}</div>
+        <div className="text-xs text-[#8fa6b9] mt-0.5">{desc}</div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <button onClick={() => min !== undefined && value <= min ? null : onChange(value - 1)} className="w-8 h-8 rounded-xl bg-white border border-[#dbe6db] text-[#2d4a33] hover:bg-[#c7eabb]/40 flex items-center justify-center cursor-pointer"><MinusIcon className="w-4 h-4" /></button>
-        <div className="w-16 text-center"><div className={`text-xl font-bold ${value < 0 ? 'text-red-600' : 'text-[#2d4a33]'}`}>{value > 0 ? `+${value}` : value}</div></div>
-        <button onClick={() => max !== undefined && value >= max ? null : onChange(value + 1)} className="w-8 h-8 rounded-xl bg-[#3e5f44] text-white hover:bg-[#5a7c61] flex items-center justify-center cursor-pointer"><PlusIcon className="w-4 h-4" /></button>
+        <button onClick={() => min !== undefined && value <= min ? null : onChange(value - 1)} className="w-8 h-8 rounded-xl bg-white border border-[#bedef6] text-[#040f36] hover:bg-[#bedef6]/40 flex items-center justify-center cursor-pointer"><MinusIcon className="w-4 h-4" /></button>
+        <div className="w-16 text-center"><div className={`text-xl font-bold ${value < 0 ? 'text-red-600' : 'text-[#040f36]'}`}>{value > 0 ? `+${value}` : value}</div></div>
+        <button onClick={() => max !== undefined && value >= max ? null : onChange(value + 1)} className="w-8 h-8 rounded-xl bg-[#112d68] text-white hover:bg-[#2776c0] flex items-center justify-center cursor-pointer"><PlusIcon className="w-4 h-4" /></button>
       </div>
     </div>
   );
@@ -538,35 +538,35 @@ function SectionsManager({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-[#f4f6f3] rounded-xl px-3.5 py-2.5 flex-1 border border-[#dbe6db]">
-          <SearchIcon className="w-4 h-4 text-[#7a947e]" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search sections…" className="bg-transparent outline-none text-sm flex-1 text-[#2d4a33]" />
+        <div className="flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-3.5 py-2.5 flex-1 border border-[#bedef6]">
+          <SearchIcon className="w-4 h-4 text-[#8fa6b9]" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search sections…" className="bg-transparent outline-none text-sm flex-1 text-[#040f36]" />
         </div>
-        <button onClick={() => { setEditing(null); setForm({ name: '' }); setShowModal(true); }} className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3e5f44] text-white rounded-xl font-semibold text-sm border-none cursor-pointer">
+        <button onClick={() => { setEditing(null); setForm({ name: '' }); setShowModal(true); }} className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#112d68] text-white rounded-xl font-semibold text-sm border-none cursor-pointer">
           <PlusIcon className="w-4 h-4" /> Add Section
         </button>
       </div>
 
-      <div className="border border-[#dbe6db]/80 rounded-2xl overflow-hidden">
+      <div className="border border-[#bedef6]/80 rounded-2xl overflow-hidden">
         <table className="w-full border-collapse">
-          <thead className="bg-[#e8f5bd]/40 text-[#2d4a33]">
+          <thead className="bg-[#bedef6]/40 text-[#040f36]">
             <tr>
               <th className="text-left text-[11px] font-semibold uppercase px-4 py-3">Section</th>
               <th className="text-right text-[11px] font-semibold uppercase px-4 py-3">Students</th>
               <th className="text-right text-[11px] font-semibold uppercase px-4 py-3">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#eef2ed]">
+          <tbody className="divide-y divide-[#f4fcfc]">
             {filtered.length === 0 ? (
-              <tr><td colSpan="3" className="px-4 py-8 text-center text-sm text-[#7a947e]">No student sections found.</td></tr>
+              <tr><td colSpan="3" className="px-4 py-8 text-center text-sm text-[#8fa6b9]">No student sections found.</td></tr>
             ) : (
               filtered.map((s, idx) => (
-                <tr key={idx} className="hover:bg-[#f4f6f3]">
-                  <td className="px-4 py-3 text-sm font-semibold text-[#2d4a33]">{s.name}</td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#2d4a33]">{Number(s.students ?? s.student_count ?? s.students_count ?? 0)}</td>
+                <tr key={idx} className="hover:bg-[#f4fcfc]">
+                  <td className="px-4 py-3 text-sm font-semibold text-[#040f36]">{s.name}</td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#040f36]">{Number(s.students ?? s.student_count ?? s.students_count ?? 0)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => { setEditing(s); setForm({ name: s.name }); setShowModal(true); }} className="w-8 h-8 rounded-lg bg-[#e8f5bd]/60 text-[#2d4a33] flex items-center justify-center border-none cursor-pointer"><PencilIcon className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { setEditing(s); setForm({ name: s.name }); setShowModal(true); }} className="w-8 h-8 rounded-lg bg-[#bedef6]/60 text-[#040f36] flex items-center justify-center border-none cursor-pointer"><PencilIcon className="w-3.5 h-3.5" /></button>
                       <button onClick={() => handleDelete(s)} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border-none cursor-pointer"><TrashIcon className="w-3.5 h-3.5" /></button>
                     </div>
                   </td>
@@ -578,18 +578,18 @@ function SectionsManager({
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-[#2d4a33]/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-50 bg-[#040f36]/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 max-w-md w-full max-h-[calc(100dvh-32px)] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-5">
-              <h3 className="font-bold text-[#2d4a33] text-xl">{editing ? 'Edit Section' : 'Add Section'}</h3>
-              <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg hover:bg-[#f4f6f3] flex items-center justify-center border-none cursor-pointer"><XIcon className="w-4 h-4" /></button>
+              <h3 className="font-bold text-[#040f36] text-xl">{editing ? 'Edit Section' : 'Add Section'}</h3>
+              <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg hover:bg-[#f4fcfc] flex items-center justify-center border-none cursor-pointer"><XIcon className="w-4 h-4" /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-[#2d4a33] mb-1.5 block">Section Name</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ name: e.target.value })} className="w-full bg-[#f4f6f3] border border-[#dbe6db] rounded-xl px-4 py-2.5 text-sm" />
+                <label className="text-xs font-semibold text-[#040f36] mb-1.5 block">Section Name</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ name: e.target.value })} className="w-full bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-4 py-2.5 text-sm" />
               </div>
-              <button onClick={save} className="w-full py-2.5 bg-[#3e5f44] text-white rounded-xl font-semibold border-none cursor-pointer">{editing ? 'Save Changes' : 'Add Section'}</button>
+              <button onClick={save} className="w-full py-2.5 bg-[#112d68] text-white rounded-xl font-semibold border-none cursor-pointer">{editing ? 'Save Changes' : 'Add Section'}</button>
             </div>
           </div>
         </div>

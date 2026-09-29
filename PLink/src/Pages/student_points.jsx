@@ -12,13 +12,13 @@ import {
 
 const COLORS = {
   white: '#ffffff',
-  dark: '#3e5f44',
-  darkMuted: 'rgba(62,95,68,0.6)',
-  mintLight: 'rgba(199,234,187,0.4)',
-  mint: '#c7eabb',
-  lime: '#e8f5bd',
-  bg: '#f7f8f3',
-  sage: '#5a7c61'
+  dark: '#112d68',
+  darkMuted: 'rgba(17,45,104,0.6)',
+  mintLight: 'rgba(190,222,246,0.4)',
+  mint: '#bedef6',
+  lime: '#bedef6',
+  bg: '#f4fcfc',
+  sage: '#2776c0'
 };
 
 
@@ -474,14 +474,14 @@ export default function StudentPoints() {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: '#EBF5E4',
-              border: '2px solid #A2CB8B',
+              background: '#f4fcfc',
+              border: '2px solid #148bf0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            <UsersIcon className="w-5 h-5 text-[#2F5D3A]" />
+            <UsersIcon className="w-5 h-5 text-[#112d68]" />
           </div>
 
           <div
@@ -530,14 +530,14 @@ export default function StudentPoints() {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: '#EBF5E4',
-              border: '2px solid #A2CB8B',
+              background: '#f4fcfc',
+              border: '2px solid #148bf0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            <LayersIcon className="w-5 h-5 text-[#2F5D3A]" />
+            <LayersIcon className="w-5 h-5 text-[#112d68]" />
           </div>
 
           <div
@@ -656,7 +656,7 @@ export default function StudentPoints() {
           <thead>
             <tr
               style={{
-                background: '#eef4df'
+                background: '#f4fcfc'
               }}
             >
               <th style={th}>Student Name</th>
@@ -677,7 +677,7 @@ export default function StudentPoints() {
                   key={student.id}
                   style={{
                     borderTop:
-                      '1px solid rgba(199,234,187,0.3)'
+                      '1px solid rgba(190,222,246,0.3)'
                   }}
                 >
                   <td style={td}>
@@ -801,7 +801,7 @@ export default function StudentPoints() {
                   <td
                     style={{
                       ...td,
-                      color: '#6aa96f',
+                      color: '#2776c0',
                       fontWeight: '700'
                     }}
                   >
@@ -819,7 +819,7 @@ export default function StudentPoints() {
                           onClick={() => handleAssignCard(student)}
                           style={{
                             ...actionBtn,
-                            background: '#3e5f44',
+                            background: '#112d68',
                             color: '#fff'
                           }}
                           title="Assign RFID Card"
@@ -1049,8 +1049,8 @@ export default function StudentPoints() {
                   style={{
                     marginTop: '16px',
                     padding: '12px',
-                    background: '#dcfce7',
-                    color: '#166534',
+                    background: '#bedef6',
+                    color: '#2776c0',
                     borderRadius: '12px',
                     fontSize: '14px'
                   }}
@@ -1065,8 +1065,8 @@ export default function StudentPoints() {
                   style={{
                     marginTop: '16px',
                     padding: '12px',
-                    background: '#e0f2fe',
-                    color: '#0369a1',
+                    background: '#bedef6',
+                    color: '#2776c0',
                     borderRadius: '12px',
                     fontSize: '14px'
                   }}
@@ -1107,8 +1107,8 @@ export default function StudentPoints() {
                   style={{
                     marginTop: '12px',
                     padding: '12px',
-                    background: '#dcfce7',
-                    color: '#166534',
+                    background: '#bedef6',
+                    color: '#2776c0',
                     borderRadius: '12px',
                     fontSize: '14px'
                   }}
@@ -1284,7 +1284,7 @@ export default function StudentPoints() {
             {selectedStudent && (
               <div
                 style={{
-                  background: '#eef4df',
+                  background: '#f4fcfc',
                   borderRadius: '16px',
                   padding: '20px',
                   marginBottom: '24px',
@@ -1388,13 +1388,13 @@ export default function StudentPoints() {
 const th = {
   padding: '16px',
   textAlign: 'left',
-  color: '#3e5f44',
+  color: '#112d68',
   fontSize: '13px'
 };
 
 const td = {
   padding: '18px',
-  color: '#3e5f44'
+  color: '#112d68'
 };
 
 const actionBtn = {
@@ -1403,8 +1403,8 @@ const actionBtn = {
   borderRadius: '10px',
   border: 'none',
   cursor: 'pointer',
-  background: '#c7eabb',
-  color: '#3e5f44',
+  background: '#bedef6',
+  color: '#112d68',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -1417,7 +1417,7 @@ const modalInput = {
   width: '100%',
   padding: '12px',
   borderRadius: '12px',
-  border: '1px solid rgba(199,234,187,.5)',
+  border: '1px solid rgba(190,222,246,.5)',
   outline: 'none',
   boxSizing: 'border-box'
 };

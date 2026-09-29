@@ -221,18 +221,18 @@ function RewardsTab() {
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-[#dbe6db] shadow-sm min-h-[520px]">
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-[#bedef6] shadow-sm min-h-[520px]">
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4 sm:gap-5">
         <input
           type="text"
           placeholder="Search rewards..."
-          className="border border-[#dbe6db] rounded-xl px-5 py-3 w-full max-w-xl outline-none text-sm"
+          className="border border-[#bedef6] rounded-xl px-5 py-3 w-full max-w-xl outline-none text-sm"
         />
 
         <button 
           onClick={() => setShowModal(true)}
-          className="bg-[#3e5f44] text-white px-6 py-3 rounded-xl text-sm font-semibold whitespace-nowrap"
+          className="bg-[#112d68] text-white px-6 py-3 rounded-xl text-sm font-semibold whitespace-nowrap"
         >
           + Create Reward
         </button>
@@ -242,7 +242,7 @@ function RewardsTab() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-[#3e5f44] mb-6">Create New Reward</h2>
+            <h2 className="text-2xl font-bold text-[#112d68] mb-6">Create New Reward</h2>
             
             {modalError && (
               <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-xl">
@@ -258,20 +258,20 @@ function RewardsTab() {
             
             <form onSubmit={handleCreateReward} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">
                   Reward Name
                 </label>
                 <input
                   type="text"
                   value={newReward.reward_name}
                   onChange={(e) => setNewReward({ ...newReward, reward_name: e.target.value })}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                   placeholder="Enter reward name"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">
                   Points Cost
                 </label>
                 <input
@@ -279,13 +279,13 @@ function RewardsTab() {
                   min="1"
                   value={newReward.points_cost}
                   onChange={(e) => setNewReward({ ...newReward, points_cost: e.target.value })}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                   placeholder="Enter points cost"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">
                   Stock Quantity
                 </label>
                 <input
@@ -293,14 +293,14 @@ function RewardsTab() {
                   min="1"
                   value={newReward.stock_quantity}
                   onChange={(e) => setNewReward({ ...newReward, stock_quantity: e.target.value })}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                   placeholder="Enter stock quantity"
                 />
               </div>
 
               {/* PRICE ADD START - price input field (not shown in rewards table, only for inventory) */}
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">
                   Price (₱)
                 </label>
                 <input
@@ -309,14 +309,14 @@ function RewardsTab() {
                   step="0.01"
                   value={newReward.price}
                   onChange={(e) => setNewReward({ ...newReward, price: e.target.value })}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                   placeholder="Enter item price (for inventory tracking)"
                 />
               </div>
               {/* PRICE ADD END */}
 
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">
                   Low-stock threshold
                 </label>
                 <input
@@ -325,10 +325,10 @@ function RewardsTab() {
                   step="1"
                   value={newReward.low_stock_threshold}
                   onChange={(e) => setNewReward({ ...newReward, low_stock_threshold: e.target.value })}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                   placeholder="10"
                 />
-                <p className="text-xs text-[#8da28e] mt-1">
+                <p className="text-xs text-[#8fa6b9] mt-1">
                   Admin is notified when stock reaches this amount or lower.
                 </p>
               </div>
@@ -344,13 +344,13 @@ function RewardsTab() {
                     setModalError(null);
                     setModalSuccess(null);
                   }}
-                  className="flex-1 py-3 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold"
+                  className="flex-1 py-3 rounded-xl border border-[#bedef6] text-[#4d6d85] font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-[#3e5f44] text-white font-semibold"
+                  className="flex-1 py-3 rounded-xl bg-[#112d68] text-white font-semibold"
                 >
                   Create Reward
                 </button>
@@ -365,8 +365,8 @@ function RewardsTab() {
       {editingReward && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl max-h-[calc(100dvh-24px)] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-[#3e5f44] mb-2">Edit Reward</h2>
-            <p className="text-sm text-[#8da28e] mb-6">
+            <h2 className="text-2xl font-bold text-[#112d68] mb-2">Edit Reward</h2>
+            <p className="text-sm text-[#8fa6b9] mb-6">
               Update the reward name and points requirement. Inventory uses the same reward record, so name changes are reflected there automatically.
             </p>
 
@@ -376,34 +376,34 @@ function RewardsTab() {
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">Reward Name</label>
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">Reward Name</label>
                 <input
                   type="text"
                   value={editForm.reward_name}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, reward_name: e.target.value }))}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">Points Cost</label>
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">Points Cost</label>
                 <input
                   type="number"
                   min="1"
                   step="1"
                   value={editForm.points_cost}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, points_cost: e.target.value }))}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#6f876f] mb-1">Low-stock threshold</label>
+                <label className="block text-sm font-medium text-[#4d6d85] mb-1">Low-stock threshold</label>
                 <input
                   type="number"
                   min="0"
                   step="1"
                   value={editForm.low_stock_threshold}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, low_stock_threshold: e.target.value }))}
-                  className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                  className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
                 />
               </div>
               <div className="flex gap-3 pt-4">
@@ -413,14 +413,14 @@ function RewardsTab() {
                     setEditingReward(null);
                     setModalError(null);
                   }}
-                  className="flex-1 py-3 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold"
+                  className="flex-1 py-3 rounded-xl border border-[#bedef6] text-[#4d6d85] font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoadingId === (editingReward.reward_id ?? editingReward.id)}
-                  className="flex-1 py-3 rounded-xl bg-[#3e5f44] text-white font-semibold disabled:opacity-60"
+                  className="flex-1 py-3 rounded-xl bg-[#112d68] text-white font-semibold disabled:opacity-60"
                 >
                   {actionLoadingId === (editingReward.reward_id ?? editingReward.id) ? 'Saving…' : 'Save Changes'}
                 </button>
@@ -432,7 +432,7 @@ function RewardsTab() {
 
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[#6f876f] border-b">
+          <tr className="text-left text-[#4d6d85] border-b">
             <th className="py-4">Reward Name</th>
             <th>Points Required</th>
             <th>Stock</th>
@@ -444,14 +444,14 @@ function RewardsTab() {
         <tbody>
           {rewards.length === 0 && (
             <tr>
-              <td colSpan="5" className="py-6 text-center text-[#6f876f]">
+              <td colSpan="5" className="py-6 text-center text-[#4d6d85]">
                 No rewards found
               </td>
             </tr>
           )}
           {rewards.map((r, idx) => (
             <tr key={r.id || r.reward_id || idx} className="border-b">
-              <td className="py-3 text-[#3e5f44] font-medium">{r.name}</td>
+              <td className="py-3 text-[#112d68] font-medium">{r.name}</td>
               <td>{r.points || r.points_required}</td>
               <td>{r.stock}</td>
 
@@ -459,7 +459,7 @@ function RewardsTab() {
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${
                     r.status === 'Active'
-                      ? 'bg-[#e8f5bd] text-[#3e5f44]'
+                      ? 'bg-[#bedef6] text-[#112d68]'
                       : 'bg-gray-200 text-gray-600'
                   }`}
                 >
@@ -739,12 +739,12 @@ function InventoryTab() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-3xl border border-[#dbe6db] shadow-sm p-12 text-center">
+      <div className="bg-white rounded-3xl border border-[#bedef6] shadow-sm p-12 text-center">
         <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
           <AlertCircleIcon className="w-8 h-8 text-red-500" />
         </div>
-        <h3 className="text-lg font-bold text-[#3e5f44] mb-2">Unable to load inventory</h3>
-        <p className="text-sm text-[#8da28e] mb-5 max-w-md mx-auto">{error}</p>
+        <h3 className="text-lg font-bold text-[#112d68] mb-2">Unable to load inventory</h3>
+        <p className="text-sm text-[#8fa6b9] mb-5 max-w-md mx-auto">{error}</p>
         <button
           onClick={() => {
             setError(null);
@@ -752,7 +752,7 @@ function InventoryTab() {
               setError(err.response?.data?.message || err.message || 'Failed to load inventory data');
             });
           }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3e5f44] text-white font-semibold text-sm hover:bg-[#5a7c61] transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#112d68] text-white font-semibold text-sm hover:bg-[#2776c0] transition-colors"
         >
           <RefreshCwIcon className="w-4 h-4" />
           Try Again
@@ -765,31 +765,31 @@ function InventoryTab() {
     <div className="space-y-6">
       {/* Inventory summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-              <ListOrderedIcon className="w-5 h-5 text-[#2F5D3A]" />
+            <div className="w-11 h-11 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+              <ListOrderedIcon className="w-5 h-5 text-[#112d68]" />
             </div>
           </div>
-          <p className="text-sm text-[#7a947e]">Total Items</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
+          <p className="text-sm text-[#8fa6b9]">Total Items</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#112d68]">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
             ) : (
               inventoryItems.length.toLocaleString()
             )}
           </h2>
-          <p className="text-xs text-[#94a894] mt-2">Tracked rewards</p>
+          <p className="text-xs text-[#8fa6b9] mt-2">Tracked rewards</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-              <CircleCheckIcon className="w-5 h-5 text-[#2F5D3A]" />
+            <div className="w-11 h-11 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+              <CircleCheckIcon className="w-5 h-5 text-[#112d68]" />
             </div>
           </div>
-          <p className="text-sm text-[#7a947e]">Total Units</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
+          <p className="text-sm text-[#8fa6b9]">Total Units</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#112d68]">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
             ) : (
@@ -798,16 +798,16 @@ function InventoryTab() {
                 .toLocaleString()
             )}
           </h2>
-          <p className="text-xs text-[#94a894] mt-2">In inventory</p>
+          <p className="text-xs text-[#8fa6b9] mt-2">In inventory</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-              <BellIcon className="w-5 h-5 text-[#2F5D3A]" />
+            <div className="w-11 h-11 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+              <BellIcon className="w-5 h-5 text-[#112d68]" />
             </div>
           </div>
-          <p className="text-sm text-[#7a947e]">Low Stock</p>
+          <p className="text-sm text-[#8fa6b9]">Low Stock</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-amber-700">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
@@ -815,16 +815,16 @@ function InventoryTab() {
               lowStockCount
             )}
           </h2>
-          <p className="text-xs text-[#94a894] mt-2">Below threshold</p>
+          <p className="text-xs text-[#8fa6b9] mt-2">Below threshold</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-              <CircleXIcon className="w-5 h-5 text-[#2F5D3A]" />
+            <div className="w-11 h-11 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+              <CircleXIcon className="w-5 h-5 text-[#112d68]" />
             </div>
           </div>
-          <p className="text-sm text-[#7a947e]">Out of Stock</p>
+          <p className="text-sm text-[#8fa6b9]">Out of Stock</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-red-700">
             {isLoading ? (
               <Loader2Icon className="w-7 h-7 animate-spin opacity-50 inline-block" />
@@ -832,16 +832,16 @@ function InventoryTab() {
               outOfStockCount
             )}
           </h2>
-          <p className="text-xs text-[#94a894] mt-2">Needs restock</p>
+          <p className="text-xs text-[#8fa6b9] mt-2">Needs restock</p>
         </div>
       </div>
 
       {/* Inventory table container */}
-      <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
+      <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
-            <h3 className="text-xl font-bold text-[#3e5f44]">Inventory Items</h3>
-            <p className="text-sm text-[#8da28e] mt-1">
+            <h3 className="text-xl font-bold text-[#112d68]">Inventory Items</h3>
+            <p className="text-sm text-[#8fa6b9] mt-1">
               Stock levels synced from rewards catalog
             </p>
           </div>
@@ -849,8 +849,8 @@ function InventoryTab() {
 
         {/* Search and Filter controls row */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
-          <div className="flex items-center gap-2 bg-[#fcfcf7] rounded-xl px-4 py-2 border border-[#dbe6db] focus-within:border-[#5a7c61] transition-colors">
-            <SearchIcon className="w-4 h-4 text-[#3e5f44]/50" />
+          <div className="flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-4 py-2 border border-[#bedef6] focus-within:border-[#2776c0] transition-colors">
+            <SearchIcon className="w-4 h-4 text-[#112d68]/50" />
             <input
               type="text"
               placeholder="Search inventory..."
@@ -859,14 +859,14 @@ function InventoryTab() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void handleSearch();
               }}
-              className="bg-transparent outline-none text-sm flex-1 placeholder:text-[#3e5f44]/40 text-[#3e5f44] w-56"
+              className="bg-transparent outline-none text-sm flex-1 placeholder:text-[#112d68]/40 text-[#112d68] w-56"
             />
           </div>
 
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="bg-[#3e5f44] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#5a7c61] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+            className="bg-[#112d68] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2776c0] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
           >
             {isApplying ? (
               <Loader2Icon className="w-4 h-4 animate-spin" />
@@ -884,7 +884,7 @@ function InventoryTab() {
                 if (e.target.value) void handleSearch();
               });
             }}
-            className="border border-[#dbe6db] rounded-xl px-4 py-2 outline-none text-sm text-[#3e5f44] bg-white hover:bg-[#fcfcf7] transition-colors"
+            className="border border-[#bedef6] rounded-xl px-4 py-2 outline-none text-sm text-[#112d68] bg-white hover:bg-[#f4fcfc] transition-colors"
           >
             <option value="">Sort by Name</option>
             <option value="name_asc">Ascending (A–Z)</option>
@@ -893,7 +893,7 @@ function InventoryTab() {
 
           <div className="flex items-center gap-2">
             <div className="pt-0.5">
-              <label className="text-xs font-semibold text-[#3e5f44] mb-1 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-[#112d68] mb-1 flex items-center gap-1.5">
                 <CalendarIcon className="w-3.5 h-3.5" /> From
               </label>
               <input
@@ -903,11 +903,11 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="bg-[#fcfcf7] border border-[#dbe6db] rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+                className="bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
             <div className="pt-0.5">
-              <label className="text-xs font-semibold text-[#3e5f44] mb-1 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-[#112d68] mb-1 flex items-center gap-1.5">
                 <CalendarIcon className="w-3.5 h-3.5" /> To
               </label>
               <input
@@ -917,7 +917,7 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="bg-[#fcfcf7] border border-[#dbe6db] rounded-xl px-3.5 py-2 text-sm text-[#3e5f44] focus:outline-none focus:border-[#5a7c61]"
+                className="bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
           </div>
@@ -926,7 +926,7 @@ function InventoryTab() {
             <button
               onClick={handleResetFilters}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold text-xs hover:bg-[#e8f5bd] hover:text-[#3e5f44] hover:border-[#A2CB8B] transition-colors disabled:opacity-40 inline-flex items-center gap-2 mt-6"
+              className="px-4 py-2 rounded-xl border border-[#bedef6] text-[#4d6d85] font-semibold text-xs hover:bg-[#bedef6] hover:text-[#112d68] hover:border-[#148bf0] transition-colors disabled:opacity-40 inline-flex items-center gap-2 mt-6"
             >
               <RefreshCwIcon className="w-3.5 h-3.5" />
               Reset Filters
@@ -937,7 +937,7 @@ function InventoryTab() {
             <button
               onClick={handleExport}
               disabled={isExporting || isLoading}
-              className="bg-[#e8f5bd] text-[#3e5f44] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#d9efa2] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+              className="bg-[#bedef6] text-[#112d68] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#bedef6] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
             >
               {isExporting ? (
                 <Loader2Icon className="w-4 h-4 animate-spin" />
@@ -952,7 +952,7 @@ function InventoryTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[#011400] border-b">
+              <tr className="text-left text-[#040f36] border-b">
                 <th className="py-3 font-semibold uppercase text-xs tracking-wider">
                   Reward
                 </th>
@@ -985,8 +985,8 @@ function InventoryTab() {
                 <tr>
                   <td colSpan="8" className="py-16 text-center">
                     <div className="inline-flex flex-col items-center gap-3">
-                      <Loader2Icon className="w-8 h-8 animate-spin text-[#3e5f44]" />
-                      <span className="text-sm text-[#011400]">Loading inventory…</span>
+                      <Loader2Icon className="w-8 h-8 animate-spin text-[#112d68]" />
+                      <span className="text-sm text-[#040f36]">Loading inventory…</span>
                     </div>
                   </td>
                 </tr>
@@ -995,7 +995,7 @@ function InventoryTab() {
                 <tr>
                   <td
                     colSpan="8"
-                    className="py-10 text-center text-[#011400]"
+                    className="py-10 text-center text-[#040f36]"
                   >
                     No inventory items found
                   </td>
@@ -1004,9 +1004,9 @@ function InventoryTab() {
                 !isLoading && inventoryItems.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b hover:bg-[#fcfcf7] transition-colors"
+                    className="border-b hover:bg-[#f4fcfc] transition-colors"
                   >
-                    <td className="py-4 text-[#011400] font-semibold text-[15px]">
+                    <td className="py-4 text-[#040f36] font-semibold text-[15px]">
                       {item.name}
                     </td>
                     <td
@@ -1015,7 +1015,7 @@ function InventoryTab() {
                           ? 'text-red-700'
                           : item.stocksInHand <= item.lowStockThreshold
                           ? 'text-amber-700'
-                          : 'text-[#011400]'
+                          : 'text-[#040f36]'
                       }`}
                     >
                       {item.stocksInHand.toLocaleString()}
@@ -1035,21 +1035,21 @@ function InventoryTab() {
                         {item.status}
                       </span>
                       {(item.status === 'Low Stock' || item.status === 'Out of Stock') && (
-                        <div className="text-[10px] text-[#8da28e] mt-1">
+                        <div className="text-[10px] text-[#8fa6b9] mt-1">
                           Alert threshold: {item.lowStockThreshold}
                         </div>
                       )}
                     </td>
-                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                    <td className="py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
                       {item.unitPriceDisplay}
                     </td>
-                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                    <td className="py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
                       {item.totalPriceDisplay}
                     </td>
-                    <td className="py-3 text-right text-[#5a7c61] font-semibold whitespace-nowrap">
+                    <td className="py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
                       {item.pointsValue.toLocaleString()} pts
                     </td>
-                    <td className="py-3 text-[#011400] text-xs whitespace-nowrap">
+                    <td className="py-3 text-[#040f36] text-xs whitespace-nowrap">
                       {item.lastStockFormatted}
                     </td>
                     <td className="py-3 text-right whitespace-nowrap">
@@ -1059,7 +1059,7 @@ function InventoryTab() {
                           setRestockQuantity('');
                           setRestockError(null);
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#e8f5bd] text-[#3e5f44] text-xs font-bold hover:bg-[#d9efa2] transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#bedef6] text-[#112d68] text-xs font-bold hover:bg-[#bedef6] transition-colors"
                       >
                         <PackagePlusIcon className="w-4 h-4" />
                         Add Stock
@@ -1073,27 +1073,27 @@ function InventoryTab() {
         </div>
 
         {/* Pagination */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 mt-4 border-t border-[#dbe6db]">
-          <p className="text-xs text-[#011400]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 mt-4 border-t border-[#bedef6]">
+          <p className="text-xs text-[#040f36]">
             Showing{' '}
-            <span className="font-semibold text-[#011400]">{isLoading ? '—' : (inventoryItems.length ? 1 : 0)}</span> –{' '}
-            <span className="font-semibold text-[#011400]">
+            <span className="font-semibold text-[#040f36]">{isLoading ? '—' : (inventoryItems.length ? 1 : 0)}</span> –{' '}
+            <span className="font-semibold text-[#040f36]">
               {isLoading ? '—' : inventoryItems.length}
             </span>{' '}
             of{' '}
-            <span className="font-semibold text-[#011400]">
+            <span className="font-semibold text-[#040f36]">
               {isLoading ? '—' : inventoryItems.length}
             </span>{' '}
             inventory items
           </p>
           <div className="flex items-center gap-2">
-            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#011400] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
+            <button className="w-8 h-8 rounded-lg bg-white border border-[#bedef6] text-[#040f36] hover:bg-[#bedef6] disabled:opacity-40 flex items-center justify-center text-xs">
               ←
             </button>
-            <span className="text-sm font-semibold text-[#011400] px-2">
+            <span className="text-sm font-semibold text-[#040f36] px-2">
               Page 1 of 1
             </span>
-            <button className="w-8 h-8 rounded-lg bg-white border border-[#dbe6db] text-[#011400] hover:bg-[#e8f5bd] disabled:opacity-40 flex items-center justify-center text-xs">
+            <button className="w-8 h-8 rounded-lg bg-white border border-[#bedef6] text-[#040f36] hover:bg-[#bedef6] disabled:opacity-40 flex items-center justify-center text-xs">
               →
             </button>
           </div>
@@ -1107,23 +1107,23 @@ function InventoryTab() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start gap-3 mb-5">
-              <div className="w-11 h-11 rounded-xl bg-[#e8f5bd] flex items-center justify-center text-[#3e5f44] shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#bedef6] flex items-center justify-center text-[#112d68] shrink-0">
                 <PackagePlusIcon className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#3e5f44]">Add Stock</h3>
-                <p className="text-sm text-[#8da28e] mt-1">{restockItem.name}</p>
+                <h3 className="text-xl font-bold text-[#112d68]">Add Stock</h3>
+                <p className="text-sm text-[#8fa6b9] mt-1">{restockItem.name}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-5">
-              <div className="rounded-xl bg-[#f7faf5] border border-[#dbe6db] p-3">
-                <p className="text-xs text-[#8da28e]">Current stock</p>
-                <p className="text-xl font-bold text-[#3e5f44]">{restockItem.stocksInHand}</p>
+              <div className="rounded-xl bg-[#f4fcfc] border border-[#bedef6] p-3">
+                <p className="text-xs text-[#8fa6b9]">Current stock</p>
+                <p className="text-xl font-bold text-[#112d68]">{restockItem.stocksInHand}</p>
               </div>
-              <div className="rounded-xl bg-[#f7faf5] border border-[#dbe6db] p-3">
-                <p className="text-xs text-[#8da28e]">Low-stock threshold</p>
-                <p className="text-xl font-bold text-[#3e5f44]">{restockItem.lowStockThreshold}</p>
+              <div className="rounded-xl bg-[#f4fcfc] border border-[#bedef6] p-3">
+                <p className="text-xs text-[#8fa6b9]">Low-stock threshold</p>
+                <p className="text-xl font-bold text-[#112d68]">{restockItem.lowStockThreshold}</p>
               </div>
             </div>
 
@@ -1134,7 +1134,7 @@ function InventoryTab() {
             )}
 
             <form onSubmit={handleAddStock}>
-              <label className="block text-sm font-semibold text-[#3e5f44] mb-2">Quantity to add</label>
+              <label className="block text-sm font-semibold text-[#112d68] mb-2">Quantity to add</label>
               <input
                 type="number"
                 min="1"
@@ -1143,10 +1143,10 @@ function InventoryTab() {
                 value={restockQuantity}
                 onChange={(event) => setRestockQuantity(event.target.value)}
                 placeholder="e.g. 20"
-                className="w-full border border-[#dbe6db] rounded-xl px-4 py-3 outline-none focus:border-[#3e5f44]"
+                className="w-full border border-[#bedef6] rounded-xl px-4 py-3 outline-none focus:border-[#112d68]"
               />
               {Number(restockQuantity) > 0 && (
-                <p className="text-xs text-[#6f876f] mt-2">
+                <p className="text-xs text-[#4d6d85] mt-2">
                   New stock: <span className="font-bold">{restockItem.stocksInHand + Number(restockQuantity)}</span>
                 </p>
               )}
@@ -1156,14 +1156,14 @@ function InventoryTab() {
                   type="button"
                   disabled={isRestocking}
                   onClick={() => setRestockItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-[#dbe6db] text-[#6f876f] font-semibold disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl border border-[#bedef6] text-[#4d6d85] font-semibold disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRestocking}
-                  className="flex-1 py-3 rounded-xl bg-[#3e5f44] text-white font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-[#112d68] text-white font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2"
                 >
                   {isRestocking ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <PackagePlusIcon className="w-4 h-4" />}
                   {isRestocking ? 'Adding…' : 'Add Stock'}
@@ -1184,78 +1184,78 @@ function InventoryTab() {
 
       {/* Stock value summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
-          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
+          <h3 className="text-lg font-bold text-[#112d68] mb-4">
             Inventory Value by Points
           </h3>
-          <p className="text-sm text-[#8da28e] mb-6">
+          <p className="text-sm text-[#8fa6b9] mb-6">
             Total value of inventory held in points equivalent
           </p>
           <div className="flex items-end gap-4">
             <div>
-              <p className="text-sm text-[#7a947e]">Total Points Value</p>
-              <p className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
+              <p className="text-sm text-[#8fa6b9]">Total Points Value</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#112d68]">
                 {isLoading ? (
                   <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
                 ) : (
                   totalStockValue.toLocaleString()
                 )}
               </p>
-              <p className="text-xs text-[#94a894] mt-1">points equivalent</p>
+              <p className="text-xs text-[#8fa6b9] mt-1">points equivalent</p>
             </div>
             <div className="ml-auto">
-              <div className="w-20 h-20 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-                <CoinsIcon className="w-8 h-8 text-[#2F5D3A]" />
+              <div className="w-20 h-20 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+                <CoinsIcon className="w-8 h-8 text-[#112d68]" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
-          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
+          <h3 className="text-lg font-bold text-[#112d68] mb-4">
             Inventory Value (Monetary)
           </h3>
-          <p className="text-sm text-[#8da28e] mb-6">
+          <p className="text-sm text-[#8fa6b9] mb-6">
             Total cost value of inventory based on unit price
           </p>
           <div className="flex items-end gap-4">
             <div>
-              <p className="text-sm text-[#7a947e]">Total Monetary Value</p>
-              <p className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
+              <p className="text-sm text-[#8fa6b9]">Total Monetary Value</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#112d68]">
                 {isLoading ? (
                   <Loader2Icon className="w-8 h-8 animate-spin opacity-50 inline-block" />
                 ) : (
                   <>₱{totalMonetaryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
                 )}
               </p>
-              <p className="text-xs text-[#94a894] mt-1">Philippine Peso (₱)</p>
+              <p className="text-xs text-[#8fa6b9] mt-1">Philippine Peso (₱)</p>
             </div>
             <div className="ml-auto">
-              <div className="w-20 h-20 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-                <CircleDollarSignIcon className="w-8 h-8 text-[#2F5D3A]" />
+              <div className="w-20 h-20 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+                <CircleDollarSignIcon className="w-8 h-8 text-[#112d68]" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm md:col-span-2">
-          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+        <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm md:col-span-2">
+          <h3 className="text-lg font-bold text-[#112d68] mb-4">
             Stock Health Overview
           </h3>
-          <p className="text-sm text-[#8da28e] mb-6">
+          <p className="text-sm text-[#8fa6b9] mb-6">
             Summary of stock status distribution
           </p>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-[#3e5f44]">In Stock</span>
-                <span className="font-semibold text-[#3e5f44]">
+                <span className="text-[#112d68]">In Stock</span>
+                <span className="font-semibold text-[#112d68]">
                   {isLoading ? '—' : inventoryItems.filter((i) => i.status === 'In Stock').length}
                 </span>
               </div>
-              <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+              <div className="h-3 bg-[#f4fcfc] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#7faa72]"
+                  className="h-full bg-[#2776c0]"
                   style={{
                     width: `${
                       !isLoading && inventoryItems.length > 0
@@ -1271,12 +1271,12 @@ function InventoryTab() {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-[#3e5f44]">Low Stock</span>
+                <span className="text-[#112d68]">Low Stock</span>
                 <span className="font-semibold text-amber-700">
                   {isLoading ? '—' : lowStockCount}
                 </span>
               </div>
-              <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+              <div className="h-3 bg-[#f4fcfc] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-amber-400"
                   style={{
@@ -1291,12 +1291,12 @@ function InventoryTab() {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-[#3e5f44]">Out of Stock</span>
+                <span className="text-[#112d68]">Out of Stock</span>
                 <span className="font-semibold text-red-700">
                   {isLoading ? '—' : outOfStockCount}
                 </span>
               </div>
-              <div className="h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+              <div className="h-3 bg-[#f4fcfc] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-red-400"
                   style={{
@@ -1318,17 +1318,17 @@ function InventoryTab() {
 /* ===================== INVENTORY TAB END ===================== */
 
 /* ===================== REPORTS TAB ===================== */
-function RewardMiniBarChart({ data, valueKey, valueSuffix = '', barColor = '#7faa72' }) {
+function RewardMiniBarChart({ data, valueKey, valueSuffix = '', barColor = '#2776c0' }) {
   const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
   return (
     <div className="relative h-[280px] pt-5 pb-8 pl-10">
-      <div className="absolute left-0 top-5 bottom-8 w-9 flex flex-col justify-between text-[10px] text-[#7a947e] text-right pr-2">
+      <div className="absolute left-0 top-5 bottom-8 w-9 flex flex-col justify-between text-[10px] text-[#8fa6b9] text-right pr-2">
         <span>{max.toLocaleString()}</span>
         <span>{Math.round(max / 2).toLocaleString()}</span>
         <span>0</span>
       </div>
-      <div className="absolute left-10 right-0 top-5 bottom-8 border-l border-b border-[#dbe6db] pointer-events-none">
-        <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-[#dbe6db]" />
+      <div className="absolute left-10 right-0 top-5 bottom-8 border-l border-b border-[#bedef6] pointer-events-none">
+        <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-[#bedef6]" />
       </div>
       <div className="relative h-full flex items-end gap-4">
         {data.map((item) => {
@@ -1336,13 +1336,13 @@ function RewardMiniBarChart({ data, valueKey, valueSuffix = '', barColor = '#7fa
           const height = value > 0 ? Math.max((value / max) * 100, 4) : 1.5;
           return (
             <div key={item.key || item.label} className="flex-1 h-full min-w-0 flex flex-col justify-end items-center gap-2 relative">
-              <span className="text-[11px] font-bold text-[#3e5f44]">{value.toLocaleString()}{valueSuffix}</span>
+              <span className="text-[11px] font-bold text-[#112d68]">{value.toLocaleString()}{valueSuffix}</span>
               <div
                 className="w-[68%] max-w-[58px] rounded-t-lg transition-all"
                 title={`${item.label}: ${value.toLocaleString()}${valueSuffix}`}
                 style={{ height: `${height}%`, minHeight: value > 0 ? '8px' : '3px', background: barColor }}
               />
-              <span className="absolute -bottom-7 text-xs text-[#6f876f] whitespace-nowrap">{item.label}</span>
+              <span className="absolute -bottom-7 text-xs text-[#4d6d85] whitespace-nowrap">{item.label}</span>
             </div>
           );
         })}
@@ -1404,10 +1404,10 @@ function ReportsTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-[#3e5f44]">
+          <h2 className="text-2xl font-bold text-[#112d68]">
             Reports & Analytics
           </h2>
-          <p className="text-sm text-[#6f876f]">
+          <p className="text-sm text-[#4d6d85]">
             Overview of rewards and redemption performance
           </p>
         </div>
@@ -1418,30 +1418,30 @@ function ReportsTab() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Distribution */}
-        <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
-          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+        <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#bedef6] shadow-sm min-h-[360px]">
+          <h3 className="text-lg font-bold text-[#112d68] mb-4">
             Reward Distribution
           </h3>
 
           <div className="space-y-3">
             {distribution.length === 0 ? (
-              <p className="text-[#6f876f] text-sm">No redemption data yet</p>
+              <p className="text-[#4d6d85] text-sm">No redemption data yet</p>
             ) : (
               distribution.slice(0, 5).map((item, idx) => (
                 <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                  <span className="text-sm text-[#3e5f44]">
+                  <span className="text-sm text-[#112d68]">
                     {item.name}
                   </span>
 
                   <div className="flex items-center gap-3 w-1/2">
-                    <div className="flex-1 h-3 bg-[#edf2ea] rounded-full overflow-hidden">
+                    <div className="flex-1 h-3 bg-[#f4fcfc] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-[#7faa72]"
+                        className="h-full bg-[#2776c0]"
                         style={{ width: `${(item.count / maxDist) * 100}%` }}
                       />
                     </div>
 
-                    <span className="text-xs font-semibold text-[#3e5f44] w-10 text-right">
+                    <span className="text-xs font-semibold text-[#112d68] w-10 text-right">
                       {item.count}
                     </span>
                   </div>
@@ -1452,22 +1452,22 @@ function ReportsTab() {
         </div>
 
         {/* Trend (Redemption Count) */}
-        <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#dbe6db] shadow-sm min-h-[360px]">
-          <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+        <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#bedef6] shadow-sm min-h-[360px]">
+          <h3 className="text-lg font-bold text-[#112d68] mb-4">
             Redemption Count (Monthly)
           </h3>
 
-          <RewardMiniBarChart data={monthlyTrend} valueKey="count" barColor="#7faa72" />
+          <RewardMiniBarChart data={monthlyTrend} valueKey="count" barColor="#2776c0" />
         </div>
       </div>
 
       {/* Bottom Chart (Points Redeemed Monthly) */}
-      <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#dbe6db] shadow-sm min-h-[380px]">
-        <h3 className="text-lg font-bold text-[#3e5f44] mb-4">
+      <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#bedef6] shadow-sm min-h-[380px]">
+        <h3 className="text-lg font-bold text-[#112d68] mb-4">
           Points Redeemed (Monthly)
         </h3>
 
-        <RewardMiniBarChart data={monthlyTrend} valueKey="points" valueSuffix=" pts" barColor="#3e5f44" />
+        <RewardMiniBarChart data={monthlyTrend} valueKey="points" valueSuffix=" pts" barColor="#112d68" />
       </div>
 
     </div>
@@ -1578,7 +1578,7 @@ export default function IncentivesRewards() {
     <div className="space-y-6">
 
       {/* Tabs (INVENTORY START - inventory tab added after rewards) */}
-      <div className="bg-white rounded-2xl p-2 inline-flex gap-2 shadow-sm border border-[#dbe6db]">
+      <div className="bg-white rounded-2xl p-2 inline-flex gap-2 shadow-sm border border-[#bedef6]">
         {['dashboard', 'rewards', 'inventory', 'reports'].map(
           (tab) => (
             <button
@@ -1586,8 +1586,8 @@ export default function IncentivesRewards() {
               onClick={() => setActiveTab(tab)}
               className={`px-5 py-2 text-sm rounded-xl capitalize ${
                 activeTab === tab
-                  ? 'bg-[#3e5f44] text-white font-semibold'
-                  : 'text-[#6f876f]'
+                  ? 'bg-[#112d68] text-white font-semibold'
+                  : 'text-[#4d6d85]'
               }`}
             >
               {tab}
@@ -1603,36 +1603,36 @@ export default function IncentivesRewards() {
             {dashboardStats.map((card) => (
               <div
                 key={card.title}
-                className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]"
+                className="bg-white rounded-3xl p-6 shadow-sm border border-[#bedef6]"
               >
                 <div className="flex justify-between items-center mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-[#EBF5E4] border-2 border-[#A2CB8B] flex items-center justify-center">
-                    <card.Icon className="w-5 h-5 text-[#2F5D3A]" />
+                  <div className="w-11 h-11 rounded-xl bg-[#f4fcfc] border-2 border-[#148bf0] flex items-center justify-center">
+                    <card.Icon className="w-5 h-5 text-[#112d68]" />
                   </div>
                 </div>
 
-                <p className="text-sm text-[#7a947e]">{card.title}</p>
+                <p className="text-sm text-[#8fa6b9]">{card.title}</p>
 
-                <h2 className="text-3xl sm:text-4xl font-bold text-[#3e5f44]">
+                <h2 className="text-3xl sm:text-4xl font-bold text-[#112d68]">
                   {card.value}
                 </h2>
 
-                <p className="text-xs text-[#94a894] mt-2">{card.sub}</p>
+                <p className="text-xs text-[#8fa6b9] mt-2">{card.sub}</p>
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
-            <div className="xl:col-span-2 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#dbe6db] shadow-sm">
-              <h3 className="text-2xl font-bold text-[#3e5f44]">
+            <div className="xl:col-span-2 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] shadow-sm">
+              <h3 className="text-2xl font-bold text-[#112d68]">
                 Reward Creation Trend
               </h3>
-              <p className="text-sm text-[#8da28e] mb-8">
+              <p className="text-sm text-[#8fa6b9] mb-8">
                 Rewards created over the last 6 months
               </p>
 
               {totalRewards === 0 ? (
-                <div className="h-[280px] flex items-center justify-center text-sm text-[#8da28e]">
+                <div className="h-[280px] flex items-center justify-center text-sm text-[#8fa6b9]">
                   No rewards found
                 </div>
               ) : (
@@ -1640,12 +1640,12 @@ export default function IncentivesRewards() {
                   {rewardCreationTrend.map((item) => (
                     <div key={item.key} className="flex flex-col items-center flex-1">
                       <div
-                        className="w-full bg-[#7faa72] rounded-t-xl"
+                        className="w-full bg-[#2776c0] rounded-t-xl"
                         style={{
                           height: `${item.value === 0 ? 12 : (item.value / trendMax) * 220}px`,
                         }}
                       />
-                      <span className="mt-3 text-xs text-[#6f876f]">
+                      <span className="mt-3 text-xs text-[#4d6d85]">
                         {item.label}
                       </span>
                     </div>
@@ -1654,30 +1654,30 @@ export default function IncentivesRewards() {
               )}
             </div>
 
-            <div className="bg-white rounded-3xl p-6 border border-[#dbe6db] shadow-sm">
-              <h3 className="text-xl font-bold text-[#3e5f44]">
+            <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
+              <h3 className="text-xl font-bold text-[#112d68]">
                 Current Reward Inventory
               </h3>
-              <p className="text-sm text-[#8da28e] mb-8">
+              <p className="text-sm text-[#8fa6b9] mb-8">
                 Rewards with the highest remaining stock
               </p>
 
               {inventoryData.length === 0 ? (
-                <div className="text-sm text-[#8da28e]">No rewards found</div>
+                <div className="text-sm text-[#8fa6b9]">No rewards found</div>
               ) : (
                 <div className="space-y-6">
                   {inventoryData.map((reward) => (
                     <div key={reward.name}>
                       <div className="flex justify-between text-sm mb-2">
-                        <span className="text-[#3e5f44]">{reward.name}</span>
-                        <span className="font-semibold text-[#3e5f44]">
+                        <span className="text-[#112d68]">{reward.name}</span>
+                        <span className="font-semibold text-[#112d68]">
                           {reward.count}
                         </span>
                       </div>
 
-                      <div className="h-4 bg-[#edf2ea] rounded-full overflow-hidden">
+                      <div className="h-4 bg-[#f4fcfc] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#7faa72]"
+                          className="h-full bg-[#2776c0]"
                           style={{
                             width: `${Math.max(
                               (reward.count / Math.max(...inventoryData.map((item) => item.count), 1)) * 100,
@@ -1694,11 +1694,11 @@ export default function IncentivesRewards() {
           </div>
 
           {totalRewards > 0 && (
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#dbe6db]">
-              <h3 className="text-lg font-bold text-[#3e5f44]">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#bedef6]">
+              <h3 className="text-lg font-bold text-[#112d68]">
                 Highest Points Reward
               </h3>
-              <p className="text-sm text-[#8da28e] mt-2">
+              <p className="text-sm text-[#8fa6b9] mt-2">
                 {highestPointReward.name} requires {highestPointReward.points.toLocaleString()} points.
               </p>
             </div>

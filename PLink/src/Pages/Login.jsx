@@ -17,22 +17,22 @@ import {
   XIcon,
 } from 'lucide-react'
 
-// Internal CSS variables mapping matching the green/eco palette design system
+// Internal CSS variables mapped to the PLink blue palette design system
 const ecoStyles = `
   :root {
-    --eco-ivory: #fcfdf7;
-    --eco-light: #e8f5bd;
-    --eco-lime: #c7eabb;
-    --eco-mint: #a2cb8b;
-    --eco-sage: #84b179;
-    --eco-dark: #3e5f44;
+    --eco-ivory: #f4fcfc;
+    --eco-light: #bedef6;
+    --eco-lime: #bedef6;
+    --eco-mint: #148bf0;
+    --eco-sage: #2776c0;
+    --eco-dark: #112d68;
   }
 
   .login-container {
     min-height: 100vh;
     width: 100%;
     background-color: var(--eco-ivory) !important;
-    color: #3e5f44 !important;
+    color: #112d68 !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,8 +80,8 @@ const ecoStyles = `
     background: rgba(255, 255, 255, 0.8) !important;
     backdrop-filter: blur(24px);
     border-radius: 2.5rem;
-    box-shadow: 0 25px 50px -12px rgba(62, 95, 68, 0.15) !important;
-    border: 1px solid rgba(162, 203, 139, 0.4);
+    box-shadow: 0 25px 50px -12px rgba(17, 45, 104, 0.15) !important;
+    border: 1px solid rgba(20, 139, 240, 0.4);
     overflow: hidden;
     display: grid;
     z-index: 10;
@@ -122,7 +122,7 @@ const ecoStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(199, 234, 187, 0.2);
+    background: rgba(190, 222, 246, 0.2);
     backdrop-filter: blur(4px);
   }
 
@@ -142,7 +142,7 @@ const ecoStyles = `
   .login-container p.tagline-p {
     font-size: 0.875rem !important;
     margin-top: 0.5rem !important;
-    color: rgba(162, 203, 139, 0.9) !important;
+    color: rgba(20, 139, 240, 0.9) !important;
     line-height: 1.5 !important;
   }
 
@@ -216,7 +216,7 @@ const ecoStyles = `
 
   .login-container p.sub-p {
     font-size: 0.875rem !important;
-    color: rgba(62, 95, 68, 0.6) !important;
+    color: rgba(17, 45, 104, 0.6) !important;
     margin-top: 0.5rem !important;
     line-height: 1.5 !important;
   }
@@ -224,7 +224,7 @@ const ecoStyles = `
   .demo-btn {
     font-size: 11px;
     font-weight: 600;
-    background-color: rgba(199, 234, 187, 0.6);
+    background-color: rgba(190, 222, 246, 0.6);
     color: var(--eco-dark);
     border: none;
     padding: 0.375rem 0.75rem;
@@ -252,7 +252,7 @@ const ecoStyles = `
     align-items: center;
     gap: 0.5rem;
     background-color: var(--eco-ivory) !important;
-    border: 1px solid rgba(162, 203, 139, 0.5);
+    border: 1px solid rgba(20, 139, 240, 0.5);
     border-radius: 0.75rem;
     padding: 0.625rem 0.875rem;
     transition: border-color 0.2s;
@@ -270,7 +270,7 @@ const ecoStyles = `
     padding: 0 !important;
     box-shadow: none !important;
   }
-  .custom-input::placeholder { color: rgba(62, 95, 68, 0.4) !important; }
+  .custom-input::placeholder { color: rgba(17, 45, 104, 0.4) !important; }
 
   .eye-toggle-btn {
     width: 1.75rem;
@@ -281,11 +281,11 @@ const ecoStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(62, 95, 68, 0.6);
+    color: rgba(17, 45, 104, 0.6);
     cursor: pointer;
     transition: background-color 0.2s;
   }
-  .eye-toggle-btn:hover { background-color: rgba(162, 203, 139, 0.6); }
+  .eye-toggle-btn:hover { background-color: rgba(20, 139, 240, 0.6); }
 
   .row-flex {
     display: flex;
@@ -341,11 +341,11 @@ const ecoStyles = `
     border: none;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 4px 6px -1px rgba(62, 95, 68, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(17, 45, 104, 0.1);
   }
   .submit-btn:hover:not(:disabled) {
     background-color: var(--eco-sage) !important;
-    box-shadow: 0 10px 15px -3px rgba(62, 95, 68, 0.2);
+    box-shadow: 0 10px 15px -3px rgba(17, 45, 104, 0.2);
   }
   .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -364,7 +364,7 @@ const ecoStyles = `
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem;
-    background-color: rgba(199, 234, 187, 0.4);
+    background-color: rgba(190, 222, 246, 0.4);
     border-radius: 0.75rem;
   }
 
@@ -373,7 +373,7 @@ const ecoStyles = `
     position: fixed;
     inset: 0;
     z-index: 50;
-    background-color: rgba(62, 95, 68, 0.4);
+    background-color: rgba(17, 45, 104, 0.4);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -387,7 +387,7 @@ const ecoStyles = `
     padding: 1.75rem;
     max-w: 24rem;
     width: 100%;
-    box-shadow: 0 25px 50px -12px rgba(62, 95, 68, 0.15);
+    box-shadow: 0 25px 50px -12px rgba(17, 45, 104, 0.15);
     position: relative;
   }
 
@@ -629,7 +629,7 @@ export default function Login({ onLogin }) {
               <div style={{ fontWeight: '700', fontSize: '1.5rem', lineHeight: '1.25', color: '#ffffff' }}>
                 Plink
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(162, 203, 139, 0.8)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(20, 139, 240, 0.8)' }}>
                 Smart Eco Recycling
               </div>
             </div>
@@ -711,7 +711,7 @@ export default function Login({ onLogin }) {
                 <label className="input-group-label">
                   <span className="input-span">Password</span>
                   <div className="input-field-container">
-                    <LockIcon style={{ width: '1rem', height: '1rem', color: 'rgba(62, 95, 68, 0.5)', flexShrink: 0 }} />
+                    <LockIcon style={{ width: '1rem', height: '1rem', color: 'rgba(17, 45, 104, 0.5)', flexShrink: 0 }} />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
@@ -743,7 +743,7 @@ export default function Login({ onLogin }) {
                     role="checkbox"
                     aria-checked={remember}
                     className="checkbox-btn"
-                    style={{ backgroundColor: remember ? 'var(--eco-dark)' : 'var(--eco-ivory)', border: remember ? 'none' : '1px solid rgba(162, 203, 139, 0.6)' }}
+                    style={{ backgroundColor: remember ? 'var(--eco-dark)' : 'var(--eco-ivory)', border: remember ? 'none' : '1px solid rgba(20, 139, 240, 0.6)' }}
                   >
                     {remember && (
                       <CheckIcon
@@ -752,7 +752,7 @@ export default function Login({ onLogin }) {
                       />
                     )}
                   </button>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'rgba(62, 95, 68, 0.8)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'rgba(17, 45, 104, 0.8)' }}>
                     Remember me
                   </span>
                 </label>
@@ -786,20 +786,20 @@ export default function Login({ onLogin }) {
 
             <div className="info-banner">
               <ShieldCheckIcon style={{ width: '1rem', height: '1rem', color: 'var(--eco-dark)', flexShrink: 0 }} />
-              <p style={{ fontSize: '11px', color: 'rgba(62, 95, 68, 0.8)', margin: 0, lineHeight: '1.25' }}>
+              <p style={{ fontSize: '11px', color: 'rgba(17, 45, 104, 0.8)', margin: 0, lineHeight: '1.25' }}>
                 Administrator access only. This console is restricted to authorized school staff.
               </p>
             </div>
 
-            <p style={{ fontSize: '0.75rem', color: 'rgba(62, 95, 68, 0.6)', textAlign: 'center', marginTop: '1.25rem', margin: '1.25rem 0 0 0' }}>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(17, 45, 104, 0.6)', textAlign: 'center', marginTop: '1.25rem', margin: '1.25rem 0 0 0' }}>
               Don't have an account?{' '}
               <button className="text-link" style={{ padding: 0, fontSize: '0.75rem' }}>
                 Contact your school administrator
               </button>
             </p>
 
-            <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(162, 203, 139, 0.4)', textAlign: 'center' }}>
-              <p style={{ fontSize: '11px', color: 'rgba(62, 95, 68, 0.5)', margin: 0 }}>
+            <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(20, 139, 240, 0.4)', textAlign: 'center' }}>
+              <p style={{ fontSize: '11px', color: 'rgba(17, 45, 104, 0.5)', margin: 0 }}>
                 © 2026 Plink Smart Eco Recycling · Greenfield Elementary School
               </p>
             </div>
@@ -830,13 +830,13 @@ export default function Login({ onLogin }) {
 
               {forgotStep === 'input' && (
                 <div>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(199, 234, 187, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(190, 222, 246, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <LockIcon style={{ width: '1.5rem', height: '1.5rem', color: 'var(--eco-dark)' }} />
                   </div>
                   <h3 style={{ fontFamily: 'inherit', fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>
                     Forgot Password
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(17, 45, 104, 0.6)', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
                     Enter your administrator email address. We&apos;ll send a 6-digit OTP to verify your identity.
                   </p>
 
@@ -869,13 +869,13 @@ export default function Login({ onLogin }) {
 
               {forgotStep === 'otp' && (
                 <div>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(199, 234, 187, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(190, 222, 246, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <MailIcon style={{ width: '1.5rem', height: '1.5rem', color: 'var(--eco-dark)' }} />
                   </div>
                   <h3 style={{ fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>
                     Enter Verification Code
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.25rem', marginBottom: '0.4rem', lineHeight: '1.4' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(17, 45, 104, 0.6)', marginTop: '0.25rem', marginBottom: '0.4rem', lineHeight: '1.4' }}>
                     Enter the 6-digit OTP sent to
                   </p>
                   <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--eco-dark)', margin: '0 0 1.25rem 0', wordBreak: 'break-word' }}>
@@ -883,7 +883,7 @@ export default function Login({ onLogin }) {
                   </p>
 
                   {forgotMessage && (
-                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(22, 101, 52, 0.08)', borderRadius: '0.75rem', color: '#166534', fontSize: '0.8rem', border: '1px solid rgba(22, 101, 52, 0.18)', marginBottom: '1rem' }}>
+                    <div style={{ padding: '0.75rem', backgroundColor: 'rgba(39, 118, 192, 0.08)', borderRadius: '0.75rem', color: '#2776c0', fontSize: '0.8rem', border: '1px solid rgba(39, 118, 192, 0.18)', marginBottom: '1rem' }}>
                       {forgotMessage}
                     </div>
                   )}
@@ -897,7 +897,7 @@ export default function Login({ onLogin }) {
                     <label className="input-group-label">
                       <span className="input-span">6-digit OTP</span>
                       <div className="input-field-container">
-                        <ShieldCheckIcon style={{ width: '1rem', height: '1rem', color: 'rgba(62, 95, 68, 0.5)', flexShrink: 0 }} />
+                        <ShieldCheckIcon style={{ width: '1rem', height: '1rem', color: 'rgba(17, 45, 104, 0.5)', flexShrink: 0 }} />
                         <input
                           type="text"
                           inputMode="numeric"
@@ -939,13 +939,13 @@ export default function Login({ onLogin }) {
 
               {forgotStep === 'password' && (
                 <div>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(199, 234, 187, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', backgroundColor: 'rgba(190, 222, 246, 0.4)', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <LockIcon style={{ width: '1.5rem', height: '1.5rem', color: 'var(--eco-dark)' }} />
                   </div>
                   <h3 style={{ fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>
                     Create New Password
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(17, 45, 104, 0.6)', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
                     Your OTP has been verified. Enter and confirm your new password.
                   </p>
 
@@ -987,13 +987,13 @@ export default function Login({ onLogin }) {
 
               {forgotStep === 'success' && (
                 <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                  <div style={{ width: '4rem', height: '4rem', borderRadius: '9999px', backgroundColor: 'rgba(162, 203, 139, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', marginRight: 'auto', marginBottom: '1rem' }}>
+                  <div style={{ width: '4rem', height: '4rem', borderRadius: '9999px', backgroundColor: 'rgba(20, 139, 240, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', marginRight: 'auto', marginBottom: '1rem' }}>
                     <CheckIcon style={{ width: '2rem', height: '2rem', color: 'var(--eco-dark)' }} />
                   </div>
                   <h3 style={{ fontWeight: '700', color: 'var(--eco-dark)', fontSize: '1.25rem', margin: 0 }}>
                     Password Reset Successful
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'rgba(62, 95, 68, 0.6)', marginTop: '0.5rem', marginBottom: '1.5rem', lineHeight: '1.4' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(17, 45, 104, 0.6)', marginTop: '0.5rem', marginBottom: '1.5rem', lineHeight: '1.4' }}>
                     You can now log in using your new password.
                   </p>
                   <button
@@ -1023,7 +1023,7 @@ function Field({ label, icon: Icon, type, value, onChange, placeholder }) {
     <label className="input-group-label">
       <span className="input-span">{label}</span>
       <div className="input-field-container">
-        <Icon style={{ width: '1rem', height: '1rem', color: 'rgba(62, 95, 68, 0.5)', flexShrink: 0 }} />
+        <Icon style={{ width: '1rem', height: '1rem', color: 'rgba(17, 45, 104, 0.5)', flexShrink: 0 }} />
         <input
           type={type}
           value={value}
@@ -1038,11 +1038,11 @@ function Field({ label, icon: Icon, type, value, onChange, placeholder }) {
 
 function FloatingShapes() {
   const shapeStyles = {
-    shape0: { top: '2.5rem', left: '-2.5rem', color: 'rgba(162, 203, 139, 0.3)', width: '8rem', height: '8rem' },
-    shape1: { bottom: '4rem', left: '5rem', color: 'rgba(232, 245, 189, 0.4)', width: '6rem', height: '6rem' },
-    shape2: { top: '33.333%', right: '2.5rem', color: 'rgba(132, 177, 121, 0.25)', width: '7rem', height: '7rem' },
-    shape3: { bottom: '2.5rem', right: '25%', color: 'rgba(162, 203, 139, 0.4)', width: '5rem', height: '5rem' },
-    shape4: { top: '5rem', right: '33.333%', color: 'rgba(232, 245, 189, 0.3)', width: '6rem', height: '6rem' },
+    shape0: { top: '2.5rem', left: '-2.5rem', color: 'rgba(20, 139, 240, 0.3)', width: '8rem', height: '8rem' },
+    shape1: { bottom: '4rem', left: '5rem', color: 'rgba(190, 222, 246, 0.4)', width: '6rem', height: '6rem' },
+    shape2: { top: '33.333%', right: '2.5rem', color: 'rgba(39, 118, 192, 0.25)', width: '7rem', height: '7rem' },
+    shape3: { bottom: '2.5rem', right: '25%', color: 'rgba(20, 139, 240, 0.4)', width: '5rem', height: '5rem' },
+    shape4: { top: '5rem', right: '33.333%', color: 'rgba(190, 222, 246, 0.3)', width: '6rem', height: '6rem' },
   }
 
   const shapes = [
@@ -1085,9 +1085,9 @@ function FloatingShapes() {
 function DecorPattern() {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
-      <LeafIcon style={{ position: 'absolute', top: '-1.5rem', right: '-1.5rem', width: '10rem', height: '10rem', color: 'rgba(132, 177, 121, 0.15)' }} />
-      <LeafIcon style={{ position: 'absolute', bottom: '-2.5rem', left: '-2.5rem', width: '13rem', height: '13rem', transform: 'rotate(45deg)', color: 'rgba(132, 177, 121, 0.1)' }} />
-      <SproutIcon style={{ position: 'absolute', top: '50%', right: '2rem', width: '4rem', height: '4rem', color: 'rgba(162, 203, 139, 0.15)' }} />
+      <LeafIcon style={{ position: 'absolute', top: '-1.5rem', right: '-1.5rem', width: '10rem', height: '10rem', color: 'rgba(39, 118, 192, 0.15)' }} />
+      <LeafIcon style={{ position: 'absolute', bottom: '-2.5rem', left: '-2.5rem', width: '13rem', height: '13rem', transform: 'rotate(45deg)', color: 'rgba(39, 118, 192, 0.1)' }} />
+      <SproutIcon style={{ position: 'absolute', top: '50%', right: '2rem', width: '4rem', height: '4rem', color: 'rgba(20, 139, 240, 0.15)' }} />
     </div>
   )
 }
@@ -1107,26 +1107,26 @@ function PlinkIllustration() {
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <rect x="110" y="80" width="140" height="160" rx="22" fill="#84b179" />
+        <rect x="110" y="80" width="140" height="160" rx="22" fill="#2776c0" />
         <rect x="110" y="80" width="140" height="160" rx="22" fill="url(#binShade)" opacity="0.25" />
-        <rect x="100" y="62" width="160" height="26" rx="13" fill="#3e5f44" />
-        <circle cx="180" cy="75" r="4" fill="#c7eabb" />
+        <rect x="100" y="62" width="160" height="26" rx="13" fill="#112d68" />
+        <circle cx="180" cy="75" r="4" fill="#bedef6" />
 
-        <rect x="130" y="105" width="100" height="60" rx="10" fill="#3e5f44" />
-        <rect x="138" y="112" width="60" height="6" rx="3" fill="#c7eabb" />
-        <rect x="138" y="124" width="80" height="6" rx="3" fill="#84b179" />
-        <rect x="138" y="136" width="40" height="6" rx="3" fill="#84b179" />
-        <circle cx="215" cy="155" r="5" fill="#a2cb8b">
+        <rect x="130" y="105" width="100" height="60" rx="10" fill="#112d68" />
+        <rect x="138" y="112" width="60" height="6" rx="3" fill="#bedef6" />
+        <rect x="138" y="124" width="80" height="6" rx="3" fill="#2776c0" />
+        <rect x="138" y="136" width="40" height="6" rx="3" fill="#2776c0" />
+        <circle cx="215" cy="155" r="5" fill="#148bf0">
           <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
         </circle>
 
-        <rect x="140" y="180" width="80" height="14" rx="7" fill="#3e5f44" />
+        <rect x="140" y="180" width="80" height="14" rx="7" fill="#112d68" />
 
         <g transform="translate(160, 205)">
-          <circle cx="20" cy="20" r="18" fill="#e8f5bd" />
-          <path d="M20 8 L26 16 L23 16 L23 22 L17 22 L17 16 L14 16 Z" fill="#3e5f44" transform="rotate(120 20 20)" />
-          <path d="M20 8 L26 16 L23 16 L23 22 L17 22 L17 16 L14 16 Z" fill="#3e5f44" transform="rotate(240 20 20)" />
-          <path d="M20 8 L26 16 L23 16 L23 22 L17 22 L17 16 L14 16 Z" fill="#3e5f44" />
+          <circle cx="20" cy="20" r="18" fill="#bedef6" />
+          <path d="M20 8 L26 16 L23 16 L23 22 L17 22 L17 16 L14 16 Z" fill="#112d68" transform="rotate(120 20 20)" />
+          <path d="M20 8 L26 16 L23 16 L23 22 L17 22 L17 16 L14 16 Z" fill="#112d68" transform="rotate(240 20 20)" />
+          <path d="M20 8 L26 16 L23 16 L23 22 L17 22 L17 16 L14 16 Z" fill="#112d68" />
         </g>
       </motion.g>
 
@@ -1135,15 +1135,15 @@ function PlinkIllustration() {
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         style={{ transformOrigin: '60px 100px' }}
       >
-        <rect x="45" y="80" width="30" height="50" rx="8" fill="#c7eabb" />
-        <rect x="50" y="68" width="20" height="14" rx="4" fill="#84b179" />
-        <rect x="48" y="92" width="24" height="10" rx="2" fill="#e8f5bd" opacity="0.7" />
+        <rect x="45" y="80" width="30" height="50" rx="8" fill="#bedef6" />
+        <rect x="50" y="68" width="20" height="14" rx="4" fill="#2776c0" />
+        <rect x="48" y="92" width="24" height="10" rx="2" fill="#bedef6" opacity="0.7" />
       </motion.g>
 
       <motion.g animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity }}>
-        <circle cx="290" cy="100" r="3" fill="#a2cb8b" />
-        <circle cx="305" cy="130" r="2" fill="#c7eabb" />
-        <circle cx="295" cy="160" r="2.5" fill="#84b179" />
+        <circle cx="290" cy="100" r="3" fill="#148bf0" />
+        <circle cx="305" cy="130" r="2" fill="#bedef6" />
+        <circle cx="295" cy="160" r="2.5" fill="#2776c0" />
       </motion.g>
 
       <motion.g
@@ -1151,9 +1151,9 @@ function PlinkIllustration() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6, delay: 0.5 }}
       >
-        <rect x="275" y="200" width="14" height="30" rx="3" fill="#a2cb8b" />
-        <rect x="293" y="185" width="14" height="45" rx="3" fill="#84b179" />
-        <rect x="311" y="170" width="14" height="60" rx="3" fill="#e8f5bd" />
+        <rect x="275" y="200" width="14" height="30" rx="3" fill="#148bf0" />
+        <rect x="293" y="185" width="14" height="45" rx="3" fill="#2776c0" />
+        <rect x="311" y="170" width="14" height="60" rx="3" fill="#bedef6" />
       </motion.g>
 
       <defs>

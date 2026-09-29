@@ -2,16 +2,16 @@ import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
   white: '#ffffff',
-  dark: '#3e5f44',
-  sage: '#5a7c61',
-  muted: 'rgba(62,95,68,0.62)',
-  mint: '#c7eabb',
-  mintLight: 'rgba(199,234,187,0.38)',
-  lime: '#e8f5bd',
-  limeLight: 'rgba(232,245,189,0.62)',
-  ivory: '#fcfcf7',
-  paper: '#d9e8c8',
-  plastic: '#6f9f78',
+  dark: '#112d68',
+  sage: '#2776c0',
+  muted: 'rgba(17,45,104,0.62)',
+  mint: '#bedef6',
+  mintLight: 'rgba(190,222,246,0.38)',
+  lime: '#bedef6',
+  limeLight: 'rgba(190,222,246,0.62)',
+  ivory: '#f4fcfc',
+  paper: '#bedef6',
+  plastic: '#2776c0',
 };
 
 const formatDate = (date) => {
@@ -33,7 +33,7 @@ const Card = ({ children, style = {} }) => (
       background: COLORS.white,
       border: `1px solid ${COLORS.mintLight}`,
       borderRadius: '24px',
-      boxShadow: '0 10px 28px rgba(62,95,68,.045)',
+      boxShadow: '0 10px 28px rgba(17,45,104,.045)',
       padding: '24px',
       ...style,
     }}
@@ -70,7 +70,7 @@ function CompartmentCard({ compartment, fallbackCategory }) {
         minWidth: '220px',
         borderRadius: '18px',
         padding: '18px',
-        background: isPaper ? 'rgba(232,245,189,.42)' : 'rgba(199,234,187,.32)',
+        background: isPaper ? 'rgba(190,222,246,.42)' : 'rgba(190,222,246,.32)',
         border: `1px solid ${COLORS.mintLight}`,
       }}
     >
@@ -84,13 +84,13 @@ function CompartmentCard({ compartment, fallbackCategory }) {
         <div style={{ fontSize: '30px', fontWeight: 800, color: COLORS.dark }}>{fill}%</div>
       </div>
 
-      <div style={{ height: '10px', borderRadius: '999px', background: 'rgba(62,95,68,.10)', overflow: 'hidden', marginTop: '18px' }}>
+      <div style={{ height: '10px', borderRadius: '999px', background: 'rgba(17,45,104,.10)', overflow: 'hidden', marginTop: '18px' }}>
         <div
           style={{
             height: '100%',
             width: `${fill}%`,
             borderRadius: '999px',
-            background: isPaper ? '#9db66e' : COLORS.sage,
+            background: isPaper ? '#148bf0' : COLORS.sage,
           }}
         />
       </div>
@@ -103,7 +103,7 @@ function CompartmentCard({ compartment, fallbackCategory }) {
   );
 }
 
-function HorizontalBars({ data, labelKey, valueKey, colors = [COLORS.dark, '#7eac78', '#9cc98d', '#badca9', '#d8ebca'], suffix = '' }) {
+function HorizontalBars({ data, labelKey, valueKey, colors = [COLORS.dark, '#2776c0', '#2776c0', '#bedef6', '#bedef6'], suffix = '' }) {
   const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
 
   return (
@@ -328,7 +328,7 @@ export default function Dashboard() {
               style={{
                 padding: '14px 16px',
                 borderRadius: '16px',
-                background: 'rgba(199,234,187,.24)',
+                background: 'rgba(190,222,246,.24)',
                 border: `1px solid ${COLORS.mintLight}`,
               }}
             >
@@ -343,7 +343,7 @@ export default function Dashboard() {
               style={{
                 padding: '14px 16px',
                 borderRadius: '16px',
-                background: 'rgba(232,245,189,.34)',
+                background: 'rgba(190,222,246,.34)',
                 border: `1px solid ${COLORS.mintLight}`,
               }}
             >
@@ -370,7 +370,7 @@ export default function Dashboard() {
                 }))}
                 labelKey="label"
                 valueKey="total_items"
-                colors={[COLORS.plastic, '#6f9d76', '#8bb88a', '#a7bd76', '#b8d4a7', '#c6dbb4', '#d5e7c4', '#e1efd4', '#adc58a']}
+                colors={[COLORS.plastic, '#2776c0', '#4d6d85', '#8fa6b9', '#bedef6', '#bedef6', '#bedef6', '#bedef6', '#8fa6b9']}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', paddingTop: '14px', borderTop: `1px solid ${COLORS.mintLight}` }}>
                 <span style={{ fontSize: '12px', color: COLORS.muted }}>Total deposited</span>
@@ -464,7 +464,7 @@ export default function Dashboard() {
           </div>
 
           {rewardTrend.length ? (
-            <SevenDayBars data={rewardTrend} valueKey="redemptions" label="Reward redemptions per day" color="#8ba566" />
+            <SevenDayBars data={rewardTrend} valueKey="redemptions" label="Reward redemptions per day" color="#4d6d85" />
           ) : <EmptyState>No reward redemptions yet.</EmptyState>}
 
           {rewardBreakdown.length > 0 && (
@@ -474,7 +474,7 @@ export default function Dashboard() {
                 data={rewardBreakdown}
                 labelKey="reward_name"
                 valueKey="redemption_count"
-                colors={['#8ba566', '#a2bc77', '#b8ce8c', '#cbdba8', '#dce7c4']}
+                colors={['#4d6d85', '#148bf0', '#bedef6', '#bedef6', '#bedef6']}
               />
             </div>
             // for redeployment purposes

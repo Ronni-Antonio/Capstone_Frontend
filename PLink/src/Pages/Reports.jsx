@@ -4,15 +4,15 @@ import { useData } from '../context/DataContext.jsx';
 
 const COLORS = {
   white: '#ffffff',
-  dark: '#3e5f44',
-  sage: '#5f8466',
-  sage2: '#7ca381',
-  paper: '#a7bd76',
-  muted: '#829487',
-  border: 'rgba(199,234,187,0.7)',
-  grid: 'rgba(62,95,68,0.10)',
-  light: '#f4f8ef',
-  forecast: '#9aae62',
+  dark: '#112d68',
+  sage: '#2776c0',
+  sage2: '#4d6d85',
+  paper: '#8fa6b9',
+  muted: '#8fa6b9',
+  border: 'rgba(190,222,246,0.7)',
+  grid: 'rgba(17,45,104,0.10)',
+  light: '#f4fcfc',
+  forecast: '#148bf0',
   danger: '#b35f5f',
 };
 
@@ -119,7 +119,7 @@ function HorizontalBars({ data, labelKey = 'label', valueKey = 'value', suffix =
               <span>{item[labelKey]}</span>
               <span>{fmt(value)}{suffix}</span>
             </div>
-            <div style={{ height: '9px', background: '#eaf3e4', borderRadius: '999px', overflow: 'hidden' }}>
+            <div style={{ height: '9px', background: '#f4fcfc', borderRadius: '999px', overflow: 'hidden' }}>
               <div
                 style={{
                   width: `${Math.max(value > 0 ? 2 : 0, (value / max) * 100)}%`,
@@ -422,12 +422,12 @@ export default function Reports() {
         </div>
       )}
       {forecastMessage && (
-        <div style={{ background: '#eef7e8', color: COLORS.dark, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
+        <div style={{ background: '#f4fcfc', color: COLORS.dark, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
           {forecastMessage}
         </div>
       )}
 
-      <div className="mobile-scroll-x" style={{ display: 'inline-flex', maxWidth: '100%', width: 'fit-content', gap: '6px', padding: '6px', borderRadius: '14px', background: '#f4f8ef', border: `1px solid ${COLORS.border}` }}>
+      <div className="mobile-scroll-x" style={{ display: 'inline-flex', maxWidth: '100%', width: 'fit-content', gap: '6px', padding: '6px', borderRadius: '14px', background: '#f4fcfc', border: `1px solid ${COLORS.border}` }}>
         {[['historical', 'Historical Analytics'], ['predictive', 'Predictive Analytics']].map(([key, label]) => (
           <button
             key={key}
@@ -536,7 +536,7 @@ export default function Reports() {
                   <strong style={{ color: COLORS.dark }}>{compartment.name}</strong>
                   <strong style={{ color: COLORS.dark, fontSize: '20px' }}>{fmt(compartment.fill_percentage)}%</strong>
                 </div>
-                <div style={{ height: '10px', background: '#e5efdf', borderRadius: '999px', overflow: 'hidden', marginTop: '12px' }}>
+                <div style={{ height: '10px', background: '#bedef6', borderRadius: '999px', overflow: 'hidden', marginTop: '12px' }}>
                   <div
                     style={{
                       width: `${Math.min(100, Math.max(0, Number(compartment.fill_percentage || 0)))}%`,
@@ -561,7 +561,7 @@ export default function Reports() {
         <>
 
       {!Object.values(predictive).some((metric) => metric?.forecast?.length) && (
-        <div style={{ background: '#f2f7df', color: COLORS.dark, borderRadius: '16px', padding: '14px 16px', fontSize: '12px' }}>
+        <div style={{ background: '#f4fcfc', color: COLORS.dark, borderRadius: '16px', padding: '14px 16px', fontSize: '12px' }}>
           No Prophet forecast has been stored yet. Start the Python Prophet service, then click <strong>Run 7-Day Forecast</strong>.
         </div>
       )}
