@@ -23,6 +23,7 @@ export function Settings() {
   const { 
     settings, 
     plasticTypes,
+    refreshGradeLevels,
     refreshSections,
     refreshPlasticTypes,
     refreshSettings,
@@ -33,8 +34,8 @@ export function Settings() {
   } = useData();
   
   useEffect(() => {
-    Promise.allSettled([refreshSettings(), refreshPlasticTypes(), refreshSections()]);
-  }, [refreshSettings, refreshPlasticTypes, refreshSections]);
+    Promise.allSettled([refreshSettings(), refreshPlasticTypes(), refreshGradeLevels(), refreshSections()]);
+  }, [refreshSettings, refreshPlasticTypes, refreshGradeLevels, refreshSections]);
 
   // Safe default matching your exact database records layout
   const [schoolInfo, setSchoolInfo] = useState({
@@ -310,7 +311,7 @@ export function Settings() {
         </SettingsCard>
 
         {/* CONTROLLER 2: Sections Component Embedded Inside Section Management Card */}
-        <SettingsCard icon={UsersIcon} title="Section Management" desc="Add, edit, and remove student sections">
+        <SettingsCard icon={UsersIcon} title="Grade Level & Section Management" desc="Manage sections separately for Grade 4, Grade 5, and Grade 6">
           <SectionsManager 
             onToast={(msg) => showToast(msg)} 
             refreshSections={refreshSections}
@@ -472,33 +473,61 @@ function SectionsManager({
   updateSectionInContext, 
   removeSectionFromContext 
 }) {
-  const { sections: sectionsFromContext } = useData();
+  const { sections: sectionsFromContext, gradeLevels = [] } = useData();
   const [search, setSearch] = useState('');
+  const [filterGrade, setFilterGrade] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '' });
+  const [form, setForm] = useState({ name: '', grade_level_id: '' });
 
-  // 1. Use sections from context
-  const sections = (sectionsFromContext || []).map(s => ({
-    ...s,
-    name: s.section_name || s.name || ''
-  }));
-
-  const filtered = sections.filter(
-    (s) => s && s.name && s.name.toLowerCase().includes(search.toLowerCase())
+  const managedGrades = (gradeLevels || []).filter((grade) =>
+    ['Grade 4', 'Grade 5', 'Grade 6'].includes(grade.name)
   );
 
-  // 2. Isolated Save Function
+  const sections = (sectionsFromContext || []).map((section) => ({
+    ...section,
+    name: section.section_name || section.name || '',
+    grade_level: section.grade_level || 'Unassigned',
+  }));
+
+  const filtered = sections.filter((section) => {
+    const matchesSearch = section?.name?.toLowerCase().includes(search.toLowerCase());
+    const matchesGrade = filterGrade === 'All' || String(section.grade_level_id ?? '') === filterGrade;
+    return matchesSearch && matchesGrade;
+  });
+
+  const openAddModal = () => {
+    setEditing(null);
+    setForm({
+      name: '',
+      grade_level_id: managedGrades[0]?.grade_level_id ? String(managedGrades[0].grade_level_id) : '',
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (section) => {
+    setEditing(section);
+    setForm({
+      name: section.name,
+      grade_level_id: section.grade_level_id ? String(section.grade_level_id) : '',
+    });
+    setShowModal(true);
+  };
+
   const save = async () => {
-    if (!form.name.trim()) return;
-    
+    if (!form.name.trim() || !form.grade_level_id) {
+      onToast('Select a grade level and enter a section name.');
+      return;
+    }
+
     const payload = {
-      name: form.name,
+      name: form.name.trim(),
+      grade_level_id: Number(form.grade_level_id),
     };
 
     try {
       if (editing) {
-        const targetIdentifier = editing.id || editing.name;
+        const targetIdentifier = editing.id || editing.section_id;
         const res = await api.updateSection(targetIdentifier, payload);
         if (res.data) {
           updateSectionInContext(targetIdentifier, res.data);
@@ -515,42 +544,62 @@ function SectionsManager({
         }
         onToast('Section added successfully');
       }
-    } catch (e) {
-      console.error(e);
-      onToast('Error handling section request');
+      setShowModal(false);
+    } catch (error) {
+      console.error(error);
+      onToast(error.response?.data?.message || error.response?.data?.error || 'Error handling section request');
     }
-    setShowModal(false);
   };
 
-  // 3. Isolated Delete Function
   const handleDelete = async (sectionItem) => {
     try {
-      const targetIdentifier = sectionItem.id || sectionItem.name;
+      const targetIdentifier = sectionItem.id || sectionItem.section_id;
       await api.deleteSection(targetIdentifier);
       removeSectionFromContext(targetIdentifier);
       onToast('Section removed successfully');
     } catch (error) {
       console.error(error);
-      onToast('Error deleting section');
+      onToast(error.response?.data?.message || error.response?.data?.error || 'Error deleting section');
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
         <div className="flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-3.5 py-2.5 flex-1 border border-[#bedef6]">
           <SearchIcon className="w-4 h-4 text-[#8fa6b9]" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search sections…" className="bg-transparent outline-none text-sm flex-1 text-[#040f36]" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search sections…"
+            className="bg-transparent outline-none text-sm flex-1 text-[#040f36]"
+          />
         </div>
-        <button onClick={() => { setEditing(null); setForm({ name: '' }); setShowModal(true); }} className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#112d68] text-white rounded-xl font-semibold text-sm border-none cursor-pointer">
+
+        <select
+          value={filterGrade}
+          onChange={(e) => setFilterGrade(e.target.value)}
+          className="bg-white border border-[#bedef6] rounded-xl px-3.5 py-2.5 text-sm text-[#040f36] outline-none"
+        >
+          <option value="All">All Grades</option>
+          {managedGrades.map((grade) => (
+            <option key={grade.grade_level_id} value={String(grade.grade_level_id)}>
+              {grade.name}
+            </option>
+          ))}
+        </select>
+
+        <button onClick={openAddModal} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#112d68] text-white rounded-xl font-semibold text-sm border-none cursor-pointer">
           <PlusIcon className="w-4 h-4" /> Add Section
         </button>
       </div>
 
-      <div className="border border-[#bedef6]/80 rounded-2xl overflow-hidden">
-        <table className="w-full border-collapse">
+      <div className="border border-[#bedef6]/80 rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[620px] border-collapse">
           <thead className="bg-[#bedef6]/40 text-[#040f36]">
             <tr>
+              <th className="text-left text-[11px] font-semibold uppercase px-4 py-3">Grade Level</th>
               <th className="text-left text-[11px] font-semibold uppercase px-4 py-3">Section</th>
               <th className="text-right text-[11px] font-semibold uppercase px-4 py-3">Students</th>
               <th className="text-right text-[11px] font-semibold uppercase px-4 py-3">Actions</th>
@@ -558,16 +607,17 @@ function SectionsManager({
           </thead>
           <tbody className="divide-y divide-[#f4fcfc]">
             {filtered.length === 0 ? (
-              <tr><td colSpan="3" className="px-4 py-8 text-center text-sm text-[#8fa6b9]">No student sections found.</td></tr>
+              <tr><td colSpan="4" className="px-4 py-8 text-center text-sm text-[#8fa6b9]">No sections found for the selected grade.</td></tr>
             ) : (
-              filtered.map((s, idx) => (
-                <tr key={idx} className="hover:bg-[#f4fcfc]">
-                  <td className="px-4 py-3 text-sm font-semibold text-[#040f36]">{s.name}</td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#040f36]">{Number(s.students ?? s.student_count ?? s.students_count ?? 0)}</td>
+              filtered.map((section) => (
+                <tr key={section.section_id || section.id} className="hover:bg-[#f4fcfc]">
+                  <td className="px-4 py-3 text-sm font-semibold text-[#112d68]">{section.grade_level || 'Unassigned'}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-[#040f36]">{section.name}</td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-[#040f36]">{Number(section.students ?? section.student_count ?? section.students_count ?? 0)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => { setEditing(s); setForm({ name: s.name }); setShowModal(true); }} className="w-8 h-8 rounded-lg bg-[#bedef6]/60 text-[#040f36] flex items-center justify-center border-none cursor-pointer"><PencilIcon className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDelete(s)} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border-none cursor-pointer"><TrashIcon className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => openEditModal(section)} className="w-8 h-8 rounded-lg bg-[#bedef6]/60 text-[#040f36] flex items-center justify-center border-none cursor-pointer" title="Edit section"><PencilIcon className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleDelete(section)} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border-none cursor-pointer" title="Delete section"><TrashIcon className="w-3.5 h-3.5" /></button>
                     </div>
                   </td>
                 </tr>
@@ -581,15 +631,42 @@ function SectionsManager({
         <div className="fixed inset-0 z-50 bg-[#040f36]/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 max-w-md w-full max-h-[calc(100dvh-32px)] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-5">
-              <h3 className="font-bold text-[#040f36] text-xl">{editing ? 'Edit Section' : 'Add Section'}</h3>
+              <div>
+                <h3 className="font-bold text-[#040f36] text-xl">{editing ? 'Edit Section' : 'Add Section'}</h3>
+                <p className="text-xs text-[#8fa6b9] mt-1">Each section belongs to one grade level.</p>
+              </div>
               <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg hover:bg-[#f4fcfc] flex items-center justify-center border-none cursor-pointer"><XIcon className="w-4 h-4" /></button>
             </div>
+
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-[#040f36] mb-1.5 block">Section Name</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ name: e.target.value })} className="w-full bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-4 py-2.5 text-sm" />
+                <label className="text-xs font-semibold text-[#040f36] mb-1.5 block">Grade Level</label>
+                <select
+                  value={form.grade_level_id}
+                  onChange={(e) => setForm((current) => ({ ...current, grade_level_id: e.target.value }))}
+                  className="w-full bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-4 py-2.5 text-sm"
+                >
+                  <option value="" disabled>Select grade level</option>
+                  {managedGrades.map((grade) => (
+                    <option key={grade.grade_level_id} value={String(grade.grade_level_id)}>{grade.name}</option>
+                  ))}
+                </select>
               </div>
-              <button onClick={save} className="w-full py-2.5 bg-[#112d68] text-white rounded-xl font-semibold border-none cursor-pointer">{editing ? 'Save Changes' : 'Add Section'}</button>
+
+              <div>
+                <label className="text-xs font-semibold text-[#040f36] mb-1.5 block">Section Name</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))}
+                  placeholder="e.g. Rizal"
+                  className="w-full bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-4 py-2.5 text-sm"
+                />
+              </div>
+
+              <button onClick={save} className="w-full py-2.5 bg-[#112d68] text-white rounded-xl font-semibold border-none cursor-pointer">
+                {editing ? 'Save Changes' : 'Add Section'}
+              </button>
             </div>
           </div>
         </div>
