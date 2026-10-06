@@ -142,7 +142,7 @@ const ecoStyles = `
   .login-container p.tagline-p {
     font-size: 0.875rem !important;
     margin-top: 0.5rem !important;
-    color: rgba(20, 139, 240, 0.9) !important;
+    color: var(--eco-ivory) !important;
     line-height: 1.5 !important;
   }
 
@@ -164,7 +164,7 @@ const ecoStyles = `
     font-weight: 600;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(4px);
-    color: var(--eco-mint) !important;
+    color: var(--eco-ivory) !important;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
