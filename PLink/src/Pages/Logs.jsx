@@ -571,73 +571,6 @@ function ActivityLogsTab() {
   );
 }
 
-/* ===================== REDEMPTIONS TAB (REDEMPTION) ===================== */
-function RedemptionsTab() {
-  const { redemptions } = useData();
-
-  // Helper to format date nicely
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] min-w-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-
-      <h2 className="text-xl font-bold text-[#112d68] mb-6">
-        Redemption Logs
-      </h2>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[620px]">
-          <thead>
-            <tr className="text-left text-[#4d6d85] border-b">
-              <th className="py-3">Student</th>
-              <th>Reward</th>
-              <th>Points</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {redemptions.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="py-6 text-center text-[#4d6d85]">
-                  No redemptions found
-                </td>
-              </tr>
-            ) : (
-              redemptions.map((r, idx) => (
-                <tr key={r.id || idx} className="border-b">
-
-                  <td className="py-3 text-[#112d68] font-medium">
-                    {r.student}
-                  </td>
-
-                  <td>{r.reward}</td>
-                  <td>{r.points}</td>
-                  <td>{formatDate(r.date)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 /* ===================== REDEMPTION FLOW (REDEMPTION TAB) ===================== */
 function RedemptionFlow() {
   const {
@@ -1157,11 +1090,11 @@ function RedemptionFlow() {
 /* ===================== MAIN LOGS COMPONENT ===================== */
 export function Logs() {
   const [activeTab, setActiveTab] = useState('activity');
-  const { refreshRedemptions, refreshStudents, refreshRewards } = useData();
+  const { refreshStudents, refreshRewards } = useData();
 
   useEffect(() => {
-    Promise.allSettled([refreshRedemptions(), refreshStudents(), refreshRewards()]);
-  }, [refreshRedemptions, refreshStudents, refreshRewards]);
+    Promise.allSettled([refreshStudents(), refreshRewards()]);
+  }, [refreshStudents, refreshRewards]);
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
@@ -1171,7 +1104,6 @@ export function Logs() {
         {[
           { key: 'activity', label: 'Activity Logs' },
           { key: 'redeem', label: 'Redemption Terminal' },
-          { key: 'redemptions', label: 'Redemptions' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -1188,7 +1120,6 @@ export function Logs() {
 
       {activeTab === 'activity' && <ActivityLogsTab />}
       {activeTab === 'redeem' && <RedemptionFlow />}
-      {activeTab === 'redemptions' && <RedemptionsTab />}
 
     </div>
   );
