@@ -25,53 +25,67 @@ const COLORS = {
 export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
   const [showRfidModal, setShowRfidModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [rfidAction, setRfidAction] = useState('assign');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
   const [assignmentError, setAssignmentError] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
-  const { 
-    students, 
-    transactions, 
+  const {
+    students,
+    transactions,
+    gradeLevels,
     sections: sectionsList,
     refreshStudents,
+    refreshGradeLevels,
     refreshSections,
     addStudent: addStudentToContext,
+    updateStudent,
     activateStudent,
     getActivationStatus,
     cancelActivation
   } = useData();
-  
+
   useEffect(() => {
-    Promise.allSettled([refreshStudents(), refreshSections()]);
-  }, [refreshStudents, refreshSections]);
+    Promise.allSettled([refreshStudents(), refreshGradeLevels(), refreshSections()]);
+  }, [refreshStudents, refreshGradeLevels, refreshSections]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
   // Initialize newStudent with first section from context
   const [newStudent, setNewStudent] = useState({
     first_name: '',
     last_name: '',
-    grade_level_id: 1,
+    grade_level_id: '',
     section_id: '',
-    bottles: 0,
+    recyclables: 0,
     points: 0
   });
-  
+
   // CSV Upload State
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState(null);
   const [csvSuccess, setCsvSuccess] = useState(null);
-  
+
   // Add Individual Student State
   const [addStudentError, setAddStudentError] = useState(null);
   const [addStudentSuccess, setAddStudentSuccess] = useState(null);
 
-  // Calculate total bottles per student from transactions
-  const getTotalBottlesForStudent = (actualStudentId, studentRecord = null) => {
+  const [editStudent, setEditStudent] = useState({
+    first_name: '',
+    last_name: '',
+    grade_level_id: '',
+    section_id: '',
+  });
+  const [editStudentError, setEditStudentError] = useState(null);
+  const [editStudentSuccess, setEditStudentSuccess] = useState(null);
+
+  // Calculate total recyclable items per student from completed transactions
+  const getTotalRecyclablesForStudent = (actualStudentId, studentRecord = null) => {
     if (studentRecord?.total_items_recycled !== undefined && studentRecord?.total_items_recycled !== null) {
       return Number(studentRecord.total_items_recycled) || 0;
     }
@@ -83,10 +97,10 @@ export default function StudentPoints() {
 
   // Helper to safely get student data with defaults
   const safeStudent = (student) => {
-    const fullName = student?.name 
-      ? student.name 
+    const fullName = student?.name
+      ? student.name
       : [student?.first_name, student?.last_name].filter(Boolean).join(' ').trim() || 'Unknown Student';
-    
+
     // Generate initials if not provided
     const getInitials = () => {
       if (student?.initials) return student.initials;
@@ -95,7 +109,7 @@ export default function StudentPoints() {
       }
       if (fullName && fullName !== 'Unknown Student') {
         const nameParts = fullName.split(' ');
-        return nameParts.length > 1 
+        return nameParts.length > 1
           ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
           : nameParts[0][0].toUpperCase();
       }
@@ -105,9 +119,9 @@ export default function StudentPoints() {
     // Get the actual student_id (foreign key) and student_number (display ID)
     const actualStudentId = student?.id || student?.student_id || 0;
     const displayId = student?.student_number || student?.id || 'N/A';
-    
-    const totalFromTransactions = getTotalBottlesForStudent(actualStudentId, student);
-    
+
+    const totalFromTransactions = getTotalRecyclablesForStudent(actualStudentId, student);
+
     // Normalize status to Title Case (e.g., "active" → "Active")
     const normalizeStatus = (status) => {
       if (!status) return 'Inactive';
@@ -115,7 +129,7 @@ export default function StudentPoints() {
       if (lowerStatus === 'active') return 'Active';
       return 'Inactive';
     };
-    
+
     // DataContext normalizes Laravel's `rfid_cards` relation into these fields.
     // Keep the card state separate from the student's account status.
     const rfidCards = Array.isArray(student?.rfid_cards) ? student.rfid_cards : [];
@@ -128,9 +142,13 @@ export default function StudentPoints() {
       actual_student_id: actualStudentId, // keep the actual id for API calls/transaction matching
       name: fullName,
       initials: getInitials(),
+      first_name: student?.first_name || '',
+      last_name: student?.last_name || '',
       grade_level: student?.grade_level || 'N/A',
+      grade_level_id: student?.grade_level_id ?? null,
       section: student?.section || 'No Section',
-      bottles: totalFromTransactions || student?.bottles || student?.bottles_qty || 0,
+      section_id: student?.section_id ?? null,
+      recyclables: totalFromTransactions || student?.recyclables || student?.bottles || student?.bottles_qty || 0,
       points: student?.points_balance ?? student?.points ?? 0,
       status: normalizeStatus(student?.status),
       rfid_cards: rfidCards,
@@ -141,10 +159,33 @@ export default function StudentPoints() {
   };
 
   // Calculate stats for top cards
-  const processedStudents = students.map(safeStudent);  
+  const processedStudents = students.map(safeStudent);
   const topStudent = [...processedStudents].sort((a, b) => b.points - a.points)[0];
   const totalStudents = students.length;
   const uniqueSections = [...new Set(processedStudents.map(s => s.section).filter(Boolean))];
+  const managedGrades = (gradeLevels || []).filter((grade) => ['Grade 4', 'Grade 5', 'Grade 6'].includes(grade.name));
+  const sectionsForGrade = (gradeId) => (sectionsList || []).filter((section) => String(section.grade_level_id ?? '') === String(gradeId ?? ''));
+  const addStudentSections = sectionsForGrade(newStudent.grade_level_id);
+  const editStudentSections = sectionsForGrade(editStudent.grade_level_id);
+
+  const openAddStudentModal = () => {
+    const firstGradeId = managedGrades[0]?.grade_level_id ? String(managedGrades[0].grade_level_id) : '';
+    const firstSection = firstGradeId ? sectionsForGrade(firstGradeId)[0] : null;
+
+    setNewStudent({
+      student_number: '',
+      first_name: '',
+      last_name: '',
+      grade_level_id: firstGradeId,
+      initials: '',
+      section_id: firstSection ? String(firstSection.section_id) : '',
+      recyclables: 0,
+      points: 0,
+    });
+    setAddStudentError(null);
+    setAddStudentSuccess(null);
+    setShowModal(true);
+  };
 
   // Filter students
   const filteredStudents = processedStudents.filter(student => {
@@ -168,7 +209,7 @@ export default function StudentPoints() {
     e.preventDefault();
     setAddStudentError(null);
     setAddStudentSuccess(null);
-    
+
     try {
       const res = await api.addStudent({
         student_number: newStudent.student_number,
@@ -185,9 +226,9 @@ export default function StudentPoints() {
         // Otherwise refresh just the students list
         await refreshStudents();
       }
-      
+
       setAddStudentSuccess('Student added successfully!');
-      
+
       // Wait 1.5 seconds then close modal and reset
       setTimeout(() => {
         setShowModal(false);
@@ -195,15 +236,15 @@ export default function StudentPoints() {
           student_number: '',
           first_name: '',
           last_name: '',
-          grade_level_id: 1,
+          grade_level_id: '',
           initials: '',
-          section_id: sectionsList.length > 0 ? sectionsList[0].section_id : '',
-          bottles: 0,
+          section_id: '',
+          recyclables: 0,
           points: 0
         });
         setAddStudentSuccess(null);
       }, 1500);
-      
+
     } catch (err) {
       console.error('Error adding student:', err);
       setAddStudentError(err.response?.data?.message || err.message || 'Failed to add student');
@@ -216,7 +257,7 @@ export default function StudentPoints() {
   const downloadSampleCsv = () => {
     const sampleContent = [
       ['student_number', 'first_name', 'last_name', 'grade_level', 'section'],
-      ['136721000000', 'John', 'Doe', '3', 'Sampaguita'],
+      ['136721000000', 'John', 'Doe', '4', 'Sampaguita'],
 
     ];
     const csvContent = sampleContent.map(row => row.join(',')).join('\n');
@@ -245,7 +286,7 @@ export default function StudentPoints() {
       // Success!
       const importedCount = response.data?.imported || 0;
       const errors = response.data?.errors || [];
-      
+
       if (importedCount > 0 && errors.length === 0) {
                 // Fully successful - close modal and refresh just students
                 setCsvSuccess(`Successfully imported ${importedCount} student(s)!`);
@@ -261,18 +302,18 @@ export default function StudentPoints() {
         } else {
           message = `Failed to import students. ${errors.length} row(s) had errors.`;
         }
-        
+
         // Format detailed errors
-        const formattedErrors = errors.map((err, idx) => 
+        const formattedErrors = errors.map((err, idx) =>
           `Row ${err.row || (idx + 2)}: ${err.message || JSON.stringify(err)}`
         ).join(' • ');
-        
+
         setCsvError(`${message} Errors: ${formattedErrors}`);
         console.warn('⚠️ CSV Import Errors:', errors);
       }
     } catch (err) {
       console.error('❌ CSV Upload Error:', err);
-      
+
       // Try to get detailed error from backend
       let errorMessage = 'Failed to upload CSV';
       if (err.response?.data) {
@@ -280,7 +321,7 @@ export default function StudentPoints() {
           errorMessage = err.response.data.message;
         }
         if (err.response.data.errors) {
-          const formattedErrors = err.response.data.errors.map((err, idx) => 
+          const formattedErrors = err.response.data.errors.map((err, idx) =>
             `Row ${err.row || (idx + 2)}: ${err.message || JSON.stringify(err)}`
           ).join(' • ');
           errorMessage += ` Errors: ${formattedErrors}`;
@@ -288,7 +329,7 @@ export default function StudentPoints() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setCsvError(errorMessage);
     } finally {
       setCsvLoading(false);
@@ -304,9 +345,53 @@ export default function StudentPoints() {
     };
   }, [pollingInterval]);
 
-  // Handle Assign RFID Card button click
-  const handleAssignCard = (student) => {
+
+  const handleEditStudent = (student) => {
     setSelectedStudent(student);
+    setEditStudent({
+      first_name: student.first_name || '',
+      last_name: student.last_name || '',
+      grade_level_id: student.grade_level_id ? String(student.grade_level_id) : '',
+      section_id: student.section_id ? String(student.section_id) : '',
+    });
+    setEditStudentError(null);
+    setEditStudentSuccess(null);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditStudent = async (e) => {
+    e.preventDefault();
+    if (!selectedStudent) return;
+
+    setEditStudentError(null);
+    setEditStudentSuccess(null);
+
+    try {
+      await updateStudent(selectedStudent.actual_student_id, {
+        first_name: editStudent.first_name.trim(),
+        last_name: editStudent.last_name.trim(),
+        grade_level_id: Number(editStudent.grade_level_id),
+        section_id: Number(editStudent.section_id),
+      });
+
+      setEditStudentSuccess('Student information updated successfully.');
+      await refreshStudents();
+
+      setTimeout(() => {
+        setShowEditModal(false);
+        setSelectedStudent(null);
+        setEditStudentSuccess(null);
+      }, 1000);
+    } catch (err) {
+      console.error('Error updating student:', err);
+      setEditStudentError(err.response?.data?.message || err.message || 'Failed to update student');
+    }
+  };
+
+  // Handle Assign RFID Card button click
+  const handleAssignCard = (student, action = 'assign') => {
+    setSelectedStudent(student);
+    setRfidAction(action);
     setScanning(false);
     setScanSuccess(false);
     setAssignmentError(null);
@@ -338,23 +423,23 @@ export default function StudentPoints() {
     if (!selectedStudent) return;
     setScanning(true);
     setAssignmentError(null);
-    
+
     try {
       // 1. Tell Laravel to put the ESP32 into RFID assignment mode
       await activateStudent(selectedStudent.actual_student_id);
-      
+
       // 2. Poll until Laravel sees the newly assigned RFID card
       const interval = setInterval(async () => {
         try {
           const statusData = await getActivationStatus(selectedStudent.actual_student_id);
           console.log('RFID assignment status:', statusData);
-          
+
           if (statusData.status === 'success') {
             clearInterval(interval);
             setPollingInterval(null);
             setScanSuccess(true);
             await refreshStudents();
-            
+
             setTimeout(() => {
               setShowRfidModal(false);
               setSelectedStudent(null);
@@ -369,9 +454,9 @@ export default function StudentPoints() {
           console.error('Polling error:', pollErr);
         }
       }, 2000); // Poll every 2 seconds
-      
+
       setPollingInterval(interval);
-      
+
     } catch (err) {
       console.error('Start RFID assignment error:', err);
       setScanning(false);
@@ -437,7 +522,7 @@ export default function StudentPoints() {
                   opacity: 0.85
                 }}
               >
-                {topStudent.section} · {topStudent.bottles} bottles
+                {topStudent.section} · {topStudent.recyclables} recyclables
               </div>
 
               <div
@@ -620,7 +705,7 @@ export default function StudentPoints() {
         </select>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openAddStudentModal}
           style={{
             border: 'none',
             background: COLORS.dark,
@@ -664,7 +749,7 @@ export default function StudentPoints() {
               <th style={th}>Section</th>
               <th style={th}>RFID Card</th>
               <th style={th}>Status</th>
-              <th style={th}>Bottles</th>
+              <th style={th}>Recyclables</th>
               <th style={th}>Points</th>
               <th style={th}>Actions</th>
             </tr>
@@ -796,7 +881,7 @@ export default function StudentPoints() {
                     </span>
                   </td>
 
-                  <td style={td}>{student.bottles}</td>
+                  <td style={td}>{student.recyclables}</td>
 
                   <td
                     style={{
@@ -810,7 +895,7 @@ export default function StudentPoints() {
 
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px', flexWrap: 'nowrap' }}>
-                      <button style={actionBtn} title="Edit student">
+                      <button onClick={() => handleEditStudent(student)} style={actionBtn} title="Edit student">
                         <PencilIcon className="w-4 h-4" />
                       </button>
 
@@ -841,7 +926,7 @@ export default function StudentPoints() {
           </tbody>
         </table>
         </div>
-        
+
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div style={{
@@ -867,7 +952,7 @@ export default function StudentPoints() {
             >
               Previous
             </button>
-            
+
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
@@ -885,7 +970,7 @@ export default function StudentPoints() {
                 {page}
               </button>
             ))}
-            
+
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
@@ -1084,7 +1169,7 @@ export default function StudentPoints() {
               >
                 Add Individual Student
               </h3>
-              
+
               {/* Add Individual Student Error */}
               {addStudentError && (
                 <div
@@ -1100,7 +1185,7 @@ export default function StudentPoints() {
                   ❌ {addStudentError}
                 </div>
               )}
-              
+
               {/* Add Individual Student Success */}
               {addStudentSuccess && (
                 <div
@@ -1135,12 +1220,21 @@ export default function StudentPoints() {
 
                 <select
                   value={newStudent.grade_level_id || ''}
-                  onChange={(e) => setNewStudent({ ...newStudent, grade_level_id: e.target.value })}
+                  onChange={(e) => {
+                    const gradeId = e.target.value;
+                    const firstSection = sectionsForGrade(gradeId)[0];
+                    setNewStudent({
+                      ...newStudent,
+                      grade_level_id: gradeId,
+                      section_id: firstSection ? String(firstSection.section_id) : '',
+                    });
+                  }}
                   style={modalInput}
                   required
                 >
-                  {[3, 4, 5, 6].map((grade) => (
-                    <option key={grade} value={grade}>Grade {grade}</option>
+                  <option value="" disabled>Select Grade Level</option>
+                  {managedGrades.map((grade) => (
+                    <option key={grade.grade_level_id} value={grade.grade_level_id}>{grade.name}</option>
                   ))}
                 </select>
 
@@ -1173,7 +1267,8 @@ export default function StudentPoints() {
                   style={modalInput}
                   required
                 >
-                  {sectionsList.map((section) => (
+                  <option value="" disabled>{addStudentSections.length ? 'Select Section' : 'No sections for this grade'}</option>
+                  {addStudentSections.map((section) => (
                     <option key={section.section_id} value={section.section_id}>{section.name}</option>
                   ))}
                 </select>
@@ -1194,6 +1289,184 @@ export default function StudentPoints() {
               >
                 Add Student
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {showEditModal && selectedStudent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.45)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+          onClick={() => setShowEditModal(false)}
+        >
+          <div
+            className="mobile-modal"
+            style={{
+              width: '620px',
+              maxWidth: '100%',
+              maxHeight: 'calc(100dvh - 32px)',
+              overflowY: 'auto',
+              background: '#fff',
+              borderRadius: '24px',
+              padding: '24px',
+              border: `1px solid ${COLORS.mintLight}`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+              <div>
+                <h2 style={{ margin: 0, color: COLORS.dark, fontSize: '24px' }}>Edit Student</h2>
+                <p style={{ margin: '6px 0 0', color: COLORS.darkMuted, fontSize: '13px' }}>
+                  Update the student's name, grade level, section, or RFID card.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '22px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {editStudentError && (
+              <div style={{ marginBottom: '14px', padding: '12px', background: '#fee2e2', color: '#dc2626', borderRadius: '12px', fontSize: '13px' }}>
+                ❌ {editStudentError}
+              </div>
+            )}
+
+            {editStudentSuccess && (
+              <div style={{ marginBottom: '14px', padding: '12px', background: COLORS.mint, color: COLORS.dark, borderRadius: '12px', fontSize: '13px' }}>
+                ✅ {editStudentSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditStudent}>
+              <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', color: COLORS.dark, fontSize: '12px', fontWeight: 700 }}>First Name</label>
+                  <input
+                    value={editStudent.first_name}
+                    onChange={(e) => setEditStudent((current) => ({ ...current, first_name: e.target.value }))}
+                    style={modalInput}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', color: COLORS.dark, fontSize: '12px', fontWeight: 700 }}>Last Name</label>
+                  <input
+                    value={editStudent.last_name}
+                    onChange={(e) => setEditStudent((current) => ({ ...current, last_name: e.target.value }))}
+                    style={modalInput}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', color: COLORS.dark, fontSize: '12px', fontWeight: 700 }}>Grade Level</label>
+                  <select
+                    value={editStudent.grade_level_id}
+                    onChange={(e) => {
+                      const gradeId = e.target.value;
+                      const firstSection = sectionsForGrade(gradeId)[0];
+                      setEditStudent((current) => ({
+                        ...current,
+                        grade_level_id: gradeId,
+                        section_id: firstSection ? String(firstSection.section_id) : '',
+                      }));
+                    }}
+                    style={modalInput}
+                    required
+                  >
+                    <option value="" disabled>Select Grade Level</option>
+                    {managedGrades.map((grade) => (
+                      <option key={grade.grade_level_id} value={grade.grade_level_id}>{grade.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', color: COLORS.dark, fontSize: '12px', fontWeight: 700 }}>Section</label>
+                  <select
+                    value={editStudent.section_id}
+                    onChange={(e) => setEditStudent((current) => ({ ...current, section_id: e.target.value }))}
+                    style={modalInput}
+                    required
+                  >
+                    <option value="" disabled>{editStudentSections.length ? 'Select Section' : 'No sections for this grade'}</option>
+                    {editStudentSections.map((section) => (
+                      <option key={section.section_id} value={section.section_id}>{section.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '20px', padding: '16px', borderRadius: '16px', background: COLORS.bg, border: `1px solid ${COLORS.mintLight}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: COLORS.dark, fontWeight: 700, fontSize: '14px' }}>RFID Card</div>
+                    <div style={{ color: COLORS.darkMuted, fontSize: '12px', marginTop: '4px' }}>
+                      {selectedStudent.has_active_rfid_card
+                        ? `Current card: ${selectedStudent.active_rfid_card?.card_uid || 'Assigned'}`
+                        : 'No RFID card is currently assigned.'}
+                    </div>
+                    <div style={{ color: COLORS.darkMuted, fontSize: '12px', marginTop: '3px' }}>
+                      Points stay on the student account when the card is replaced.
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      handleAssignCard(selectedStudent, selectedStudent.has_active_rfid_card ? 'replace' : 'assign');
+                    }}
+                    style={{
+                      border: 'none',
+                      background: COLORS.dark,
+                      color: '#fff',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <CreditCardIcon className="w-4 h-4" />
+                    {selectedStudent.has_active_rfid_card ? 'Replace RFID Card' : 'Assign RFID Card'}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  style={{ border: `1px solid ${COLORS.mint}`, background: '#fff', color: COLORS.dark, padding: '11px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!editStudent.section_id}
+                  style={{ border: 'none', background: COLORS.dark, color: '#fff', padding: '11px 18px', borderRadius: '12px', cursor: editStudent.section_id ? 'pointer' : 'not-allowed', fontWeight: 700, opacity: editStudent.section_id ? 1 : 0.55 }}
+                >
+                  Save Changes
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -1259,11 +1532,11 @@ export default function StudentPoints() {
                 color: COLORS.dark
               }}
             >
-              {scanSuccess 
-                ? 'RFID Card Assigned!' 
-                : scanning 
-                  ? 'Waiting for RFID Scan...' 
-                  : 'Assign RFID Card'}
+              {scanSuccess
+                ? (rfidAction === 'replace' ? 'RFID Card Replaced!' : 'RFID Card Assigned!')
+                : scanning
+                  ? 'Waiting for RFID Scan...'
+                  : (rfidAction === 'replace' ? 'Replace RFID Card' : 'Assign RFID Card')}
             </h2>
 
             <p
@@ -1274,11 +1547,13 @@ export default function StudentPoints() {
                 lineHeight: '1.5'
               }}
             >
-              {scanSuccess 
-                ? `${selectedStudent.name}'s RFID card has been assigned successfully!` 
-                : scanning 
-                  ? 'The system is waiting for the ESP32 RFID reader to detect the card...' 
-                  : `Click "Start Card Assignment" to begin assigning ${selectedStudent.name}'s RFID card.`}
+              {scanSuccess
+                ? `${selectedStudent.name}'s RFID card has been ${rfidAction === 'replace' ? 'replaced' : 'assigned'} successfully. Their points remain unchanged.`
+                : scanning
+                  ? 'The system is waiting for the ESP32 RFID reader to detect the new card...'
+                  : (rfidAction === 'replace'
+                    ? `Click "Start Card Replacement" and tap the new card for ${selectedStudent.name}. The old card will be deactivated.`
+                    : `Click "Start Card Assignment" to begin assigning ${selectedStudent.name}'s RFID card.`)}
             </p>
 
             {selectedStudent && (
@@ -1374,7 +1649,7 @@ export default function StudentPoints() {
                     cursor: 'pointer'
                   }}
                 >
-                  Start Card Assignment
+                  {rfidAction === 'replace' ? 'Start Card Replacement' : 'Start Card Assignment'}
                 </button>
               )}
             </div>

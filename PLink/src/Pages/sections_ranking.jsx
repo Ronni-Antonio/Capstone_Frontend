@@ -19,6 +19,8 @@ export default function SectionsRanking() {
       // Add any missing properties to API data for consistency
       return sectionsRanking.map((section, index) => ({
         name: section.name || section.section_name || 'Unknown Section',
+        grade_level: section.grade_level || 'Unassigned',
+        grade_level_id: section.grade_level_id ?? null,
         students: section.students || 0,
         bottles: section.bottles || 0,
         points: section.points || 0,
@@ -38,15 +40,19 @@ export default function SectionsRanking() {
     const sectionsMap = {};
     safeStudents.forEach(student => {
       const sectionName = (student.section || 'Unknown Section').toString();
-      if (!sectionsMap[sectionName]) {
-        sectionsMap[sectionName] = {
+      const gradeLevel = (student.grade_level || 'Unassigned').toString();
+      const sectionKey = `${gradeLevel}::${sectionName}`;
+      if (!sectionsMap[sectionKey]) {
+        sectionsMap[sectionKey] = {
           name: sectionName,
+          grade_level: gradeLevel,
+          grade_level_id: student.grade_level_id ?? null,
           students: 0,
           bottles: 0,
           points: 0,
         };
       }
-      sectionsMap[sectionName].students++;
+      sectionsMap[sectionKey].students++;
     });
 
     // Get point conversion rate from settings
@@ -57,10 +63,12 @@ export default function SectionsRanking() {
       const student = safeStudents.find(s => (s.id || s.student_id) === studentId);
       if (student && student.section) {
         const sectionName = student.section.toString();
-        if (sectionsMap[sectionName]) {
+        const gradeLevel = (student.grade_level || 'Unassigned').toString();
+        const sectionKey = `${gradeLevel}::${sectionName}`;
+        if (sectionsMap[sectionKey]) {
           const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-          sectionsMap[sectionName].bottles += Number(bottles) || 0;
-          sectionsMap[sectionName].points += Number(tx.total_points || tx.points_earned || 0);
+          sectionsMap[sectionKey].bottles += Number(bottles) || 0;
+          sectionsMap[sectionKey].points += Number(tx.total_points || tx.points_earned || 0);
         }
       }
     });
@@ -102,6 +110,10 @@ export default function SectionsRanking() {
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold break-words">
                 {topSection.name}
               </h2>
+
+              <p className="text-sm font-semibold text-white/80 mt-1">
+                {topSection.grade_level || 'Unassigned'}
+              </p>
 
               <p className="mt-2 text-[#bedef6]">
                 Leading with {topSection.points.toLocaleString()} points · {topSection.bottles.toLocaleString()} bottles recycled
@@ -159,6 +171,7 @@ export default function SectionsRanking() {
                 <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[1].name}
                 </div>
+                <div className="text-xs text-[#4d6d85]">{podiumSections[1].grade_level || 'Unassigned'}</div>
 
                 <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[1].points.toLocaleString()} pts
@@ -175,6 +188,7 @@ export default function SectionsRanking() {
                 <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[0].name}
                 </div>
+                <div className="text-xs text-[#4d6d85]">{podiumSections[0].grade_level || 'Unassigned'}</div>
 
                 <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[0].points.toLocaleString()} pts
@@ -191,6 +205,7 @@ export default function SectionsRanking() {
                 <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[2].name}
                 </div>
+                <div className="text-xs text-[#4d6d85]">{podiumSections[2].grade_level || 'Unassigned'}</div>
 
                 <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[2].points.toLocaleString()} pts
@@ -233,6 +248,9 @@ export default function SectionsRanking() {
                     <h4 className="font-bold text-[#112d68]">
                       {section.name}
                     </h4>
+                    <span className="text-xs font-semibold text-[#4d6d85]">
+                      {section.grade_level || 'Unassigned'}
+                    </span>
 
                     {section.badge && (
                       <span className="bg-[#bedef6] text-[#112d68] text-xs px-2 py-1 rounded-full">
