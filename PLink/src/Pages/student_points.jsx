@@ -26,6 +26,21 @@ export default function StudentPoints() {
   const [showModal, setShowModal] = useState(false);
   const [showRfidModal, setShowRfidModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Student editing
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [editStudentForm, setEditStudentForm] = useState({
+    student_number: '',
+    first_name: '',
+    last_name: '',
+    grade_level_id: '',
+    section_id: '',
+    status: 'active'
+  });
+  const [editStudentError, setEditStudentError] = useState(null);
+  const [editStudentSaving, setEditStudentSaving] = useState(false);
+
   const [scanning, setScanning] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
   const [assignmentError, setAssignmentError] = useState(null);
@@ -127,6 +142,9 @@ export default function StudentPoints() {
     const finalStudent = {
       id: displayId, // use student_number for display in the table
       actual_student_id: actualStudentId, // keep the actual id for API calls/transaction matching
+      student_number: student?.student_number || displayId,
+      first_name: student?.first_name || '',
+      last_name: student?.last_name || '',
       name: fullName,
       initials: getInitials(),
       grade_level: student?.grade_level || 'N/A',
@@ -160,6 +178,30 @@ export default function StudentPoints() {
       .map((student) => student.section)
       .filter(Boolean)
   )].sort();
+
+  const gradeOptions = Array.from(
+    new Map(
+      (sectionsList || [])
+        .filter((section) => section?.grade_level_id !== undefined && section?.grade_level_id !== null)
+        .map((section) => [
+          String(section.grade_level_id),
+          {
+            id: String(section.grade_level_id),
+            label:
+              section.grade_level ||
+              section.grade_level_name ||
+              section.grade_name ||
+              `Grade ${section.grade_level_id}`
+          }
+        ])
+    ).values()
+  ).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
+  const editAvailableSections = (sectionsList || []).filter(
+    (section) =>
+      !editStudentForm.grade_level_id ||
+      String(section.grade_level_id) === String(editStudentForm.grade_level_id)
+  );
 
   // Filter students by search + grade + section.
   const filteredStudents = processedStudents.filter(student => {
@@ -223,6 +265,115 @@ export default function StudentPoints() {
     } catch (err) {
       console.error('Error adding student:', err);
       setAddStudentError(err.response?.data?.message || err.message || 'Failed to add student');
+    }
+  };
+
+  // ------------------------------------------------------------
+  // EDIT STUDENT
+  // ------------------------------------------------------------
+  const handleEditStudent = (student) => {
+    setEditingStudent(student);
+    setEditStudentError(null);
+
+    setEditStudentForm({
+      student_number: String(student.student_number || student.id || ''),
+      first_name: student.first_name || '',
+      last_name: student.last_name || '',
+      grade_level_id:
+        student.grade_level_id !== null && student.grade_level_id !== undefined
+          ? String(student.grade_level_id)
+          : '',
+      section_id:
+        student.section_id !== null && student.section_id !== undefined
+          ? String(student.section_id)
+          : '',
+      status:
+        String(student.status || 'Active').toLowerCase() === 'active'
+          ? 'active'
+          : 'inactive'
+    });
+
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditStudent = () => {
+    if (editStudentSaving) return;
+    setShowEditModal(false);
+    setEditingStudent(null);
+    setEditStudentError(null);
+  };
+
+  const handleEditGradeChange = (gradeId) => {
+    const matchingSections = (sectionsList || []).filter(
+      (section) => String(section.grade_level_id) === String(gradeId)
+    );
+
+    setEditStudentForm((current) => ({
+      ...current,
+      grade_level_id: gradeId,
+      section_id: matchingSections.some(
+        (section) => String(section.section_id) === String(current.section_id)
+      )
+        ? current.section_id
+        : matchingSections.length > 0
+          ? String(matchingSections[0].section_id)
+          : ''
+    }));
+  };
+
+  const handleSaveEditedStudent = async (event) => {
+    event.preventDefault();
+
+    if (!editingStudent) return;
+
+    if (
+      !editStudentForm.student_number.trim() ||
+      !editStudentForm.first_name.trim() ||
+      !editStudentForm.last_name.trim() ||
+      !editStudentForm.grade_level_id ||
+      !editStudentForm.section_id
+    ) {
+      setEditStudentError('Please complete all required student information.');
+      return;
+    }
+
+    setEditStudentSaving(true);
+    setEditStudentError(null);
+
+    try {
+      await api.updateStudent(
+        editingStudent.actual_student_id,
+        {
+          student_number: editStudentForm.student_number.trim(),
+          first_name: editStudentForm.first_name.trim(),
+          last_name: editStudentForm.last_name.trim(),
+          grade_level_id: Number(editStudentForm.grade_level_id),
+          section_id: Number(editStudentForm.section_id),
+          status: editStudentForm.status
+        }
+      );
+
+      await refreshStudents();
+
+      setShowEditModal(false);
+      setEditingStudent(null);
+      setEditStudentError(null);
+    } catch (error) {
+      console.error('Error updating student:', error);
+
+      const backendErrors = error?.response?.data?.errors;
+      const validationMessage = backendErrors
+        ? Object.values(backendErrors).flat().join(' ')
+        : null;
+
+      setEditStudentError(
+        validationMessage ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to update student information.'
+      );
+    } finally {
+      setEditStudentSaving(false);
     }
   };
 
@@ -853,23 +1004,31 @@ export default function StudentPoints() {
 
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px', flexWrap: 'nowrap' }}>
-                      <button style={actionBtn} title="Edit student">
+                      <button
+                        type="button"
+                        onClick={() => handleEditStudent(student)}
+                        style={actionBtn}
+                        title="Edit student information"
+                      >
                         <PencilIcon className="w-4 h-4" />
                       </button>
 
-                      {!student.has_active_rfid_card && (
-                        <button
-                          onClick={() => handleAssignCard(student)}
-                          style={{
-                            ...actionBtn,
-                            background: '#112d68',
-                            color: '#fff'
-                          }}
-                          title="Assign RFID Card"
-                        >
-                          <CreditCardIcon className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleAssignCard(student)}
+                        style={{
+                          ...actionBtn,
+                          background: student.has_active_rfid_card ? '#bedef6' : '#112d68',
+                          color: student.has_active_rfid_card ? '#112d68' : '#fff'
+                        }}
+                        title={
+                          student.has_active_rfid_card
+                            ? 'Replace RFID Card'
+                            : 'Assign RFID Card'
+                        }
+                      >
+                        <CreditCardIcon className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -1242,6 +1401,252 @@ export default function StudentPoints() {
         </div>
       )}
 
+      {/* Edit Student Modal */}
+      {showEditModal && editingStudent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.45)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10000,
+            padding: '16px'
+          }}
+          onClick={handleCloseEditStudent}
+        >
+          <div
+            className="mobile-modal"
+            style={{
+              width: '620px',
+              maxWidth: '100%',
+              background: '#fff',
+              borderRadius: '24px',
+              padding: '24px',
+              border: `1px solid ${COLORS.mintLight}`,
+              maxHeight: 'calc(100dvh - 32px)',
+              overflowY: 'auto'
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '16px',
+                marginBottom: '20px'
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, color: COLORS.dark }}>
+                  Edit Student Information
+                </h2>
+                <p
+                  style={{
+                    margin: '6px 0 0',
+                    color: COLORS.darkMuted,
+                    fontSize: '13px'
+                  }}
+                >
+                  Update the student's identity, grade, section, or account status.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseEditStudent}
+                disabled={editStudentSaving}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: editStudentSaving ? 'not-allowed' : 'pointer',
+                  fontSize: '22px',
+                  color: COLORS.dark
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {editStudentError && (
+              <div
+                style={{
+                  marginBottom: '16px',
+                  padding: '12px',
+                  background: '#fee2e2',
+                  color: '#b91c1c',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  lineHeight: 1.5
+                }}
+              >
+                {editStudentError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditedStudent}>
+              <div
+                className="responsive-two-col"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px'
+                }}
+              >
+                <div>
+                  <label style={modalLabel}>Student Number</label>
+                  <input
+                    value={editStudentForm.student_number}
+                    onChange={(event) =>
+                      setEditStudentForm((current) => ({
+                        ...current,
+                        student_number: event.target.value
+                      }))
+                    }
+                    style={modalInput}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={modalLabel}>Status</label>
+                  <select
+                    value={editStudentForm.status}
+                    onChange={(event) =>
+                      setEditStudentForm((current) => ({
+                        ...current,
+                        status: event.target.value
+                      }))
+                    }
+                    style={modalInput}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={modalLabel}>First Name</label>
+                  <input
+                    value={editStudentForm.first_name}
+                    onChange={(event) =>
+                      setEditStudentForm((current) => ({
+                        ...current,
+                        first_name: event.target.value
+                      }))
+                    }
+                    style={modalInput}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={modalLabel}>Last Name</label>
+                  <input
+                    value={editStudentForm.last_name}
+                    onChange={(event) =>
+                      setEditStudentForm((current) => ({
+                        ...current,
+                        last_name: event.target.value
+                      }))
+                    }
+                    style={modalInput}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={modalLabel}>Grade Level</label>
+                  <select
+                    value={editStudentForm.grade_level_id}
+                    onChange={(event) => handleEditGradeChange(event.target.value)}
+                    style={modalInput}
+                    required
+                  >
+                    <option value="" disabled>Select grade</option>
+                    {gradeOptions.map((grade) => (
+                      <option key={grade.id} value={grade.id}>
+                        {grade.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={modalLabel}>Section</label>
+                  <select
+                    value={editStudentForm.section_id}
+                    onChange={(event) =>
+                      setEditStudentForm((current) => ({
+                        ...current,
+                        section_id: event.target.value
+                      }))
+                    }
+                    style={modalInput}
+                    required
+                  >
+                    <option value="" disabled>Select section</option>
+                    {editAvailableSections.map((section) => (
+                      <option
+                        key={section.section_id || section.id}
+                        value={section.section_id || section.id}
+                      >
+                        {section.name || section.section_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '10px',
+                  marginTop: '22px'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleCloseEditStudent}
+                  disabled={editStudentSaving}
+                  style={{
+                    padding: '11px 16px',
+                    borderRadius: '12px',
+                    border: `1px solid ${COLORS.mint}`,
+                    background: '#fff',
+                    color: COLORS.dark,
+                    cursor: editStudentSaving ? 'not-allowed' : 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={editStudentSaving}
+                  style={{
+                    padding: '11px 18px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: COLORS.dark,
+                    color: '#fff',
+                    cursor: editStudentSaving ? 'not-allowed' : 'pointer',
+                    fontWeight: 700,
+                    opacity: editStudentSaving ? 0.65 : 1
+                  }}
+                >
+                  {editStudentSaving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* RFID Scan Modal */}
       {showRfidModal && selectedStudent && (
         <div
@@ -1303,10 +1708,10 @@ export default function StudentPoints() {
               }}
             >
               {scanSuccess 
-                ? 'RFID Card Assigned!' 
-                : scanning 
-                  ? 'Waiting for RFID Scan...' 
-                  : 'Assign RFID Card'}
+                ? (selectedStudent.has_active_rfid_card ? 'RFID Card Replaced!' : 'RFID Card Assigned!')
+                : scanning
+                  ? 'Waiting for RFID Scan...'
+                  : (selectedStudent.has_active_rfid_card ? 'Replace RFID Card' : 'Assign RFID Card')}
             </h2>
 
             <p
@@ -1318,10 +1723,12 @@ export default function StudentPoints() {
               }}
             >
               {scanSuccess 
-                ? `${selectedStudent.name}'s RFID card has been assigned successfully!` 
-                : scanning 
-                  ? 'The system is waiting for the ESP32 RFID reader to detect the card...' 
-                  : `Click "Start Card Assignment" to begin assigning ${selectedStudent.name}'s RFID card.`}
+                ? `${selectedStudent.name}'s RFID card has been ${selectedStudent.has_active_rfid_card ? 'replaced' : 'assigned'} successfully!`
+                : scanning
+                  ? 'The system is waiting for the ESP32 RFID reader to detect the new card...'
+                  : selectedStudent.has_active_rfid_card
+                    ? `This student already has an active RFID card. Start replacement, then tap the new card on the RFID reader. The old active card will be deactivated after the new card is paired.`
+                    : `Click "Start Card Assignment" to begin assigning ${selectedStudent.name}'s RFID card.`}
             </p>
 
             {selectedStudent && (
@@ -1417,7 +1824,9 @@ export default function StudentPoints() {
                     cursor: 'pointer'
                   }}
                 >
-                  Start Card Assignment
+                  {selectedStudent.has_active_rfid_card
+                    ? 'Start Card Replacement'
+                    : 'Start Card Assignment'}
                 </button>
               )}
             </div>
@@ -1454,6 +1863,14 @@ const actionBtn = {
   padding: 0,
   lineHeight: 0,
   flexShrink: 0
+};
+
+const modalLabel = {
+  display: 'block',
+  marginBottom: '6px',
+  color: '#112d68',
+  fontSize: '12px',
+  fontWeight: '700'
 };
 
 const modalInput = {
