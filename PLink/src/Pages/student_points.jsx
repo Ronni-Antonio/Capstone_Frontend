@@ -33,12 +33,10 @@ export default function StudentPoints() {
   const [assignmentError, setAssignmentError] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
   const {
-    students,
-    transactions,
-    gradeLevels,
-    sections: sectionsList,
+    students = [],
+    transactions = [],
+    sections: sectionsList = [],
     refreshStudents,
-    refreshGradeLevels,
     refreshSections,
     addStudent: addStudentToContext,
     updateStudent,
@@ -47,9 +45,53 @@ export default function StudentPoints() {
     cancelActivation
   } = useData();
 
+  // Grade levels are loaded directly from Laravel instead of relying on
+  // a grade-level refresh function from DataContext.
+  const [gradeLevels, setGradeLevels] = useState([]);
+
   useEffect(() => {
-    Promise.allSettled([refreshStudents(), refreshGradeLevels(), refreshSections()]);
-  }, [refreshStudents, refreshGradeLevels, refreshSections]);
+    let active = true;
+
+    const loadStudentPageData = async () => {
+      const refreshTasks = [];
+
+      if (typeof refreshStudents === 'function') {
+        refreshTasks.push(refreshStudents());
+      }
+
+      if (typeof refreshSections === 'function') {
+        refreshTasks.push(refreshSections());
+      }
+
+      await Promise.allSettled(refreshTasks);
+
+      try {
+        const response = await api.get('/grade-levels');
+
+        const rows = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.data)
+            ? response.data.data
+            : [];
+
+        if (active) {
+          setGradeLevels(rows);
+        }
+      } catch (error) {
+        console.error('Unable to load grade levels:', error);
+
+        if (active) {
+          setGradeLevels([]);
+        }
+      }
+    };
+
+    void loadStudentPageData();
+
+    return () => {
+      active = false;
+    };
+  }, [refreshStudents, refreshSections]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGrade, setFilterGrade] = useState('All');
@@ -160,9 +202,9 @@ export default function StudentPoints() {
   };
 
   // Calculate stats for top cards
-  const processedStudents = students.map(safeStudent);
+  const processedStudents = (Array.isArray(students) ? students : []).map(safeStudent);
   const topStudent = [...processedStudents].sort((a, b) => b.points - a.points)[0];
-  const totalStudents = students.length;
+  const totalStudents = Array.isArray(students) ? students.length : 0;
   const uniqueSections = [...new Set(processedStudents.map(s => s.section).filter(Boolean))];
   const managedGrades = (gradeLevels || []).filter((grade) => ['Grade 4', 'Grade 5', 'Grade 6'].includes(grade.name));
 
