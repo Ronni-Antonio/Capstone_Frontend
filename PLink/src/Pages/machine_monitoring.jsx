@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext.jsx';
 import { RecycleIcon } from 'lucide-react';
 
@@ -148,21 +148,27 @@ export function MachineMonitoring() {
 
   useEffect(() => {
     let mounted = true;
+
     const load = async () => {
       try {
-        setRefreshing(true);
         await refreshSmartBins();
-        if (mounted) setLastUpdated(new Date());
       } catch (error) {
-        console.error('Unable to refresh Smart Bin data:', error);
-      } finally {
-        if (mounted) setRefreshing(false);
+        if (mounted) {
+          console.error('Unable to refresh Smart Bin data:', error);
+        }
       }
     };
 
-    load();
-    const interval = window.setInterval(load, 5000);
-    return () => { mounted = false; window.clearInterval(interval); };
+    void load();
+
+    const interval = window.setInterval(() => {
+      void load();
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
   }, [refreshSmartBins]);
 
   const compartments = useMemo(() => {
