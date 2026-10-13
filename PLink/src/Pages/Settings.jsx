@@ -23,7 +23,6 @@ export function Settings() {
   const { 
     settings, 
     plasticTypes,
-    refreshGradeLevels,
     refreshSections,
     refreshPlasticTypes,
     refreshSettings,
@@ -33,9 +32,46 @@ export function Settings() {
     removeSection: removeSectionFromContext
   } = useData();
   
+  const [gradeLevels, setGradeLevels] = useState([]);
+
   useEffect(() => {
-    Promise.allSettled([refreshSettings(), refreshPlasticTypes(), refreshGradeLevels(), refreshSections()]);
-  }, [refreshSettings, refreshPlasticTypes, refreshGradeLevels, refreshSections]);
+    let active = true;
+
+    const loadSettingsData = async () => {
+      // These refresh functions are provided by DataContext.
+      await Promise.allSettled([
+        refreshSettings(),
+        refreshPlasticTypes(),
+        refreshSections(),
+      ]);
+
+      // Grade levels are not exposed by DataContext, so load them directly
+      // from the existing Laravel /grade-levels endpoint.
+      try {
+        const response = await api.get('/grade-levels');
+        const rows = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.data)
+            ? response.data.data
+            : [];
+
+        if (active) {
+          setGradeLevels(rows);
+        }
+      } catch (error) {
+        console.error('Failed to load grade levels', error);
+        if (active) {
+          setGradeLevels([]);
+        }
+      }
+    };
+
+    void loadSettingsData();
+
+    return () => {
+      active = false;
+    };
+  }, [refreshSettings, refreshPlasticTypes, refreshSections]);
 
   // Safe default matching your exact database records layout
   const [schoolInfo, setSchoolInfo] = useState({
@@ -315,6 +351,7 @@ export function Settings() {
           <SectionsManager 
             onToast={(msg) => showToast(msg)} 
             refreshSections={refreshSections}
+            gradeLevels={gradeLevels}
             addSectionToContext={addSectionToContext}
             updateSectionInContext={updateSectionInContext}
             removeSectionFromContext={removeSectionFromContext}
@@ -468,12 +505,13 @@ function PointRule({ label, desc, value, onChange, min, max }) {
 // CONTROLLER 2: Section Table Manager Component
 function SectionsManager({ 
   onToast, 
-  refreshSections, 
+  refreshSections,
+  gradeLevels = [],
   addSectionToContext, 
   updateSectionInContext, 
   removeSectionFromContext 
 }) {
-  const { sections: sectionsFromContext, gradeLevels = [] } = useData();
+  const { sections: sectionsFromContext } = useData();
   const [search, setSearch] = useState('');
   const [filterGrade, setFilterGrade] = useState('All');
   const [showModal, setShowModal] = useState(false);

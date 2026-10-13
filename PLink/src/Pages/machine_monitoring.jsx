@@ -299,32 +299,6 @@ export function MachineMonitoring() {
       </div>
 
       <div className="animate-fade-in-up" style={{ background: COLORS.white, borderRadius: 24, padding: 24, border: `1px solid ${COLORS.mintLight}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 15 }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 18, color: COLORS.dark }}>HC-SR04 Compartment Sensors</h3>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.darkMuted }}>Each compartment has its own distance sensor and fullness calculation.</p>
-          </div>
-          <span style={{ fontSize: 11, color: COLORS.darkMuted }}>{refreshing ? 'Updating…' : lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Waiting for sensor data'}</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px),1fr))', gap: 12 }}>
-          {compartments.map((compartment) => {
-            const fill = getStoredFill(compartment);
-            return (
-              <div key={compartment.compartment_id} style={{ background: COLORS.ivory, borderRadius: 14, padding: 15 }}>
-                <div style={{ fontSize: 11, color: COLORS.darkMuted, fontWeight: 800, textTransform: 'uppercase' }}>{compartment.name}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
-                  <span style={{ color: COLORS.dark }}>Distance</span><strong style={{ color: COLORS.dark }}>{compartment.current_distance_cm != null ? `${Number(compartment.current_distance_cm).toFixed(1)} cm` : '—'}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, gap: 8 }}>
-                  <span style={{ color: COLORS.dark }}>Fullness</span><strong style={{ color: COLORS.dark }}>{fill}%</strong>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="animate-fade-in-up" style={{ background: COLORS.white, borderRadius: 24, padding: 24, border: `1px solid ${COLORS.mintLight}` }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 18, color: COLORS.dark }}>Rejected Items by Hour</h3>
         <p style={{ margin: '0 0 16px', fontSize: 13, color: COLORS.darkMuted }}>Items rejected by the classifier today.</p>
         <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderBottom: `1px solid ${COLORS.mintMuted}`, paddingBottom: 8, gap: 4 }}>
