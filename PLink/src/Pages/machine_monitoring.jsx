@@ -144,8 +144,6 @@ function CompartmentCard({ compartment }) {
 
 export function MachineMonitoring() {
   const { smartBins, refreshSmartBins } = useData();
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
   const smartBin = smartBins?.[0] || null;
 
   useEffect(() => {
