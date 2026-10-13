@@ -419,9 +419,6 @@ export default function Profile() {
     localStorage.clear();
     window.location.href = '/login';
   };
-    setSecurity(updated);
-    localStorage.setItem('plink_security', JSON.stringify(updated));
-  };
 
   // Pre-compiled style layouts for component layout rendering setup logic
   const cancelButtonStyle = { padding: '10px 16px', borderRadius: '12px', border: '1px solid #bedef6', background: '#fff', cursor: 'pointer', fontWeight: '500', fontSize: '14px' };

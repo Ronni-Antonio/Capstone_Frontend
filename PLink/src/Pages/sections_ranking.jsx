@@ -7,16 +7,27 @@ const badges = ['Eco Champion', 'Rising Star', 'Green Warriors', 'Steady Recycle
 export default function SectionsRanking() {
   const { students, transactions, sectionsRanking, refreshSectionsRanking } = useData();
   const [period, setPeriod] = useState('weekly');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+
     refreshSectionsRanking(period)
       .catch((error) => console.error('Unable to load section ranking:', error))
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [period, refreshSectionsRanking]);
+
+  const handlePeriodChange = (nextPeriod) => {
+    if (nextPeriod === period) return;
+    setLoading(true);
+    setPeriod(nextPeriod);
+  };
   
   // Calculate ranking from students/transactions if API ranking is empty
   const sectionsData = useMemo(() => {
@@ -176,7 +187,7 @@ export default function SectionsRanking() {
             <div className="flex bg-[#f4fcfc] rounded-xl p-1">
               <button
                 type="button"
-                onClick={() => setPeriod('weekly')}
+                onClick={() => handlePeriodChange('weekly')}
                 className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors ${
                   period === 'weekly'
                     ? 'bg-[#112d68] text-white'
@@ -188,7 +199,7 @@ export default function SectionsRanking() {
 
               <button
                 type="button"
-                onClick={() => setPeriod('monthly')}
+                onClick={() => handlePeriodChange('monthly')}
                 className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors ${
                   period === 'monthly'
                     ? 'bg-[#112d68] text-white'
