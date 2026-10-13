@@ -62,11 +62,11 @@ const sevStyle = {
     badge: 'bg-amber-100 text-amber-700',
   },
   info: {
-    bar: 'bg-emerald-600',
-    bg: 'bg-emerald-50',
-    iconColor: 'text-emerald-700',
+    bar: 'bg-[#2776c0]',
+    bg: 'bg-[#eef7ff]',
+    iconColor: 'text-[#2776c0]',
     label: 'Info',
-    badge: 'bg-emerald-100 text-emerald-800',
+    badge: 'bg-[#bedef6] text-[#112d68]',
   },
 };
 
@@ -107,18 +107,18 @@ export function Notifications({ onNavigate }) {
   const unreadCount = items.filter((i) => !i.read).length;
 
   return (
-    <div className="p-0 sm:p-2 lg:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 font-sans min-w-0">
+    <div className="w-full max-w-none p-0 sm:p-2 lg:p-6 space-y-4 sm:space-y-6 font-sans min-w-0">
       
       {/* Header Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-emerald-900 text-white rounded-2xl p-5 shadow flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300">
+        <div className="bg-[#112d68] text-white rounded-2xl p-5 shadow-sm flex items-center gap-4 border border-[#112d68]">
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-[#bedef6]">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
           </div>
           <div>
-            <div className="text-xs text-emerald-200 uppercase tracking-wider">Unread</div>
+            <div className="text-xs text-[#bedef6] uppercase tracking-wider">Unread</div>
             <div className="text-2xl font-bold">{unreadCount}</div>
           </div>
         </div>
@@ -126,9 +126,9 @@ export function Notifications({ onNavigate }) {
         {[
           { label: 'Critical', value: items.filter((i) => i.severity === 'critical').length, text: 'text-red-600' },
           { label: 'Warnings', value: items.filter((i) => i.severity === 'warning').length, text: 'text-amber-600' },
-          { label: 'Info', value: items.filter((i) => i.severity === 'info').length, text: 'text-emerald-700' },
+          { label: 'Info', value: items.filter((i) => i.severity === 'info').length, text: 'text-[#2776c0]' },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+          <div key={s.label} className="bg-white rounded-2xl p-5 border border-[#bedef6]/70 shadow-sm">
             <div className="text-xs text-gray-500 uppercase tracking-wider font-medium">{s.label}</div>
             <div className={`text-2xl font-bold mt-1 ${s.text}`}>{s.value}</div>
             <div className="mt-2 inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
@@ -139,14 +139,14 @@ export function Notifications({ onNavigate }) {
       </div>
 
       {/* Filters and Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-        <div className="inline-flex bg-gray-50 rounded-xl p-1 gap-1 self-start">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white rounded-2xl p-4 border border-[#bedef6]/70 shadow-sm">
+        <div className="inline-flex flex-wrap bg-[#f4fcfc] rounded-xl p-1 gap-1 self-start">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                filter === f ? 'bg-emerald-800 text-white' : 'text-gray-600 hover:bg-gray-200'
+                filter === f ? 'bg-[#112d68] text-white' : 'text-[#4d6d85] hover:bg-[#bedef6]/50'
               }`}
             >
               {f}
@@ -155,7 +155,7 @@ export function Notifications({ onNavigate }) {
         </div>
         <button
           onClick={markAllNotificationsRead}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-semibold transition-colors self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#2776c0] hover:bg-[#112d68] text-white rounded-xl text-sm font-semibold transition-colors self-start md:self-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 0 012 2m-6 9l2 2 4-4" />
@@ -171,7 +171,7 @@ export function Notifications({ onNavigate }) {
           if (groupItems.length === 0) return null;
           return (
             <div key={g.key}>
-              <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-3 px-1">
+              <h3 className="text-xs font-bold text-[#112d68] uppercase tracking-wider mb-3 px-1">
                 {g.label}
               </h3>
               <div className="space-y-3">
@@ -182,7 +182,7 @@ export function Notifications({ onNavigate }) {
                     <div
                       key={nid}
                       onClick={() => setSelectedNotif(n)}
-                      className="w-full text-left relative flex gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl border border-gray-100 bg-white shadow-sm hover:bg-gray-50 transition-colors cursor-pointer overflow-hidden"
+                      className="w-full text-left relative grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl border border-[#bedef6]/70 bg-white shadow-sm hover:bg-[#f4fcfc] transition-colors cursor-pointer overflow-hidden"
                     >
                       <span className={`absolute left-0 top-0 bottom-0 w-1 ${s.bar}`} />
                       
@@ -197,13 +197,13 @@ export function Notifications({ onNavigate }) {
                             {s.label}
                           </span>
                           {!n.read && (
-                            <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                            <span className="w-2 h-2 rounded-full bg-[#148bf0]" />
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1 truncate">
+                        <p className="text-sm text-[#4d6d85] mt-1 leading-relaxed max-w-5xl">
                           {n.message}
                         </p>
-                        <div className="text-xs text-gray-400 mt-2">
+                        <div className="text-xs text-[#8fa6b9] mt-2">
                           {n.time}
                         </div>
                       </div>
@@ -212,7 +212,7 @@ export function Notifications({ onNavigate }) {
                         {!n.read ? (
                           <button
                             onClick={() => markNotificationRead(nid)}
-                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-950"
+                            className="text-xs font-semibold text-[#2776c0] hover:text-[#112d68]"
                           >
                             Mark read
                           </button>
@@ -235,8 +235,8 @@ export function Notifications({ onNavigate }) {
         })}
 
         {filtered.length === 0 && (
-          <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-4 text-emerald-700">
+          <div className="bg-white rounded-2xl p-12 text-center border border-[#bedef6]/70 shadow-sm">
+            <div className="w-16 h-16 mx-auto rounded-full bg-[#eef7ff] flex items-center justify-center mb-4 text-[#2776c0]">
               <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
@@ -289,7 +289,7 @@ export function Notifications({ onNavigate }) {
                     window.sessionStorage.setItem('plink.incentives.tab', 'inventory');
                     onNavigate('incentives');
                   }}
-                  className="w-full py-2.5 bg-emerald-800 text-white rounded-xl font-semibold text-sm hover:bg-emerald-900 transition-colors"
+                  className="w-full py-2.5 bg-[#112d68] text-white rounded-xl font-semibold text-sm hover:bg-[#2776c0] transition-colors"
                 >
                   Open Rewards Inventory
                 </button>
@@ -300,7 +300,7 @@ export function Notifications({ onNavigate }) {
                     setSelectedNotif(null);
                     onNavigate('machines'); 
                   }}
-                  className="w-full py-2.5 bg-emerald-800 text-white rounded-xl font-semibold text-sm hover:bg-emerald-900 transition-colors"
+                  className="w-full py-2.5 bg-[#112d68] text-white rounded-xl font-semibold text-sm hover:bg-[#2776c0] transition-colors"
                 >
                   View Machine Status
                 </button>
@@ -311,7 +311,7 @@ export function Notifications({ onNavigate }) {
                     markNotificationRead(selectedNotif.id || selectedNotif.notification_id);
                     setSelectedNotif(null);
                   }}
-                  className="w-full py-2.5 bg-emerald-100 text-emerald-900 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition-colors"
+                  className="w-full py-2.5 bg-[#bedef6] text-[#112d68] rounded-xl font-semibold text-sm hover:bg-[#9fcdf0] transition-colors"
                 >
                   Mark as Read
                 </button>

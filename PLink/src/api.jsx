@@ -116,10 +116,9 @@ api.updateIotDeviceConfig = (controllerCode, data) =>
   api.put(`/iot-device-configs/${controllerCode}`, data);
 
 // Sections / grade levels
-api.getGradeLevels = () => api.get('/grade-levels');
 api.getSections = () => api.get('/sections');
 api.getSectionsList = () => api.get('/sections/list');
-api.getSectionsRanking = () => api.get('/sections/ranking');
+api.getSectionsRanking = (period = 'weekly') => api.get('/sections/ranking', { params: { period } });
 api.addSection = (data) => api.post('/sections', data);
 api.updateSection = (id, data) => api.put(`/sections/${id}`, data);
 api.deleteSection = (id) => api.delete(`/sections/${id}`);

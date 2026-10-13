@@ -411,7 +411,7 @@ export default function Reports() {
             {forecasting ? 'Running Prophet…' : 'Run 7-Day Forecast'}
           </button>
           <button onClick={downloadPdf} disabled={downloading} style={buttonStyle(COLORS.dark)}>
-            {downloading ? 'Preparing PDF…' : 'Download PDF Report'}
+            {downloading ? 'Preparing PDF…' : 'Download Formal PDF Report'}
           </button>
         </div>
       </div>
@@ -583,13 +583,13 @@ export default function Reports() {
 
       <Card>
         <SectionTitle
-          title="Downloadable Sustainability Report"
-          subtitle="The PDF uses the same historical analytics and stored Prophet forecasts shown on this page"
-          right={<button onClick={downloadPdf} disabled={downloading} style={buttonStyle(COLORS.dark)}>{downloading ? 'Preparing…' : 'Download PDF'}</button>}
+          title="Formal Sustainability Report"
+          subtitle="A print-ready administrative report using the same historical analytics and stored Prophet forecasts shown on this page"
+          right={<button onClick={downloadPdf} disabled={downloading} style={buttonStyle(COLORS.dark)}>{downloading ? 'Preparing…' : 'Download Formal PDF'}</button>}
         />
         <div style={{ color: COLORS.muted, fontSize: '12px', lineHeight: 1.7 }}>
-          Includes the reporting period, summary statistics, recyclable-type breakdown, section performance,
-          top recyclers, compartment fullness, and the latest seven-day Prophet forecasts with prediction ranges.
+          Includes a formal report header, executive summary, structured performance tables, reward activity, smart bin status,
+          and the latest seven-day Prophet forecasts with prediction ranges and page numbering.
         </div>
       </Card>
     </div>

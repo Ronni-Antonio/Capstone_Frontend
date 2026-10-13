@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { TrophyIcon } from 'lucide-react';
 
@@ -6,10 +6,17 @@ const badges = ['Eco Champion', 'Rising Star', 'Green Warriors', 'Steady Recycle
 
 export default function SectionsRanking() {
   const { students, transactions, sectionsRanking, refreshSectionsRanking } = useData();
+  const [period, setPeriod] = useState('weekly');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    refreshSectionsRanking().catch((error) => console.error('Unable to load section ranking:', error));
-  }, [refreshSectionsRanking]);
+    let active = true;
+    setLoading(true);
+    refreshSectionsRanking(period)
+      .catch((error) => console.error('Unable to load section ranking:', error))
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [period, refreshSectionsRanking]);
   
   // Calculate ranking from students/transactions if API ranking is empty
   const sectionsData = useMemo(() => {
@@ -19,8 +26,6 @@ export default function SectionsRanking() {
       // Add any missing properties to API data for consistency
       return sectionsRanking.map((section, index) => ({
         name: section.name || section.section_name || 'Unknown Section',
-        grade_level: section.grade_level || 'Unassigned',
-        grade_level_id: section.grade_level_id ?? null,
         students: section.students || 0,
         bottles: section.bottles || 0,
         points: section.points || 0,
@@ -36,39 +41,52 @@ export default function SectionsRanking() {
     const safeStudents = Array.isArray(students) ? students : [];
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
 
+    const now = new Date();
+    let periodStart;
+    if (period === 'monthly') {
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else {
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      periodStart = new Date(now);
+      periodStart.setHours(0, 0, 0, 0);
+      periodStart.setDate(now.getDate() - diffToMonday);
+    }
+
+    const periodTransactions = safeTransactions.filter((tx) => {
+      const rawDate = tx?.completed_at || tx?.transaction_date || tx?.created_at || tx?.started_at;
+      if (!rawDate) return false;
+      const date = new Date(rawDate);
+      return !Number.isNaN(date.getTime()) && date >= periodStart && date <= now;
+    });
+
     // Group students by section
     const sectionsMap = {};
     safeStudents.forEach(student => {
       const sectionName = (student.section || 'Unknown Section').toString();
-      const gradeLevel = (student.grade_level || 'Unassigned').toString();
-      const sectionKey = `${gradeLevel}::${sectionName}`;
-      if (!sectionsMap[sectionKey]) {
-        sectionsMap[sectionKey] = {
+      if (!sectionsMap[sectionName]) {
+        sectionsMap[sectionName] = {
           name: sectionName,
-          grade_level: gradeLevel,
-          grade_level_id: student.grade_level_id ?? null,
           students: 0,
           bottles: 0,
           points: 0,
         };
       }
-      sectionsMap[sectionKey].students++;
+      sectionsMap[sectionName].students++;
     });
 
     // Get point conversion rate from settings
       // Add bottles and points from transactions
-    safeTransactions.forEach(tx => {
+    periodTransactions.forEach(tx => {
       if (!tx) return;
       const studentId = tx.student_id;
       const student = safeStudents.find(s => (s.id || s.student_id) === studentId);
       if (student && student.section) {
         const sectionName = student.section.toString();
-        const gradeLevel = (student.grade_level || 'Unassigned').toString();
-        const sectionKey = `${gradeLevel}::${sectionName}`;
-        if (sectionsMap[sectionKey]) {
+        if (sectionsMap[sectionName]) {
           const bottles = tx.bottles_deposited || tx.bottles || tx.bottle_qty || tx.bottles_qty || 0;
-          sectionsMap[sectionKey].bottles += Number(bottles) || 0;
-          sectionsMap[sectionKey].points += Number(tx.total_points || tx.points_earned || 0);
+          sectionsMap[sectionName].bottles += Number(bottles) || 0;
+          sectionsMap[sectionName].points += Number(tx.total_points || tx.points_earned || 0);
         }
       }
     });
@@ -86,7 +104,7 @@ export default function SectionsRanking() {
 
       
     return sortedSections;
-  }, [students, transactions, sectionsRanking]);
+  }, [students, transactions, sectionsRanking, period]);
 
   const topSection = sectionsData && sectionsData[0];
   const podiumSections = sectionsData ? sectionsData.slice(0, 3) : [];
@@ -110,10 +128,6 @@ export default function SectionsRanking() {
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold break-words">
                 {topSection.name}
               </h2>
-
-              <p className="text-sm font-semibold text-white/80 mt-1">
-                {topSection.grade_level || 'Unassigned'}
-              </p>
 
               <p className="mt-2 text-[#bedef6]">
                 Leading with {topSection.points.toLocaleString()} points · {topSection.bottles.toLocaleString()} bottles recycled
@@ -150,16 +164,37 @@ export default function SectionsRanking() {
         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#bedef6] shadow-sm">
 
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-            <h3 className="text-2xl font-bold text-[#112d68]">
-              Leaderboard
-            </h3>
+            <div>
+              <h3 className="text-2xl font-bold text-[#112d68]">
+                Leaderboard
+              </h3>
+              <p className="text-xs text-[#8fa6b9] mt-1">
+                {loading ? 'Updating rankings…' : period === 'monthly' ? 'Top sections for the current month' : 'Top sections for the current week'}
+              </p>
+            </div>
 
             <div className="flex bg-[#f4fcfc] rounded-xl p-1">
-              <button className="px-5 py-2 rounded-xl bg-[#112d68] text-white text-sm font-semibold">
+              <button
+                type="button"
+                onClick={() => setPeriod('weekly')}
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                  period === 'weekly'
+                    ? 'bg-[#112d68] text-white'
+                    : 'text-[#4d6d85] hover:bg-[#bedef6]/50'
+                }`}
+              >
                 Weekly
               </button>
 
-              <button className="px-5 py-2 text-sm text-[#4d6d85]">
+              <button
+                type="button"
+                onClick={() => setPeriod('monthly')}
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                  period === 'monthly'
+                    ? 'bg-[#112d68] text-white'
+                    : 'text-[#4d6d85] hover:bg-[#bedef6]/50'
+                }`}
+              >
                 Monthly
               </button>
             </div>
@@ -171,7 +206,6 @@ export default function SectionsRanking() {
                 <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[1].name}
                 </div>
-                <div className="text-xs text-[#4d6d85]">{podiumSections[1].grade_level || 'Unassigned'}</div>
 
                 <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[1].points.toLocaleString()} pts
@@ -188,7 +222,6 @@ export default function SectionsRanking() {
                 <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[0].name}
                 </div>
-                <div className="text-xs text-[#4d6d85]">{podiumSections[0].grade_level || 'Unassigned'}</div>
 
                 <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[0].points.toLocaleString()} pts
@@ -205,7 +238,6 @@ export default function SectionsRanking() {
                 <div className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
                   {podiumSections[2].name}
                 </div>
-                <div className="text-xs text-[#4d6d85]">{podiumSections[2].grade_level || 'Unassigned'}</div>
 
                 <div className="text-sm text-[#8fa6b9] mb-3">
                   {podiumSections[2].points.toLocaleString()} pts
@@ -225,7 +257,7 @@ export default function SectionsRanking() {
 
         <div className="p-6 border-b border-[#f4fcfc]">
           <h3 className="text-sm sm:text-xl font-bold text-[#112d68] break-words">
-            Full Rankings · This Week
+            Full Rankings · {period === 'monthly' ? 'This Month' : 'This Week'}
           </h3>
         </div>
 
@@ -248,9 +280,6 @@ export default function SectionsRanking() {
                     <h4 className="font-bold text-[#112d68]">
                       {section.name}
                     </h4>
-                    <span className="text-xs font-semibold text-[#4d6d85]">
-                      {section.grade_level || 'Unassigned'}
-                    </span>
 
                     {section.badge && (
                       <span className="bg-[#bedef6] text-[#112d68] text-xs px-2 py-1 rounded-full">
