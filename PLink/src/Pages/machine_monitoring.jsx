@@ -49,14 +49,7 @@ const compartmentDescription = (category) =>
     : 'Plastic storage compartment';
 
 function CompartmentCard({ compartment }) {
-  const distance = compartment?.current_distance_cm === null || compartment?.current_distance_cm === undefined
-    ? null
-    : Number(compartment.current_distance_cm);
   const fullness = getStoredFill(compartment);
-  const empty = Number(compartment?.empty_threshold_cm);
-  const full = Number(compartment?.full_threshold_cm);
-  const emptyDisplay = Number.isFinite(empty) ? `${empty.toFixed(1)} cm` : '—';
-  const fullDisplay = Number.isFinite(full) ? `${full.toFixed(1)} cm` : '—';
   const state = getCompartmentState(compartment, fullness);
   const styles = stateStyles[state.key] || stateStyles.offline;
   const circleDashOffset = 100 - fullness;
@@ -135,21 +128,13 @@ function CompartmentCard({ compartment }) {
             <span>0% Empty</span><span>80% Almost Full</span><span>100% Full</span>
           </div>
 
-          <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: '8px' }}>
-            {[
-              ['Distance', distance !== null && Number.isFinite(distance) ? `${distance.toFixed(1)} cm` : '—'],
-              ['Empty', emptyDisplay],
-              ['Full', fullDisplay],
-            ].map(([label, value]) => (
-              <div key={label} style={{ background: COLORS.white, border: `1px solid ${COLORS.mintLight}`, borderRadius: '12px', padding: '10px' }}>
-                <div style={{ fontSize: '9px', color: COLORS.darkMuted, textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
-                <div style={{ fontSize: '16px', color: COLORS.dark, fontWeight: 800, marginTop: '3px' }}>{value}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: '13px', fontSize: '12px', color: styles.text, fontWeight: 650 }}>
-            ● {state.message}
+          <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: `1px solid ${COLORS.mintLight}` }}>
+            <div style={{ fontSize: '12px', color: styles.text, fontWeight: 650 }}>
+              ● {state.message}
+            </div>
+            <div style={{ marginTop: '5px', fontSize: '11px', color: COLORS.darkMuted }}>
+              Last sensor activity: {compartment?.last_active_at ? new Date(compartment.last_active_at).toLocaleString() : 'No recent reading'}
+            </div>
           </div>
         </div>
       </div>

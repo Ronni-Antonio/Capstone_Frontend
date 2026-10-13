@@ -128,8 +128,6 @@ const normalizeSection = (section) => ({
   id: section.section_id ?? section.id,
   section_id: section.section_id ?? section.id,
   name: section.name || section.section_name || 'Unnamed Section',
-  grade_level_id: section.grade_level_id ?? section.gradeLevel?.grade_level_id ?? null,
-  grade_level: section.grade_level || section.gradeLevel?.name || null,
   students: Number(section.students ?? section.student_count ?? section.students_count ?? 0),
   student_count: Number(section.student_count ?? section.students_count ?? section.students ?? 0),
   students_count: Number(section.students_count ?? section.student_count ?? section.students ?? 0),
@@ -265,7 +263,6 @@ export const DataProvider = ({ children }) => {
     reportsLoading: false,
     reportsError: null,
     redemptions: [],
-    gradeLevels: [],
     sections: [],
     sectionsRanking: [],
     notifications: [],
@@ -596,31 +593,22 @@ export const DataProvider = ({ children }) => {
     return res;
   }, []);
 
-
-  const refreshGradeLevels = useCallback(async () => {
-    const res = await api.getGradeLevels();
-    setData((prev) => ({ ...prev, gradeLevels: arrayFrom(res.data) }));
-    return res;
-  }, []);
-
   const refreshSections = useCallback(async () => {
     const res = await api.getSections();
     setData((prev) => ({ ...prev, sections: arrayFrom(res.data).map(normalizeSection) }));
     return res;
   }, []);
 
-  const refreshSectionsRanking = useCallback(async () => {
-    const res = await api.getSectionsRanking();
+  const refreshSectionsRanking = useCallback(async (period = 'weekly') => {
+    const res = await api.getSectionsRanking(period);
     setData((prev) => ({ ...prev, sectionsRanking: arrayFrom(res.data).map((s) => ({
       ...s,
       name: s.section_name || s.name,
       students: Number(s.student_count ?? s.students ?? 0),
-      grade_level_id: s.grade_level_id ?? null,
-      grade_level: s.grade_level || 'Unassigned',
-      recyclables: Number(s.total_recyclables ?? s.total_bottles ?? s.recyclables ?? s.bottles ?? 0),
-      bottles: Number(s.total_recyclables ?? s.total_bottles ?? s.bottles ?? 0),
+      bottles: Number(s.total_bottles ?? s.bottles ?? 0),
       points: Number(s.total_points ?? s.points ?? 0),
       rank: s.points_rank || s.rank,
+      growth: s.growth ?? '+0%',
     })) }));
     return res;
   }, []);
@@ -744,7 +732,6 @@ export const DataProvider = ({ children }) => {
       loadReports,
       refreshReports,
       refreshRedemptions,
-      refreshGradeLevels,
       refreshSections,
       refreshSectionsRanking,
       refreshNotifications,

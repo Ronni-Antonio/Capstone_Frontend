@@ -62,23 +62,6 @@ export default function Profile() {
     confirmPass: ''
   });
 
-  const [security, setSecurity] = useState(() => {
-    const savedSecurity = localStorage.getItem('plink_security');
-    if (savedSecurity) {
-      try {
-        return JSON.parse(savedSecurity);
-      } catch {
-        // Fall back to defaults when saved JSON is invalid.
-      }
-    }
-
-    return {
-      twoFactor: true,
-      loginAlerts: true,
-      autoLogout: false
-    };
-  });
-
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
 
@@ -437,28 +420,12 @@ export default function Profile() {
     window.location.href = '/login';
   };
 
-  const toggleSecurity = (setting) => {
-    const updated = {
-      ...security,
-      [setting]: !security[setting]
-    };
-    setSecurity(updated);
-    localStorage.setItem('plink_security', JSON.stringify(updated));
-  };
-
   // Pre-compiled style layouts for component layout rendering setup logic
   const cancelButtonStyle = { padding: '10px 16px', borderRadius: '12px', border: '1px solid #bedef6', background: '#fff', cursor: 'pointer', fontWeight: '500', fontSize: '14px' };
   const confirmButtonStyle = { ...buttonStyle, background: COLORS.dark };
 
   return (
     <div className="profile-responsive" style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'sans-serif', minWidth: 0 }}>
-      <div>
-        <h1 style={{ margin: 0, color: COLORS.dark, fontSize: '28px' }}>User Management</h1>
-        <p style={{ marginTop: '6px', color: COLORS.darkMuted, fontSize: '14px' }}>
-          Manage profile information and account security.
-        </p>
-      </div>
-
       {message && (
         <div style={{
           padding: '14px',
@@ -659,55 +626,7 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* SECURITY SETTINGS */}
-          <div style={{
-            background: COLORS.white,
-            borderRadius: '24px',
-            padding: '24px',
-            border: `1px solid ${COLORS.mintLight}`,
-            boxShadow: '0 10px 25px rgba(0,0,0,.04)'
-          }}>
-            <h3 style={{ marginTop: 0, color: COLORS.dark }}>Security Settings</h3>
-            {[
-              { key: 'twoFactor', label: 'Two-Factor Authentication' },
-              { key: 'loginAlerts', label: 'Login Alerts' },
-              { key: 'autoLogout', label: 'Automatic Session Logout' }
-            ].map((item) => (
-              <div key={item.key} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '14px 0',
-                borderBottom: '1px solid rgba(0,0,0,.05)'
-              }}>
-                <span style={{ color: COLORS.dark, fontWeight: '500' }}>{item.label}</span>
-                <button
-                  onClick={() => toggleSecurity(item.key)}
-                  style={{
-                    width: '52px',
-                    height: '28px',
-                    border: 'none',
-                    borderRadius: '999px',
-                    cursor: 'pointer',
-                    background: security[item.key] ? COLORS.sage : '#bedef6',
-                    position: 'relative',
-                    transition: '.2s'
-                  }}
-                >
-                  <span style={{
-                    position: 'absolute',
-                    top: '3px',
-                    left: security[item.key] ? '27px' : '3px',
-                    width: '22px',
-                    height: '22px',
-                    background: '#fff',
-                    borderRadius: '50%',
-                    transition: '.2s'
-                  }} />
-                </button>
-              </div>
-            ))}
-          </div>
+
         </div>
       </div>
 

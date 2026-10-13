@@ -25,7 +25,7 @@ const navItems = [
   { key: 'reports', label: 'Reports & Analytics', icon: BarChart3Icon },
   { key: 'incentives', label: 'Incentives & Rewards', icon: GiftIcon },
   { key: 'logs', label: 'Logs', icon: ScrollTextIcon },
-  { key: 'notifications', label: 'Notifications', icon: BellIcon, badge: 3 },
+  { key: 'notifications', label: 'Notifications', icon: BellIcon  },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
@@ -119,10 +119,6 @@ function SidebarContent({ activePage, setActivePage, onLogout, collapsed = false
             >
               <Icon className="w-[18px] h-[18px] shrink-0" />
               {!collapsed && <span className="flex-1 text-left whitespace-nowrap">{item.label}</span>}
-              {item.badge && !collapsed && (
-                <span className="text-[10px] font-bold bg-[#bedef6] text-[#112d68] px-1.5 py-0.5 rounded-full shrink-0">{item.badge}</span>
-              )}
-              {item.badge && collapsed && <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#bedef6]" />}
             </button>
           );
         })}
