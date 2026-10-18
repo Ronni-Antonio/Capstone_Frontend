@@ -5,26 +5,38 @@ const COLORS = {
   dark: '#112d68',
   sage: '#2776c0',
   muted: 'rgba(17,45,104,0.62)',
-  mint: '#bedef6',
   mintLight: 'rgba(190,222,246,0.38)',
-  lime: '#bedef6',
   limeLight: 'rgba(190,222,246,0.62)',
-  ivory: '#f4fcfc',
-  paper: '#bedef6',
-  plastic: '#2776c0',
 };
 
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+const formatDate = (value) => {
+  if (!value) return '—';
+
+  const normalized = String(value).includes('T')
+    ? String(value)
+    : `${value}T00:00:00`;
+
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return '—';
+
+  return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
   });
 };
 
-const getCompartmentFill = (compartment) => {
-  const value = Number(compartment?.current_fill_percentage);
-  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
+const formatDateTime = (value) => {
+  if (!value) return '—';
+  const date = new Date(String(value).replace(' ', 'T'));
+  if (Number.isNaN(date.getTime())) return '—';
+
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 };
 
 const Card = ({ children, style = {} }) => (
@@ -43,86 +55,58 @@ const Card = ({ children, style = {} }) => (
 );
 
 const EmptyState = ({ children }) => (
-  <div style={{ padding: '34px 12px', textAlign: 'center', color: COLORS.muted, fontSize: '13px' }}>
+  <div
+    style={{
+      padding: '34px 12px',
+      textAlign: 'center',
+      color: COLORS.muted,
+      fontSize: '13px',
+    }}
+  >
     {children}
   </div>
 );
 
-function CompartmentCard({ compartment, fallbackCategory }) {
-  const category = compartment?.material_category || fallbackCategory;
-  const isPaper = category === 'paper';
-  const fill = getCompartmentFill(compartment);
-  const distance = compartment?.current_distance_cm;
-  const label = compartment?.name || `${isPaper ? 'Paper' : 'Plastic'} Compartment`;
-
-  const status = compartment?.fill_state === 'offline' || compartment?.sensor_online === false
-    ? 'Offline'
-    : compartment?.fill_state === 'full' || fill >= 100
-      ? 'Full'
-      : compartment?.fill_state === 'almost_full' || fill >= 80
-        ? 'Almost Full'
-        : 'Normal';
-
-  return (
-    <div
-      style={{
-        flex: 1,
-        minWidth: '220px',
-        borderRadius: '18px',
-        padding: '18px',
-        background: isPaper ? 'rgba(190,222,246,.42)' : 'rgba(190,222,246,.32)',
-        border: `1px solid ${COLORS.mintLight}`,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontSize: '11px', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-            {isPaper ? 'Paper' : 'Plastic'} fullness
-          </div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: COLORS.dark, marginTop: '4px' }}>{label}</div>
-        </div>
-        <div style={{ fontSize: '30px', fontWeight: 800, color: COLORS.dark }}>{fill}%</div>
-      </div>
-
-      <div style={{ height: '10px', borderRadius: '999px', background: 'rgba(17,45,104,.10)', overflow: 'hidden', marginTop: '18px' }}>
-        <div
-          style={{
-            height: '100%',
-            width: `${fill}%`,
-            borderRadius: '999px',
-            background: isPaper ? '#148bf0' : COLORS.sage,
-          }}
-        />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', color: COLORS.muted }}>
-        <span>{distance != null && Number.isFinite(Number(distance)) ? `${Number(distance).toFixed(1)} cm` : 'No reading'}</span>
-        <span style={{ fontWeight: 700, color: fill >= 80 ? '#9a6a20' : COLORS.dark }}>{status}</span>
-      </div>
-    </div>
-  );
-}
-
-function HorizontalBars({ data, labelKey, valueKey, colors = [COLORS.dark, '#2776c0', '#2776c0', '#bedef6', '#bedef6'], suffix = '' }) {
+function HorizontalBars({ data, labelKey, valueKey }) {
   const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       {data.map((item, index) => {
         const value = Number(item[valueKey] || 0);
+
         return (
           <div key={`${item[labelKey]}-${index}`}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.dark }}>{item[labelKey]}</span>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: COLORS.sage }}>{value.toLocaleString()}{suffix}</span>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginBottom: '6px',
+              }}
+            >
+              <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.dark }}>
+                {item[labelKey]}
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: COLORS.sage }}>
+                {value.toLocaleString()}
+              </span>
             </div>
-            <div style={{ height: '9px', borderRadius: '999px', background: COLORS.mintLight, overflow: 'hidden' }}>
+
+            <div
+              style={{
+                height: '9px',
+                borderRadius: '999px',
+                background: COLORS.mintLight,
+                overflow: 'hidden',
+              }}
+            >
               <div
                 style={{
                   width: `${(value / max) * 100}%`,
                   height: '100%',
                   borderRadius: '999px',
-                  background: colors[index % colors.length],
+                  background: index === 0 ? COLORS.dark : COLORS.sage,
                 }}
               />
             </div>
@@ -133,29 +117,82 @@ function HorizontalBars({ data, labelKey, valueKey, colors = [COLORS.dark, '#277
   );
 }
 
-function SevenDayBars({ data, valueKey, label = 'Count', color = COLORS.dark }) {
+function SevenDayBars({ data, valueKey, label }) {
   const values = data.map((item) => Number(item[valueKey] || 0));
   const max = Math.max(...values, 1);
 
   return (
     <div style={{ minWidth: 0 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '38px minmax(0, 1fr)', gap: '10px' }}>
-        <div style={{ height: '230px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '4px 0 30px', color: COLORS.muted, fontSize: '10px', textAlign: 'right' }}>
+        <div
+          style={{
+            height: '230px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '4px 0 30px',
+            color: COLORS.muted,
+            fontSize: '10px',
+            textAlign: 'right',
+          }}
+        >
           <span>{max}</span>
           <span>{Math.round(max / 2)}</span>
           <span>0</span>
         </div>
 
-        <div style={{ position: 'relative', height: '230px', borderLeft: `1px solid ${COLORS.mintLight}`, borderBottom: `1px solid ${COLORS.mintLight}`, padding: '8px 8px 30px' }}>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: `1px dashed ${COLORS.mintLight}` }} />
-          <div style={{ position: 'absolute', left: '8px', right: '8px', top: '8px', bottom: '30px', display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+        <div
+          style={{
+            position: 'relative',
+            height: '230px',
+            borderLeft: `1px solid ${COLORS.mintLight}`,
+            borderBottom: `1px solid ${COLORS.mintLight}`,
+            padding: '8px 8px 30px',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: '50%',
+              borderTop: `1px dashed ${COLORS.mintLight}`,
+            }}
+          />
+
+          <div
+            style={{
+              position: 'absolute',
+              left: '8px',
+              right: '8px',
+              top: '8px',
+              bottom: '30px',
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: '12px',
+            }}
+          >
             {data.map((item, index) => {
               const value = Number(item[valueKey] || 0);
               const height = value > 0 ? Math.max((value / max) * 100, 5) : 1.5;
 
               return (
-                <div key={`${item.date}-${index}`} style={{ flex: 1, height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: COLORS.dark }}>{value}</span>
+                <div
+                  key={`${item.date}-${index}`}
+                  style={{
+                    flex: 1,
+                    height: '100%',
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: COLORS.dark }}>
+                    {value}
+                  </span>
                   <div
                     title={`${formatDate(item.date)}: ${value}`}
                     style={{
@@ -164,9 +201,8 @@ function SevenDayBars({ data, valueKey, label = 'Count', color = COLORS.dark }) 
                       height: `${height}%`,
                       minHeight: value > 0 ? '8px' : '3px',
                       borderRadius: '9px 9px 3px 3px',
-                      background: color,
-                      opacity: value > 0 ? 1 : .16,
-                      transition: 'height .25s ease',
+                      background: COLORS.dark,
+                      opacity: value > 0 ? 1 : 0.16,
                     }}
                   />
                 </div>
@@ -174,16 +210,37 @@ function SevenDayBars({ data, valueKey, label = 'Count', color = COLORS.dark }) 
             })}
           </div>
 
-          <div style={{ position: 'absolute', left: '8px', right: '8px', bottom: '6px', display: 'grid', gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0,1fr))`, gap: '12px' }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: '8px',
+              right: '8px',
+              bottom: '6px',
+              display: 'grid',
+              gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0,1fr))`,
+              gap: '12px',
+            }}
+          >
             {data.map((item, index) => (
-              <span key={`${item.date}-label-${index}`} style={{ textAlign: 'center', fontSize: '10px', color: COLORS.muted, whiteSpace: 'nowrap' }}>
+              <span
+                key={`${item.date}-label-${index}`}
+                style={{
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  color: COLORS.muted,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {formatDate(item.date)}
               </span>
             ))}
           </div>
         </div>
       </div>
-      <div style={{ textAlign: 'center', fontSize: '11px', color: COLORS.muted, marginTop: '10px' }}>{label}</div>
+
+      <div style={{ textAlign: 'center', fontSize: '11px', color: COLORS.muted, marginTop: '10px' }}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -196,44 +253,43 @@ export default function Dashboard() {
   const totalPoints = Number(summary.total_points || 0);
   const participatingStudents = Number(summary.participating_students || 0);
 
-  const smartBin = dashboard?.smart_bin || null;
-  const compartments = Array.isArray(smartBin?.compartments) ? smartBin.compartments : [];
-  const plasticCompartment = compartments.find((c) => c.material_category === 'plastic') || null;
-  const paperCompartment = compartments.find((c) => c.material_category === 'paper') || null;
-
-  const dailyData = Array.isArray(dashboard?.daily_recycling) ? dashboard.daily_recycling : [];
-  const wasteCategories = Array.isArray(dashboard?.waste_categories) ? dashboard.waste_categories : [];
-  const participationTrend = Array.isArray(dashboard?.participation_trend) ? dashboard.participation_trend : [];
-  const sectionStats = Array.isArray(dashboard?.section_stats) ? dashboard.section_stats : [];
+  const dailyData = Array.isArray(dashboard?.daily_recycling)
+    ? dashboard.daily_recycling
+    : [];
+  const collectionTrends = Array.isArray(dashboard?.collection_trends)
+    ? dashboard.collection_trends
+    : dailyData;
+  const wasteCategories = Array.isArray(dashboard?.waste_categories)
+    ? dashboard.waste_categories
+    : [];
   const topRecyclers = Array.isArray(dashboard?.top_recyclers)
     ? dashboard.top_recyclers
     : Array.isArray(dashboard?.user_ranking)
       ? dashboard.user_ranking
       : [];
-  const rewardTrend = Array.isArray(dashboard?.reward_redemptions_trend) ? dashboard.reward_redemptions_trend : [];
-  const rewardBreakdown = Array.isArray(dashboard?.reward_breakdown) ? dashboard.reward_breakdown : [];
+  const rewardHistory = Array.isArray(dashboard?.reward_history)
+    ? dashboard.reward_history
+    : [];
 
-  const wasteCategoryTotal = wasteCategories.reduce((sum, item) => sum + Number(item.total_items || 0), 0);
-
-  // Compact Daily Waste Collection Report summaries. These are derived from the
-  // existing 7-day dashboard payload, so no additional backend request is needed.
+  const wasteCategoryTotal = wasteCategories.reduce(
+    (sum, item) => sum + Number(item.total_items || 0),
+    0,
+  );
   const weeklyCollectedItems = dailyData.reduce(
     (sum, item) => sum + Number(item.items || 0),
-    0
+    0,
   );
   const averageCollectedPerDay = dailyData.length
     ? weeklyCollectedItems / dailyData.length
     : 0;
 
-  const totalRedemptions = rewardTrend.reduce((sum, item) => sum + Number(item.redemptions || 0), 0);
-  const totalPointsSpent = rewardTrend.reduce((sum, item) => sum + Number(item.points_spent || 0), 0);
-
-  const topSection = dashboard?.top_section || null;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', fontFamily: 'sans-serif' }}>
       <style>{`
-        @keyframes dashboardFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes dashboardFade {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         .dashboard-section { animation: dashboardFade .35s ease both; }
         @media (max-width: 980px) {
           .dashboard-grid-2 { grid-template-columns: 1fr !important; }
@@ -245,9 +301,11 @@ export default function Dashboard() {
         }
       `}</style>
 
-
-      {/* Core KPIs */}
-      <div className="dashboard-section dashboard-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px' }}>
+      {/* Keep the existing dashboard KPI cards. */}
+      <div
+        className="dashboard-section dashboard-grid-3"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px' }}
+      >
         {[
           ['Recyclables Collected', totalItems.toLocaleString(), 'All accepted/rejected transaction items'],
           ['Points Earned', totalPoints.toLocaleString(), 'Recycling points generated'],
@@ -255,40 +313,50 @@ export default function Dashboard() {
         ].map(([title, value, subtitle]) => (
           <Card key={title} style={{ padding: '20px 22px' }}>
             <div style={{ fontSize: '12px', color: COLORS.muted }}>{title}</div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: COLORS.dark, marginTop: '10px' }}>{value}</div>
-            <div style={{ fontSize: '11px', color: COLORS.muted, marginTop: '5px' }}>{subtitle}</div>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: COLORS.dark, marginTop: '10px' }}>
+              {value}
+            </div>
+            <div style={{ fontSize: '11px', color: COLORS.muted, marginTop: '5px' }}>
+              {subtitle}
+            </div>
           </Card>
         ))}
       </div>
 
-      {/* Both compartments are shown because either can become full independently. */}
-      <Card className="dashboard-section">
-        <div className="dashboard-mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '18px' }}>
-          <div>
-            <h3 style={{ margin: 0, color: COLORS.dark }}>Smart Bin Compartment Fullness</h3>
-            <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>
-              Separate HC-SR04 fullness monitoring for plastic and paper compartments
-            </div>
-          </div>
-          <span style={{ padding: '6px 11px', borderRadius: '999px', background: COLORS.limeLight, color: COLORS.dark, fontSize: '11px', fontWeight: 800 }}>
-            {smartBin?.status || 'Unknown'}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <CompartmentCard compartment={plasticCompartment} fallbackCategory="plastic" />
-          <CompartmentCard compartment={paperCompartment} fallbackCategory="paper" />
-        </div>
-      </Card>
-
-      {/* Daily report + categories */}
-      <div className="dashboard-section dashboard-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: '20px' }}>
+      {/* 1. Daily waste collection report + 2. Waste category statistics */}
+      <div
+        className="dashboard-section dashboard-grid-2"
+        style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: '20px' }}
+      >
         <Card>
-          <div className="dashboard-mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+          <div
+            className="dashboard-mobile-stack"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '10px',
+              alignItems: 'center',
+              marginBottom: '16px',
+            }}
+          >
             <div>
               <h3 style={{ margin: 0, color: COLORS.dark }}>Daily Waste Collection Report</h3>
-              <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>Last seven days of recycling activity</div>
+              <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>
+                Last seven days of recycling activity
+              </div>
             </div>
-            <span style={{ background: COLORS.limeLight, color: COLORS.dark, padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 800 }}>7 days</span>
+            <span
+              style={{
+                background: COLORS.limeLight,
+                color: COLORS.dark,
+                padding: '6px 10px',
+                borderRadius: '999px',
+                fontSize: '11px',
+                fontWeight: 800,
+              }}
+            >
+              7 days
+            </span>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -303,16 +371,21 @@ export default function Dashboard() {
               <tbody>
                 {[...dailyData].reverse().map((item) => (
                   <tr key={item.date} style={{ borderBottom: '1px solid rgba(0,0,0,.045)' }}>
-                    <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: COLORS.dark }}>{formatDate(item.date)}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '13px', fontWeight: 800, color: COLORS.sage }}>{Number(item.items || 0)}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '13px', fontWeight: 800, color: COLORS.dark }}>{Number(item.points || 0)}</td>
+                    <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: COLORS.dark }}>
+                      {formatDate(item.date)}
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '13px', fontWeight: 800, color: COLORS.sage }}>
+                      {Number(item.items || 0)}
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '13px', fontWeight: 800, color: COLORS.dark }}>
+                      {Number(item.points || 0)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Keep this compact: only the two most useful 7-day summaries. */}
           <div
             className="daily-summary-grid"
             style={{
@@ -324,31 +397,17 @@ export default function Dashboard() {
               borderTop: `1px solid ${COLORS.mintLight}`,
             }}
           >
-            <div
-              style={{
-                padding: '14px 16px',
-                borderRadius: '16px',
-                background: 'rgba(190,222,246,.24)',
-                border: `1px solid ${COLORS.mintLight}`,
-              }}
-            >
+            <div style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(190,222,246,.24)', border: `1px solid ${COLORS.mintLight}` }}>
               <div style={{ fontSize: '11px', color: COLORS.muted }}>Total Items</div>
-              <div style={{ fontSize: '22px', lineHeight: 1.1, fontWeight: 800, color: COLORS.dark, marginTop: '6px' }}>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: COLORS.dark, marginTop: '6px' }}>
                 {weeklyCollectedItems.toLocaleString()}
               </div>
               <div style={{ fontSize: '10px', color: COLORS.muted, marginTop: '4px' }}>Last 7 days</div>
             </div>
 
-            <div
-              style={{
-                padding: '14px 16px',
-                borderRadius: '16px',
-                background: 'rgba(190,222,246,.34)',
-                border: `1px solid ${COLORS.mintLight}`,
-              }}
-            >
+            <div style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(190,222,246,.34)', border: `1px solid ${COLORS.mintLight}` }}>
               <div style={{ fontSize: '11px', color: COLORS.muted }}>Average / Day</div>
-              <div style={{ fontSize: '22px', lineHeight: 1.1, fontWeight: 800, color: COLORS.dark, marginTop: '6px' }}>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: COLORS.dark, marginTop: '6px' }}>
                 {averageCollectedPerDay.toFixed(1)}
               </div>
               <div style={{ fontSize: '10px', color: COLORS.muted, marginTop: '4px' }}>items per day</div>
@@ -357,74 +416,56 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <h3 style={{ margin: 0, color: COLORS.dark }}>Recyclable Type Statistics</h3>
+          <h3 style={{ margin: 0, color: COLORS.dark }}>Waste Category Statistics</h3>
           <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px', marginBottom: '20px' }}>
-            Accepted recyclable items deposited by CNN-classified material type
+            Accepted recyclable items by CNN-classified material type
           </div>
+
           {wasteCategories.length ? (
             <>
               <HorizontalBars
                 data={wasteCategories.map((item) => ({
                   ...item,
-                  label: item.label || item.name || item.material_category || item.category || 'Unknown',
+                  label: item.label || item.name || item.material_category || 'Unknown',
                 }))}
                 labelKey="label"
                 valueKey="total_items"
-                colors={[COLORS.plastic, '#2776c0', '#4d6d85', '#8fa6b9', '#bedef6', '#bedef6', '#bedef6', '#bedef6', '#8fa6b9']}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', paddingTop: '14px', borderTop: `1px solid ${COLORS.mintLight}` }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '20px',
+                  paddingTop: '14px',
+                  borderTop: `1px solid ${COLORS.mintLight}`,
+                }}
+              >
                 <span style={{ fontSize: '12px', color: COLORS.muted }}>Total deposited</span>
                 <strong style={{ color: COLORS.dark }}>{wasteCategoryTotal.toLocaleString()} items</strong>
               </div>
             </>
-          ) : <EmptyState>No recyclable type data available yet.</EmptyState>}
+          ) : (
+            <EmptyState>No waste category data available yet.</EmptyState>
+          )}
         </Card>
       </div>
 
-      {/* Student participation trend is more useful here than active/inactive account status. */}
-      <div className="dashboard-section dashboard-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <Card>
-          <h3 style={{ margin: 0, color: COLORS.dark }}>Student Participation Trend</h3>
-          <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px', marginBottom: '18px' }}>
-            Unique students who recycled per day during the last seven days
-          </div>
-          {participationTrend.length ? (
-            <SevenDayBars data={participationTrend} valueKey="participants" label="Unique participating students per day" color={COLORS.dark} />
-          ) : <EmptyState>No student participation activity yet.</EmptyState>}
-        </Card>
-
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
-            <div>
-              <h3 style={{ margin: 0, color: COLORS.dark }}>Weekly Waste Collection by Section</h3>
-              <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>All sections, last seven days</div>
-            </div>
-            {topSection && (
-              <span style={{ background: COLORS.limeLight, color: COLORS.dark, borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 800 }}>
-                Top: {topSection.name}
-              </span>
-            )}
-          </div>
-          {sectionStats.length ? (
-            <HorizontalBars
-              data={[...sectionStats].sort((a, b) => Number(b.total_items) - Number(a.total_items))}
-              labelKey="name"
-              valueKey="total_items"
-              suffix=""
-            />
-          ) : <EmptyState>No section recycling data available.</EmptyState>}
-        </Card>
-      </div>
-
-      {/* Ranking + rewards */}
-      <div className="dashboard-section dashboard-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '20px' }}>
+      {/* 3. User ranking + 4. Reward history */}
+      <div
+        className="dashboard-section dashboard-grid-2"
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '20px' }}
+      >
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 style={{ margin: 0, color: COLORS.dark }}>Top 5 Recyclers</h3>
-              <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>Ranked by points earned from recycling</div>
+              <h3 style={{ margin: 0, color: COLORS.dark }}>User Ranking</h3>
+              <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>
+                Top students by points earned from recycling
+              </div>
             </div>
-            <span style={{ padding: '6px 10px', borderRadius: '999px', background: COLORS.limeLight, color: COLORS.dark, fontSize: '11px', fontWeight: 800 }}>Top 5</span>
+            <span style={{ padding: '6px 10px', borderRadius: '999px', background: COLORS.limeLight, color: COLORS.dark, fontSize: '11px', fontWeight: 800 }}>
+              Top 5
+            </span>
           </div>
 
           {topRecyclers.length ? (
@@ -432,55 +473,116 @@ export default function Dashboard() {
               {topRecyclers.slice(0, 5).map((item, index) => (
                 <div
                   key={item.student_id || `${item.student_name}-${index}`}
-                  style={{ display: 'grid', gridTemplateColumns: '42px 1fr auto', gap: '12px', alignItems: 'center', padding: '12px 0', borderBottom: index < Math.min(topRecyclers.length, 5) - 1 ? '1px solid rgba(0,0,0,.05)' : 'none' }}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '42px 1fr auto',
+                    gap: '12px',
+                    alignItems: 'center',
+                    padding: '12px 0',
+                    borderBottom: index < Math.min(topRecyclers.length, 5) - 1
+                      ? '1px solid rgba(0,0,0,.05)'
+                      : 'none',
+                  }}
                 >
-                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'grid', placeItems: 'center', background: index === 0 ? COLORS.dark : COLORS.mintLight, color: index === 0 ? '#fff' : COLORS.dark, fontWeight: 800 }}>
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '12px',
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: index === 0 ? COLORS.dark : COLORS.mintLight,
+                      color: index === 0 ? '#fff' : COLORS.dark,
+                      fontWeight: 800,
+                    }}
+                  >
                     {index + 1}
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: COLORS.dark, fontWeight: 800, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.student_name || 'Unknown Student'}</div>
-                    <div style={{ color: COLORS.muted, fontSize: '11px', marginTop: '3px' }}>{Number(item.total_items || 0)} items recycled</div>
+                    <div style={{ color: COLORS.dark, fontWeight: 800, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.student_name || 'Unknown Student'}
+                    </div>
+                    <div style={{ color: COLORS.muted, fontSize: '11px', marginTop: '3px' }}>
+                      {Number(item.total_items || 0)} items recycled
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: COLORS.sage, fontWeight: 800, fontSize: '14px' }}>{Number(item.points_earned || item.total_points || 0).toLocaleString()}</div>
+                    <div style={{ color: COLORS.sage, fontWeight: 800, fontSize: '14px' }}>
+                      {Number(item.points_earned || 0).toLocaleString()}
+                    </div>
                     <div style={{ color: COLORS.muted, fontSize: '10px' }}>points earned</div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <EmptyState>No recycler ranking data available yet.</EmptyState>}
+          ) : (
+            <EmptyState>No user ranking data available yet.</EmptyState>
+          )}
         </Card>
 
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div>
-              <h3 style={{ margin: 0, color: COLORS.dark }}>Recent Reward Redemptions</h3>
-              <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px' }}>Daily redemption activity during the last seven days</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: COLORS.dark }}>{totalRedemptions}</div>
-              <div style={{ fontSize: '10px', color: COLORS.muted }}>{totalPointsSpent.toLocaleString()} pts spent</div>
-            </div>
+          <h3 style={{ margin: 0, color: COLORS.dark }}>Reward History</h3>
+          <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px', marginBottom: '16px' }}>
+            Most recent reward redemptions
           </div>
 
-          {rewardTrend.length ? (
-            <SevenDayBars data={rewardTrend} valueKey="redemptions" label="Reward redemptions per day" color="#4d6d85" />
-          ) : <EmptyState>No reward redemptions yet.</EmptyState>}
-
-          {rewardBreakdown.length > 0 && (
-            <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: `1px solid ${COLORS.mintLight}` }}>
-              <div style={{ fontSize: '12px', fontWeight: 800, color: COLORS.dark, marginBottom: '12px' }}>Most redeemed rewards · last 30 days</div>
-              <HorizontalBars
-                data={rewardBreakdown}
-                labelKey="reward_name"
-                valueKey="redemption_count"
-                colors={['#4d6d85', '#148bf0', '#bedef6', '#bedef6', '#bedef6']}
-              />
+          {rewardHistory.length ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '580px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${COLORS.mintLight}` }}>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '11px', color: COLORS.muted }}>Student</th>
+                    <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '11px', color: COLORS.muted }}>Reward</th>
+                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', color: COLORS.muted }}>Points</th>
+                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '11px', color: COLORS.muted }}>Redeemed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rewardHistory.map((item) => (
+                    <tr key={item.redemption_id} style={{ borderBottom: '1px solid rgba(0,0,0,.045)' }}>
+                      <td style={{ padding: '12px 8px', color: COLORS.dark, fontSize: '12px', fontWeight: 700 }}>
+                        {item.student_name || 'Unknown Student'}
+                        <div style={{ fontSize: '10px', fontWeight: 500, color: COLORS.muted, marginTop: '2px' }}>
+                          {item.student_number || '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 8px', color: COLORS.dark, fontSize: '12px' }}>
+                        {item.reward_name || 'Unknown Reward'}
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', color: COLORS.sage, fontSize: '12px', fontWeight: 800 }}>
+                        {Number(item.points_spent || 0).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', color: COLORS.muted, fontSize: '11px' }}>
+                        {formatDateTime(item.redeemed_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            // for redeployment purposes
+          ) : (
+            <EmptyState>No reward history available yet.</EmptyState>
           )}
         </Card>
       </div>
+
+      {/* 5. Collection trends */}
+      <Card style={{ marginBottom: '4px' }}>
+        <h3 style={{ margin: 0, color: COLORS.dark }}>Collection Trends</h3>
+        <div style={{ fontSize: '12px', color: COLORS.muted, marginTop: '4px', marginBottom: '18px' }}>
+          Recyclables collected per day during the last seven days
+        </div>
+
+        {collectionTrends.length ? (
+          <SevenDayBars
+            data={collectionTrends}
+            valueKey="items"
+            label="Recyclables collected per day"
+          />
+        ) : (
+          <EmptyState>No collection trend data available yet.</EmptyState>
+        )}
+      </Card>
     </div>
   );
 }
