@@ -539,13 +539,75 @@ export const DataProvider = ({ children }) => {
   /* INVENTORY TAB END */
 
   const refreshLogs = useCallback(async () => {
-    const res = await api.getLogs();
+    const [activityResult, classificationResult] = await Promise.allSettled([
+      api.getLogs(),
+      api.getClassifications(),
+    ]);
+
+    if (activityResult.status === 'rejected') {
+      throw activityResult.reason;
+    }
+
+    const activityLogs = arrayFrom(activityResult.value.data);
+    const classifications = classificationResult.status === 'fulfilled'
+      ? arrayFrom(classificationResult.value.data)
+      : [];
+
+    // Surface every CNN classification inside Logs for audit purposes. The
+    // confidence score comes from ai_classifications.confidence_score, which is
+    // already persisted by the backend for each recyclable.
+    const classificationAuditLogs = classifications.map((classification) => {
+      const item = classification.item || {};
+      const transaction = item.transaction || {};
+      const recyclableType =
+        classification.recyclable_type ||
+        classification.plastic_type ||
+        classification.recyclableType ||
+        classification.plasticType ||
+        null;
+      const model = classification.model || null;
+      const confidence = Number(classification.confidence_score);
+
+      return {
+        activity_log_id: `classification-${classification.classification_id}`,
+        created_at:
+          classification.classified_at ||
+          classification.created_at ||
+          item.created_at ||
+          null,
+        actor: 'CNN',
+        action: 'RECYCLABLE_CLASSIFIED',
+        description: `${recyclableType?.name || 'Unmapped recyclable'} classified${
+          Number.isFinite(confidence) ? ` at ${confidence.toFixed(2)}% confidence` : ''
+        }.`,
+        module: 'AI Classification',
+        log_type: 'collection',
+        metadata: {
+          classification_id: classification.classification_id,
+          recycling_item_id: classification.recycling_item_id,
+          transaction_code: transaction.transaction_code || null,
+          item_number: item.item_number ?? null,
+          confidence_score: Number.isFinite(confidence) ? confidence : null,
+          recyclable_type: recyclableType?.name || null,
+          model_name: model?.name || null,
+          model_version: model?.version || null,
+          classification_status: classification.status || null,
+          notes: classification.notes || null,
+        },
+        confidence_score: Number.isFinite(confidence) ? confidence : null,
+        recyclable_type_name: recyclableType?.name || null,
+        model_name: model?.name || null,
+        status: classification.status || 'Info',
+      };
+    });
+
     setData((prev) => ({
       ...prev,
-      logs: arrayFrom(res.data),
+      logs: [...activityLogs, ...classificationAuditLogs],
       logsLoaded: true,
     }));
-    return res;
+
+    return activityResult.value;
   }, []);
 
   const loadReports = useCallback(async (days = 30, force = false) => {

@@ -90,6 +90,25 @@ const normalizeLog = (log, idx) => {
 
   const pointsUsed = log.points_used ?? log.points_spent ?? log.points ?? undefined;
   const quantity = log.quantity ?? undefined;
+  const metadata = log.metadata && typeof log.metadata === 'object' ? log.metadata : {};
+  const rawConfidence =
+    log.confidence_score ??
+    metadata.confidence_score ??
+    metadata.classification_confidence ??
+    undefined;
+  const confidenceScore =
+    rawConfidence !== undefined && rawConfidence !== null && Number.isFinite(Number(rawConfidence))
+      ? Number(rawConfidence)
+      : undefined;
+  const recyclableType =
+    log.recyclable_type_name ??
+    metadata.recyclable_type ??
+    metadata.recyclable_type_name ??
+    null;
+  const modelName =
+    log.model_name ??
+    metadata.model_name ??
+    null;
   const status = log.status ||
     (action && /fail|reject|cancel/i.test(action + description) ? 'Rejected' :
      action && /pending|wait|process/i.test(action + description) ? 'Pending' :
@@ -117,6 +136,10 @@ const normalizeLog = (log, idx) => {
     processedBy,
     pointsUsed: pointsUsed !== undefined && pointsUsed !== null ? Number(pointsUsed) : undefined,
     quantity: quantity !== undefined && quantity !== null ? Number(quantity) : undefined,
+    confidenceScore,
+    recyclableType,
+    modelName,
+    metadata,
     status,
     details: log.details || description,
   };
@@ -185,6 +208,8 @@ function ActivityLogsTab() {
         log.reward ?? '',
         log.section ?? '',
         log.processedBy,
+        log.recyclableType ?? '',
+        log.confidenceScore !== undefined ? `${log.confidenceScore}%` : '',
       ]
         .join(' ')
         .toLowerCase();
@@ -346,7 +371,7 @@ function ActivityLogsTab() {
       {/* Log table */}
       <div className="bg-white rounded-3xl border border-[#bedef6]/40 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px]">
+          <table className="w-full min-w-[900px]">
             <thead className="bg-[#bedef6]/50 text-[#040f36]">
               <tr>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
@@ -364,6 +389,9 @@ function ActivityLogsTab() {
                 <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
                   Module
                 </th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
+                  Confidence
+                </th>
                 <th className="text-right text-xs font-semibold uppercase tracking-wider px-6 py-4">
                   Action
                 </th>
@@ -372,7 +400,7 @@ function ActivityLogsTab() {
             <tbody className="divide-y divide-[#bedef6]/40">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
+                  <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center gap-3">
                       <Loader2Icon className="w-8 h-8 animate-spin text-[#112d68]" />
                       <span className="text-sm text-[#040f36]">Loading activity logs…</span>
@@ -417,6 +445,22 @@ function ActivityLogsTab() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
+                    {log.confidenceScore !== undefined ? (
+                      <div>
+                        <span className="inline-flex px-2.5 py-1 rounded-full bg-[#bedef6]/60 text-[#112d68] text-xs font-bold whitespace-nowrap">
+                          {log.confidenceScore.toFixed(2)}%
+                        </span>
+                        {log.recyclableType && (
+                          <div className="text-[10px] text-[#4d6d85] mt-1 max-w-[130px] truncate" title={log.recyclableType}>
+                            {log.recyclableType}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[#8fa6b9]">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
                     <div className="flex justify-end">
                       <button
                         onClick={() => setViewing(log)}
@@ -433,7 +477,7 @@ function ActivityLogsTab() {
               {!isLoading && pageData.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-12 text-center text-[#040f36] text-sm"
                   >
                     {logs.length === 0
@@ -536,6 +580,11 @@ function ActivityLogsTab() {
                   ...(viewing.reward ? [['Reward', viewing.reward]] : []),
                   ...(viewing.action ? [['Action', viewing.action]] : []),
                   ['Module', viewing.module],
+                  ...(viewing.recyclableType ? [['Recyclable Type', viewing.recyclableType]] : []),
+                  ...(viewing.confidenceScore !== undefined
+                    ? [['Classification Confidence', `${viewing.confidenceScore.toFixed(2)}%`]]
+                    : []),
+                  ...(viewing.modelName ? [['AI Model', viewing.modelName]] : []),
                   ...(viewing.pointsUsed !== undefined
                     ? [['Points Used', viewing.pointsUsed.toLocaleString()]]
                     : []),
@@ -599,6 +648,11 @@ function RedemptionFlow() {
   const identifyIntervalRef = useRef(null);
   const confirmIntervalRef = useRef(null);
   const redemptionCommandRef = useRef(null);
+  const cancelRedemptionRef = useRef(cancelRedemption);
+
+  useEffect(() => {
+    cancelRedemptionRef.current = cancelRedemption;
+  }, [cancelRedemption]);
 
   // Helper to get student's full name
   const getStudentFullName = (student) => {
@@ -906,7 +960,7 @@ function RedemptionFlow() {
 
       const commandId = redemptionCommandRef.current;
       if (commandId) {
-        void cancelRedemption(commandId).catch((err) => {
+        void cancelRedemptionRef.current(commandId).catch((err) => {
           if (err?.response?.status !== 409) {
             console.error('Error cleaning up redemption command:', err);
           }

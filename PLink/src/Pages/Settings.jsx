@@ -95,7 +95,6 @@ export function Settings() {
     scannerErrors: true,
     machineOffline: true,
     maintenance: true,
-    weeklySummary: false,
     milestones: true,
   });
 
@@ -104,6 +103,63 @@ export function Settings() {
   const showToast = (msg, done = true) => {
     setToast({ show: true, msg, done });
     if (done) setTimeout(() => setToast(null), 3000);
+  };
+
+  const notificationSettingMap = {
+    machineFull: {
+      field: 'notify_machine_full',
+      label: 'Machine Almost Full',
+    },
+    scannerErrors: {
+      field: 'notify_scanner_errors',
+      label: 'Scanner Errors',
+    },
+    machineOffline: {
+      field: 'notify_machine_offline',
+      label: 'Machine Offline',
+    },
+    maintenance: {
+      field: 'notify_maintenance',
+      label: 'Maintenance Reminders',
+    },
+    milestones: {
+      field: 'notify_milestones',
+      label: 'Student Milestone Alerts',
+    },
+  };
+
+  const handleNotificationToggle = async (key, value) => {
+    const config = notificationSettingMap[key];
+    if (!config) return;
+
+    const previousValue = notifications[key];
+
+    // Optimistic UI update: the switch responds immediately.
+    setNotifications((current) => ({
+      ...current,
+      [key]: value,
+    }));
+
+    try {
+      await api.updateSettings({
+        [config.field]: value ? 1 : 0,
+      });
+
+      updateSettingsInContext({
+        [config.field]: value ? 1 : 0,
+      });
+
+      showToast(`${config.label} notifications ${value ? 'enabled' : 'disabled'}.`);
+    } catch (error) {
+      console.error('Unable to update notification preference', error);
+
+      setNotifications((current) => ({
+        ...current,
+        [key]: previousValue,
+      }));
+
+      showToast('Unable to update notification preference.');
+    }
   };
 
   // CONTROLLER 1: System Settings Loader - Initialize from context
@@ -121,7 +177,6 @@ export function Settings() {
         scannerErrors: settings.notify_scanner_errors == 1,
         machineOffline: settings.notify_machine_offline == 1,
         maintenance: settings.notify_maintenance == 1,
-        weeklySummary: settings.notify_weekly_summary == 1,
         milestones: settings.notify_milestones == 1,
       });
     }
@@ -230,7 +285,6 @@ export function Settings() {
       notify_scanner_errors: notifications.scannerErrors ? 1 : 0,
       notify_machine_offline: notifications.machineOffline ? 1 : 0,
       notify_maintenance: notifications.maintenance ? 1 : 0,
-      notify_weekly_summary: notifications.weeklySummary ? 1 : 0,
       notify_milestones: notifications.milestones ? 1 : 0,
     };
 
@@ -337,12 +391,36 @@ export function Settings() {
         {/* Notification Settings */}
         <SettingsCard icon={BellIcon} title="Notification Settings" desc="Choose what alerts you want to receive">
           <div className="space-y-2">
-            <ToggleRow label="Machine Almost Full" desc="When the bin exceeds 80% capacity" isOn={notifications.machineFull} onChange={(val) => setNotifications({ ...notifications, machineFull: val })} />
-            <ToggleRow label="Scanner Errors" desc="When AI detection fails repeatedly" isOn={notifications.scannerErrors} onChange={(val) => setNotifications({ ...notifications, scannerErrors: val })} />
-            <ToggleRow label="Machine Offline" desc="When the machine loses internet" isOn={notifications.machineOffline} onChange={(val) => setNotifications({ ...notifications, machineOffline: val })} />
-            <ToggleRow label="Maintenance Reminders" desc="Scheduled service alerts" isOn={notifications.maintenance} onChange={(val) => setNotifications({ ...notifications, maintenance: val })} />
-            <ToggleRow label="Weekly Summary Email" desc="Receive a weekly digest on Mondays" isOn={notifications.weeklySummary} onChange={(val) => setNotifications({ ...notifications, weeklySummary: val })} />
-            <ToggleRow label="Student Milestone Alerts" desc="When a student reaches a goal" isOn={notifications.milestones} onChange={(val) => setNotifications({ ...notifications, milestones: val })} />
+            <ToggleRow
+              label="Machine Almost Full"
+              desc="Alert when a compartment crosses 80% capacity or becomes full"
+              isOn={notifications.machineFull}
+              onChange={(val) => void handleNotificationToggle('machineFull', val)}
+            />
+            <ToggleRow
+              label="Scanner Errors"
+              desc="Alert after repeated CNN/scanner failures"
+              isOn={notifications.scannerErrors}
+              onChange={(val) => void handleNotificationToggle('scannerErrors', val)}
+            />
+            <ToggleRow
+              label="Machine Offline"
+              desc="Alert when Controller 1 stops contacting the backend"
+              isOn={notifications.machineOffline}
+              onChange={(val) => void handleNotificationToggle('machineOffline', val)}
+            />
+            <ToggleRow
+              label="Maintenance Reminders"
+              desc="Alert when the smart bin is due for routine maintenance"
+              isOn={notifications.maintenance}
+              onChange={(val) => void handleNotificationToggle('maintenance', val)}
+            />
+            <ToggleRow
+              label="Student Milestone Alerts"
+              desc="Alert when a student crosses a 100-point milestone"
+              isOn={notifications.milestones}
+              onChange={(val) => void handleNotificationToggle('milestones', val)}
+            />
           </div>
         </SettingsCard>
 
