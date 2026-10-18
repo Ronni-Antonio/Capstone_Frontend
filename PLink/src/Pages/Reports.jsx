@@ -236,7 +236,7 @@ function ForecastPanel({ metric }) {
     <Card>
       <SectionTitle
         title={metric.title}
-        subtitle={metric.forecast_generated_at ? `Prophet forecast generated ${metric.forecast_generated_at}` : 'Historical trend; run Prophet to generate a forecast'}
+        subtitle={metric.forecast_generated_at ? `Prophet forecast generated ${metric.forecast_generated_at}` : 'Historical trend; awaiting the next scheduled Prophet forecast'}
         right={
           <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: COLORS.muted, whiteSpace: 'nowrap' }}>
             <span>━ Actual</span>
@@ -287,17 +287,14 @@ function MiniMetric({ label, value }) {
 
 export default function Reports() {
   const [period, setPeriod] = useState(30);
-  const [forecasting, setForecasting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [localError, setLocalError] = useState('');
-  const [forecastMessage, setForecastMessage] = useState('');
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('historical');
   const {
     reportsCache,
     reportsLoading,
     reportsError,
     loadReports,
-    refreshReports,
   } = useData();
 
   const data = reportsCache?.[String(period)] ?? reportsCache?.[period] ?? null;
@@ -311,27 +308,6 @@ export default function Reports() {
       });
     }
   }, [data, period, loadReports]);
-
-  const runForecast = async () => {
-    setForecasting(true);
-    setForecastMessage('');
-    setLocalError('');
-    try {
-      const response = await api.runProphetForecast({ periods: 7 });
-      setForecastMessage(response.data?.message || 'Forecast generated successfully.');
-      await refreshReports(period);
-    } catch (err) {
-      console.error('Prophet forecast error:', err);
-      setLocalError(
-        err.response?.data?.details ||
-        err.response?.data?.message ||
-        err.message ||
-        'Unable to run Prophet forecast.'
-      );
-    } finally {
-      setForecasting(false);
-    }
-  };
 
   const downloadPdf = async () => {
     setDownloading(true);
@@ -407,11 +383,8 @@ export default function Reports() {
               <option key={item.value} value={item.value}>{item.label}</option>
             ))}
           </select>
-          <button onClick={runForecast} disabled={forecasting} style={buttonStyle(COLORS.sage)}>
-            {forecasting ? 'Running Prophet…' : 'Run 7-Day Forecast'}
-          </button>
           <button onClick={downloadPdf} disabled={downloading} style={buttonStyle(COLORS.dark)}>
-            {downloading ? 'Preparing PDF…' : 'Download Formal PDF Report'}
+            {downloading ? 'Preparing PDF…' : 'Download PDF Report'}
           </button>
         </div>
       </div>
@@ -419,11 +392,6 @@ export default function Reports() {
       {error && (
         <div style={{ background: '#fff0f0', color: COLORS.danger, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
           {error}
-        </div>
-      )}
-      {forecastMessage && (
-        <div style={{ background: '#f4fcfc', color: COLORS.dark, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
-          {forecastMessage}
         </div>
       )}
 
@@ -562,7 +530,7 @@ export default function Reports() {
 
       {!Object.values(predictive).some((metric) => metric?.forecast?.length) && (
         <div style={{ background: '#f4fcfc', color: COLORS.dark, borderRadius: '16px', padding: '14px 16px', fontSize: '12px' }}>
-          No Prophet forecast has been stored yet. Start the Python Prophet service, then click <strong>Run 7-Day Forecast</strong>.
+          No Prophet forecast has been stored yet. Forecasts will appear after the next scheduled Prophet training run.
         </div>
       )}
 
@@ -580,18 +548,6 @@ export default function Reports() {
 
         </>
       )}
-
-      <Card>
-        <SectionTitle
-          title="Formal Sustainability Report"
-          subtitle="A print-ready administrative report using the same historical analytics and stored Prophet forecasts shown on this page"
-          right={<button onClick={downloadPdf} disabled={downloading} style={buttonStyle(COLORS.dark)}>{downloading ? 'Preparing…' : 'Download Formal PDF'}</button>}
-        />
-        <div style={{ color: COLORS.muted, fontSize: '12px', lineHeight: 1.7 }}>
-          Includes a formal report header, executive summary, structured performance tables, reward activity, smart bin status,
-          and the latest seven-day Prophet forecasts with prediction ranges and page numbering.
-        </div>
-      </Card>
     </div>
   );
 }
