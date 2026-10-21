@@ -33,6 +33,7 @@ api.interceptors.response.use(
 // Authentication
 api.login = (data) => api.post('/auth/login', data);
 api.logout = () => api.post('/auth/logout');
+api.getCurrentUser = () => api.get('/user');
 
 // Forgot password OTP flow
 api.sendForgotPasswordOtp = (email) =>

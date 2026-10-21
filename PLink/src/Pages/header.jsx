@@ -1,4 +1,5 @@
 import { BellIcon, MenuIcon } from 'lucide-react';
+import { useData } from '../context/DataContext.jsx';
 
 const titles = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of recycling activity today' },
@@ -15,6 +16,11 @@ const titles = {
 
 export function Header({ activePage, setActivePage, onOpenMobile }) {
   const meta = titles[activePage] || titles.machines;
+  const { notifications = [] } = useData();
+
+  // The bell badge reflects the real backend unread state instead of a hard-coded value.
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount);
 
   return (
     <header className="w-full flex items-start sm:items-center justify-between gap-3 pb-3 sm:pb-4 font-sans select-none min-w-0">
@@ -41,12 +47,15 @@ export function Header({ activePage, setActivePage, onOpenMobile }) {
       <button
         onClick={() => setActivePage('notifications')}
         className="relative w-10 h-10 shrink-0 rounded-xl border border-[#bedef6] bg-white flex items-center justify-center cursor-pointer shadow-sm hover:bg-gray-50 active:scale-95 transition"
-        aria-label="Notifications"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+        title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}` : 'No unread notifications'}
       >
         <BellIcon className="w-5 h-5 text-[#040f36]" />
-        <span className="absolute -top-1.5 -right-1.5 bg-[#f04444] text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[14px] text-center">
-          3
-        </span>
+        {unreadCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 bg-[#f04444] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none shadow-sm">
+            {unreadLabel}
+          </span>
+        )}
       </button>
     </header>
   );
