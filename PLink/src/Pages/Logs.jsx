@@ -71,7 +71,16 @@ const normalizeLog = (log, idx) => {
   const textForDetection = `${String(rawCategory || '')} ${String(action || '')} ${String(description || '')} ${String(log.module || '')}`.toLowerCase();
 
   let category;
-  if (rawCategory && typeof rawCategory === 'string') {
+
+  // Inventory events must win over the backend's generic `log_type=system`.
+  // The current ActivityLog model classifies the Inventory module as a system
+  // log, so checking `log_type` first previously hid restocks and stock alerts
+  // under the System filter.
+  if (/(inventor|restock|low stock|out of stock|no stock|stock|reward stock|sku|supply)/.test(textForDetection)) {
+    category = 'Inventory';
+  } else if (/redempt|redeem/.test(textForDetection)) {
+    category = 'Redemption';
+  } else if (rawCategory && typeof rawCategory === 'string') {
     const r = rawCategory.trim().toLowerCase();
     if (/redempt|redeem/.test(r)) category = 'Redemption';
     else if (/(user|profile|account|login|logout|auth|admin|employee|staff)/.test(r)) category = 'User Activity';
@@ -79,11 +88,10 @@ const normalizeLog = (log, idx) => {
     else if (/(inventor|stock|restock|reward|sku|supply)/.test(r)) category = 'Inventory';
     else if (/(system|sync|cron|job|machine|bin|iot|alert|notification|health)/.test(r)) category = 'System';
   }
+
   if (!category) {
-    if (/redempt|redeem/.test(textForDetection)) category = 'Redemption';
-    else if (/(user|profile|account|login|logout|auth|admin|employee|staff|password|otp|email change)/.test(textForDetection)) category = 'User Activity';
+    if (/(user|profile|account|login|logout|auth|admin|employee|staff|password|otp|email change)/.test(textForDetection)) category = 'User Activity';
     else if (/(collect|deposit|drop|recycl|plastic|bottle|scan|dispose|smart bin|bin|weight|points awarded|awarded|transaction)/.test(textForDetection)) category = 'Collection';
-    else if (/(inventor|stock|restock|reward|sku|supply)/.test(textForDetection)) category = 'Inventory';
     else if (/(system|sync|cron|job|machine|iot|alert|notification|health|offline|maintenance|restart|backup)/.test(textForDetection)) category = 'System';
     else category = 'System';
   }
@@ -176,26 +184,65 @@ function ActivityLogsTab() {
   const [page, setPage] = useState(1);
   const [viewing, setViewing] = useState(null);
   const [error, setError] = useState(null);
+  const refreshInFlightRef = useRef(false);
   const { logs: rawLogs, logsLoaded, refreshLogs } = useData();
 
   const logs = useMemo(() => normalizeLogs(rawLogs), [rawLogs]);
   const isLoading = !logsLoaded;
 
   const fetchLogs = useCallback(async () => {
+    // Avoid overlapping /logs + /classifications requests when a slow request
+    // is still running and the next polling tick fires.
+    if (refreshInFlightRef.current) return;
+
+    refreshInFlightRef.current = true;
     try {
       await refreshLogs();
       setError(null);
     } catch (err) {
       console.error('❌ Error fetching activity logs:', err);
-      setError(getLogErrorMessage(err));
+
+      // Once logs have loaded successfully, keep the existing table visible
+      // during a temporary network failure and simply retry on the next tick.
+      if (!logsLoaded) {
+        setError(getLogErrorMessage(err));
+      }
+    } finally {
+      refreshInFlightRef.current = false;
     }
-  }, [refreshLogs]);
+  }, [refreshLogs, logsLoaded]);
 
   useEffect(() => {
-    if (!logsLoaded) {
-      void Promise.resolve().then(fetchLogs);
-    }
-  }, [fetchLogs, logsLoaded]);
+    let cancelled = false;
+
+    const refreshWhenVisible = () => {
+      if (!cancelled && !document.hidden) {
+        void fetchLogs();
+      }
+    };
+
+    // Refresh immediately whenever the Activity Logs tab is opened.
+    refreshWhenVisible();
+
+    // The current backend does not use WebSockets/SSE, so poll while this tab
+    // is mounted to surface ESP32, redemption, inventory and CNN events quickly.
+    const intervalId = window.setInterval(refreshWhenVisible, 3000);
+
+    const handleFocus = () => refreshWhenVisible();
+    const handleVisibility = () => {
+      if (!document.hidden) refreshWhenVisible();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchLogs]);
 
   const filtered = useMemo(() => {
     return logs.filter((log) => {
@@ -632,7 +679,9 @@ function RedemptionFlow() {
     cancelRedemption,
     refreshStudents,
     refreshRewards,
-    refreshRedemptions
+    refreshRedemptions,
+    refreshLogs,
+    refreshNotifications
   } = useData();
 
   // State variables
@@ -866,6 +915,8 @@ function RedemptionFlow() {
               refreshRedemptions(),
               refreshStudents(),
               refreshRewards(),
+              refreshLogs(),
+              refreshNotifications(),
             ]);
 
             setTimeout(() => {

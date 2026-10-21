@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import api from './api.jsx';
 import Login from './Pages/Login.jsx';
 import { Sidebar } from './Pages/sidebar.jsx';
 import { Header } from './Pages/header.jsx';
@@ -107,12 +108,76 @@ function AppContent({ activePage, setActivePage, handleLogout, renderPageContent
 }
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Keep authentication across browser refreshes. The access token is already
+  // stored in localStorage by Login.jsx; on startup we verify that token with
+  // Laravel before deciding whether to show the login screen.
+  const [authStatus, setAuthStatus] = useState('checking'); // checking | authenticated | guest
   const [activePage, setActivePage] = useState('dashboard');
 
-  const handleLogout = () => {
-    localStorage.removeItem('ACCESS_TOKEN');
-    setIsLoggedIn(false);
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      const token = localStorage.getItem('ACCESS_TOKEN');
+
+      if (!token) {
+        if (!cancelled) setAuthStatus('guest');
+        return;
+      }
+
+      try {
+        // /api/user is protected by auth:sanctum in the current backend.
+        // A successful response proves the saved token is still valid.
+        const response = await api.getCurrentUser();
+        const user = response.data;
+
+        if (user) {
+          if (user.id !== undefined && user.id !== null) {
+            localStorage.setItem('plink_user_id', String(user.id));
+          }
+          if (user.name || user.full_name) {
+            localStorage.setItem('plink_user_name', user.name || user.full_name);
+          }
+          if (user.email) {
+            localStorage.setItem('plink_user_email', user.email);
+          }
+        }
+
+        if (!cancelled) setAuthStatus('authenticated');
+      } catch (error) {
+        console.error('Unable to restore saved login session:', error);
+
+        // Do not keep a token that Laravel no longer accepts.
+        localStorage.removeItem('ACCESS_TOKEN');
+        localStorage.removeItem('plink_user_id');
+        localStorage.removeItem('plink_user_name');
+        localStorage.removeItem('plink_user_email');
+
+        if (!cancelled) setAuthStatus('guest');
+      }
+    };
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      // Revoke the current Sanctum token on the backend when possible.
+      await api.logout();
+    } catch (error) {
+      // Local logout should still complete if the server/network is unavailable.
+      console.warn('Server logout failed; clearing the local session anyway.', error);
+    } finally {
+      localStorage.removeItem('ACCESS_TOKEN');
+      localStorage.removeItem('plink_user_id');
+      localStorage.removeItem('plink_user_name');
+      localStorage.removeItem('plink_user_email');
+      setAuthStatus('guest');
+    }
   };
 
   const renderPageContent = () => {
@@ -149,8 +214,18 @@ function App() {
     }
   };
 
-  if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  if (authStatus === 'checking') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4fcfc] px-5 text-center font-sans">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 border-[6px] border-[#bedef6] border-t-[#112d68] rounded-full animate-spin mb-6" />
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#112d68]">Restoring your session...</h2>
+        <p className="text-sm text-[#112d68]/70 mt-2">Checking your saved login securely</p>
+      </div>
+    );
+  }
+
+  if (authStatus !== 'authenticated') {
+    return <Login onLogin={() => setAuthStatus('authenticated')} />;
   }
 
   return (

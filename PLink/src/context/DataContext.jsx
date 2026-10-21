@@ -681,6 +681,54 @@ export const DataProvider = ({ children }) => {
     return res;
   }, []);
 
+  // Keep the notification bell and Notifications page synchronized even when
+  // the admin is working on another screen. Without WebSockets/SSE in the
+  // current backend, lightweight polling is the most reliable near-real-time
+  // option. Refresh immediately, every 10 seconds, and whenever the browser
+  // regains focus/visibility.
+  useEffect(() => {
+    let cancelled = false;
+    let refreshInFlight = false;
+
+    const syncNotifications = async () => {
+      if (cancelled || refreshInFlight || document.hidden) return;
+      refreshInFlight = true;
+      try {
+        await refreshNotifications();
+      } catch (error) {
+        // Do not turn a temporary notification refresh failure into a global
+        // application error. The next poll/focus event will retry.
+        console.warn('Unable to refresh notifications:', error);
+      } finally {
+        refreshInFlight = false;
+      }
+    };
+
+    const handleFocus = () => {
+      void syncNotifications();
+    };
+
+    const handleVisibility = () => {
+      if (!document.hidden) void syncNotifications();
+    };
+
+    void syncNotifications();
+
+    const intervalId = window.setInterval(() => {
+      void syncNotifications();
+    }, 10000);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [refreshNotifications]);
+
   const refreshSettings = useCallback(async () => {
     const res = await api.getSettings();
     setData((prev) => ({ ...prev, settings: normalizeSettings(res.data) }));
