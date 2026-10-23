@@ -51,8 +51,8 @@ function SidebarContent({ activePage, setActivePage, onLogout, collapsed = false
     <>
       <div className={`px-4 sm:px-6 pt-5 sm:pt-7 pb-5 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
-            <LeafIcon className="w-5 h-5 text-[#bedef6]" />
+          <div className={`${collapsed && !mobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0`}>
+            <LeafIcon className={`${collapsed && !mobile ? 'w-4 h-4' : 'w-5 h-5'} text-[#bedef6]`} />
           </div>
           {!collapsed && (
             <div className="min-w-0">
@@ -75,9 +75,7 @@ function SidebarContent({ activePage, setActivePage, onLogout, collapsed = false
           <button
             type="button"
             onClick={() => onToggleCollapse?.(!collapsed)}
-            className={`w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-[#bedef6] transition-colors ${
-              collapsed ? 'absolute -right-4 top-8 bg-[#112d68] border border-[#bedef6]/20 shadow-sm' : ''
-            }`}
+            className={`${collapsed ? 'absolute right-0 top-8 w-6 h-6 bg-[#112d68] border border-[#bedef6]/20 shadow-sm' : 'w-8 h-8'} rounded-lg hover:bg-white/10 flex items-center justify-center text-[#bedef6] transition-colors`}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >

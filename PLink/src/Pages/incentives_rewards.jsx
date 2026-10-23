@@ -800,7 +800,7 @@ function InventoryTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Inventory summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
@@ -875,7 +875,7 @@ function InventoryTab() {
       </div>
 
       {/* Inventory table container */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] shadow-sm">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] shadow-sm min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-xl font-bold text-[#112d68]">Inventory Items</h3>
@@ -886,7 +886,7 @@ function InventoryTab() {
         </div>
 
         {/* Search and Filter controls row */}
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 mb-5 min-w-0">
           <div className="w-full sm:w-56 flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-4 py-2 border border-[#bedef6] focus-within:border-[#2776c0] transition-colors">
             <SearchIcon className="w-4 h-4 text-[#112d68]/50" />
             <input
@@ -929,7 +929,7 @@ function InventoryTab() {
             <option value="name_desc">Descending (Z–A)</option>
           </select>
 
-          <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-[304px] sm:gap-2">
             <div className="min-w-0 pt-0.5">
               <label className="text-xs font-semibold text-[#112d68] mb-1 flex items-center gap-1.5">
                 <CalendarIcon className="w-3.5 h-3.5" /> From
@@ -941,7 +941,7 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
+                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
             <div className="min-w-0 pt-0.5">
@@ -955,7 +955,7 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
+                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
           </div>
@@ -971,7 +971,7 @@ function InventoryTab() {
             </button>
           )}
 
-          <div className="ml-auto self-end">
+          <div className="ml-auto self-end sm:self-auto">
             <button
               onClick={handleExport}
               disabled={isExporting || isLoading}
