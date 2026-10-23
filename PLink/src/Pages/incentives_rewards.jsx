@@ -886,8 +886,8 @@ function InventoryTab() {
         </div>
 
         {/* Search and Filter controls row */}
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 mb-5 min-w-0">
-          <div className="w-full sm:w-56 flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-4 py-2 border border-[#bedef6] focus-within:border-[#2776c0] transition-colors">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 mb-5 min-w-0">
+          <div className="w-full sm:w-56 h-10 flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-4 border border-[#bedef6] focus-within:border-[#2776c0] transition-colors">
             <SearchIcon className="w-4 h-4 text-[#112d68]/50" />
             <input
               type="text"
@@ -904,7 +904,7 @@ function InventoryTab() {
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="self-start bg-[#112d68] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2776c0] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+            className="self-start sm:self-auto h-10 bg-[#112d68] text-white px-4 rounded-xl text-sm font-semibold hover:bg-[#2776c0] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
           >
             {isApplying ? (
               <Loader2Icon className="w-4 h-4 animate-spin" />
@@ -922,7 +922,7 @@ function InventoryTab() {
                 if (e.target.value) void handleSearch();
               });
             }}
-            className="w-full sm:w-auto border border-[#bedef6] rounded-xl px-4 py-2 outline-none text-sm text-[#112d68] bg-white hover:bg-[#f4fcfc] transition-colors"
+            className="w-full sm:w-auto h-10 border border-[#bedef6] rounded-xl px-4 outline-none text-sm text-[#112d68] bg-white hover:bg-[#f4fcfc] transition-colors"
           >
             <option value="">Sort by Name</option>
             <option value="name_asc">Ascending (A–Z)</option>
@@ -941,7 +941,7 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
+                className="w-full min-w-0 h-10 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
             <div className="min-w-0 pt-0.5">
@@ -955,7 +955,7 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
+                className="w-full min-w-0 h-10 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
           </div>
@@ -975,7 +975,7 @@ function InventoryTab() {
             <button
               onClick={handleExport}
               disabled={isExporting || isLoading}
-              className="bg-[#bedef6] text-[#112d68] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#bedef6] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+              className="h-10 bg-[#bedef6] text-[#112d68] px-4 rounded-xl text-sm font-semibold hover:bg-[#bedef6] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
             >
               {isExporting ? (
                 <Loader2Icon className="w-4 h-4 animate-spin" />
