@@ -271,7 +271,9 @@ export function MachineMonitoring() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ padding: '6px 12px', borderRadius: 999, background: machineLabel === 'Normal' ? COLORS.mintMuted : COLORS.amberBg, color: machineLabel === 'Normal' ? COLORS.dark : COLORS.amberText, fontSize: 12, fontWeight: 800 }}>{machineLabel}</span>
+            {machineLabel !== 'Offline' && (
+              <span style={{ padding: '6px 12px', borderRadius: 999, background: machineLabel === 'Normal' ? COLORS.mintMuted : COLORS.amberBg, color: machineLabel === 'Normal' ? COLORS.dark : COLORS.amberText, fontSize: 12, fontWeight: 800 }}>{machineLabel}</span>
+            )}
             <span style={{ padding: '6px 12px', borderRadius: 999, background: COLORS.limeLight, color: COLORS.dark, fontSize: 12, fontWeight: 700 }}>
               {smartBin?.status === 'online' ? '🟢 Connected' : '🔴 Offline'}
             </span>
