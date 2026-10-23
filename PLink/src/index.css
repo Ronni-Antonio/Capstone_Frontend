@@ -233,9 +233,9 @@ textarea {
     margin-left: -16px;
     margin-right: -16px;
     padding: 10px 16px 12px;
-    background: rgba(244, 252, 252, 0.96);
+    background: #f4fcfc;
     border-bottom: 1px solid rgba(190, 222, 246, 0.7);
-    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 12px rgba(17, 45, 104, 0.04);
   }
 }
 

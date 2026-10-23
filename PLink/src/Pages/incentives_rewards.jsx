@@ -26,6 +26,7 @@ const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 /* ===================== REWARDS TAB ===================== */
 function RewardsTab() {
   const { rewards, refreshRewards, refreshInventory, refreshLogs } = useData();
+  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingReward, setEditingReward] = useState(null);
   const [editForm, setEditForm] = useState({ reward_name: '', points_cost: '', low_stock_threshold: '10' });
@@ -42,6 +43,24 @@ function RewardsTab() {
   const [modalError, setModalError] = useState(null);
   const [modalSuccess, setModalSuccess] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredRewards = rewards.filter((reward) => {
+    if (!normalizedSearchQuery) return true;
+
+    return [
+      reward.name,
+      reward.reward_name,
+      reward.points,
+      reward.points_required,
+      reward.points_cost,
+      reward.stock,
+      reward.stock_quantity,
+      reward.status,
+    ]
+      .filter((value) => value !== null && value !== undefined)
+      .some((value) => String(value).toLocaleLowerCase().includes(normalizedSearchQuery));
+  });
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -226,7 +245,10 @@ function RewardsTab() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4 sm:gap-5">
         <input
           type="text"
-          placeholder="Search rewards..."
+          aria-label="Search rewards"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search by name, points, stock, or status..."
           className="border border-[#bedef6] rounded-xl px-5 py-3 w-full max-w-xl outline-none text-sm"
         />
 
@@ -454,14 +476,14 @@ function RewardsTab() {
             </thead>
 
             <tbody className="divide-y divide-[#bedef6]/40">
-              {rewards.length === 0 && (
+              {filteredRewards.length === 0 && (
                 <tr>
                   <td colSpan="5" className="px-6 py-8 text-center text-[#040f36]">
-                    No rewards found
+                    {normalizedSearchQuery ? 'No rewards match your search.' : 'No rewards found.'}
                   </td>
                 </tr>
               )}
-              {rewards.map((r, idx) => (
+              {filteredRewards.map((r, idx) => (
                 <tr key={r.id || r.reward_id || idx} className="hover:bg-[#f4fcfc] transition-colors">
                   <td className="px-6 py-4 text-[#040f36] font-semibold whitespace-nowrap">{r.name}</td>
                   <td className="px-6 py-4 text-[#040f36] whitespace-nowrap">{r.points || r.points_required}</td>
