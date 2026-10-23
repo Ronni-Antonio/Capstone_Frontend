@@ -158,7 +158,7 @@ api.downloadSustainabilityReport = (params = {}) =>
   api.get('/reports-analytics/pdf', { params, responseType: 'blob' });
 
 // Activity logs
-api.getLogs = () => api.get('/logs');
+api.getLogs = (params = {}) => api.get('/logs', { params });
 
 // User profile
 api.getUser = (id) => api.get(`/users/${id}`);

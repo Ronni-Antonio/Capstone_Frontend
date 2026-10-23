@@ -23,8 +23,8 @@ export function Header({ activePage, setActivePage, onOpenMobile }) {
   const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount);
 
   return (
-    <header className="mobile-sticky-header w-full flex items-start sm:items-center justify-between gap-3 pb-3 sm:pb-4 font-sans select-none min-w-0">
-      <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+    <header className="mobile-sticky-header w-full flex items-center justify-between gap-2 sm:gap-3 pb-3 sm:pb-4 font-sans select-none min-w-0">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
         <button
           type="button"
           onClick={onOpenMobile}
@@ -35,7 +35,7 @@ export function Header({ activePage, setActivePage, onOpenMobile }) {
         </button>
 
         <div className="min-w-0">
-          <h1 className="m-0 text-xl sm:text-2xl lg:text-3xl font-bold text-[#040f36] tracking-tight break-words">
+          <h1 className="m-0 text-lg sm:text-2xl lg:text-3xl leading-tight font-bold text-[#040f36] tracking-tight break-words">
             {meta.title}
           </h1>
           <p className="m-0 mt-1 text-xs sm:text-sm font-medium text-[#8fa6b9] leading-snug">

@@ -15,6 +15,26 @@ const arrayFrom = (value) => {
   return [];
 };
 
+const fetchAllActivityLogs = async () => {
+  const perPage = 500;
+  const firstResponse = await api.getLogs({ page: 1, per_page: perPage });
+  const activityLogs = arrayFrom(firstResponse.data);
+  const lastPage = Math.max(1, Number(firstResponse.data?.pagination?.last_page) || 1);
+  const pagesPerBatch = 5;
+
+  for (let firstPage = 2; firstPage <= lastPage; firstPage += pagesPerBatch) {
+    const batchLastPage = Math.min(lastPage, firstPage + pagesPerBatch - 1);
+    const responses = await Promise.all(
+      Array.from({ length: batchLastPage - firstPage + 1 }, (_, index) =>
+        api.getLogs({ page: firstPage + index, per_page: perPage })
+      )
+    );
+    responses.forEach((response) => activityLogs.push(...arrayFrom(response.data)));
+  }
+
+  return { activityLogs, response: firstResponse };
+};
+
 const buildStudentName = (student) =>
   student?.name || [student?.first_name, student?.last_name].filter(Boolean).join(' ').trim() || 'Unknown Student';
 
@@ -275,6 +295,8 @@ export const DataProvider = ({ children }) => {
   });
 
   const reportsCacheRef = useRef({});
+  const activityLogsLoadedRef = useRef(false);
+  const initialActivityLogsPromiseRef = useRef(null);
 
   const refreshDashboard = useCallback(async () => {
     const res = await api.getDashboard();
@@ -539,16 +561,30 @@ export const DataProvider = ({ children }) => {
   /* INVENTORY TAB END */
 
   const refreshLogs = useCallback(async () => {
+    let activityLogsPromise;
+    if (activityLogsLoadedRef.current) {
+      activityLogsPromise = api.getLogs({ page: 1, per_page: 500 }).then((response) => ({
+        activityLogs: arrayFrom(response.data),
+        response,
+      }));
+    } else {
+      if (!initialActivityLogsPromiseRef.current) {
+        initialActivityLogsPromiseRef.current = fetchAllActivityLogs();
+      }
+      activityLogsPromise = initialActivityLogsPromiseRef.current;
+    }
+
     const [activityResult, classificationResult] = await Promise.allSettled([
-      api.getLogs(),
+      activityLogsPromise,
       api.getClassifications(),
     ]);
 
     if (activityResult.status === 'rejected') {
+      if (!activityLogsLoadedRef.current) initialActivityLogsPromiseRef.current = null;
       throw activityResult.reason;
     }
 
-    const activityLogs = arrayFrom(activityResult.value.data);
+    const fetchedActivityLogs = activityResult.value.activityLogs;
     const classifications = classificationResult.status === 'fulfilled'
       ? arrayFrom(classificationResult.value.data)
       : [];
@@ -601,13 +637,29 @@ export const DataProvider = ({ children }) => {
       };
     });
 
-    setData((prev) => ({
-      ...prev,
-      logs: [...activityLogs, ...classificationAuditLogs],
-      logsLoaded: true,
-    }));
+    setData((prev) => {
+      const previousActivityLogs = prev.logs.filter(
+        (log) => !String(log.activity_log_id ?? '').startsWith('classification-')
+      );
+      const activityById = new Map();
 
-    return activityResult.value;
+      previousActivityLogs.forEach((log, index) => {
+        activityById.set(String(log.activity_log_id ?? log.id ?? `existing-${index}`), log);
+      });
+      fetchedActivityLogs.forEach((log, index) => {
+        activityById.set(String(log.activity_log_id ?? log.id ?? `fetched-${index}`), log);
+      });
+
+      return {
+        ...prev,
+        logs: [...activityById.values(), ...classificationAuditLogs],
+        logsLoaded: true,
+      };
+    });
+    activityLogsLoadedRef.current = true;
+    initialActivityLogsPromiseRef.current = null;
+
+    return activityResult.value.response;
   }, []);
 
   const loadReports = useCallback(async (days = 30, force = false) => {
