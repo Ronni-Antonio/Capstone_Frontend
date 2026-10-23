@@ -430,72 +430,88 @@ function RewardsTab() {
         </div>
       )}
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-[#4d6d85] border-b">
-            <th className="py-4">Reward Name</th>
-            <th>Points Required</th>
-            <th>Stock</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#bedef6]/40 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[820px] text-sm">
+            <thead className="bg-[#bedef6]/50 text-[#040f36]">
+              <tr>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
+                  Reward Name
+                </th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
+                  Points Required
+                </th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
+                  Stock
+                </th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider px-6 py-4">
+                  Status
+                </th>
+                <th className="text-right text-xs font-semibold uppercase tracking-wider px-6 py-4">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
-        <tbody>
-          {rewards.length === 0 && (
-            <tr>
-              <td colSpan="5" className="py-6 text-center text-[#4d6d85]">
-                No rewards found
-              </td>
-            </tr>
-          )}
-          {rewards.map((r, idx) => (
-            <tr key={r.id || r.reward_id || idx} className="border-b">
-              <td className="py-3 text-[#112d68] font-medium">{r.name}</td>
-              <td>{r.points || r.points_required}</td>
-              <td>{r.stock}</td>
+            <tbody className="divide-y divide-[#bedef6]/40">
+              {rewards.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-[#040f36]">
+                    No rewards found
+                  </td>
+                </tr>
+              )}
+              {rewards.map((r, idx) => (
+                <tr key={r.id || r.reward_id || idx} className="hover:bg-[#f4fcfc] transition-colors">
+                  <td className="px-6 py-4 text-[#040f36] font-semibold whitespace-nowrap">{r.name}</td>
+                  <td className="px-6 py-4 text-[#040f36] whitespace-nowrap">{r.points || r.points_required}</td>
+                  <td className="px-6 py-4 text-[#040f36] whitespace-nowrap">{r.stock}</td>
 
-              <td>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    r.status === 'Active'
-                      ? 'bg-[#bedef6] text-[#112d68]'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {r.status}
-                </span>
-              </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        r.status === 'Active'
+                          ? 'bg-[#bedef6]/60 text-[#112d68]'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {r.status}
+                    </span>
+                  </td>
 
-              <td className="space-x-2">
-                <button
-                  onClick={() => handleEdit(r)}
-                  disabled={actionLoadingId === (r.reward_id ?? r.id)}
-                  className="text-xs px-3 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-                >
-                  Edit
-                </button>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(r)}
+                        disabled={actionLoadingId === (r.reward_id ?? r.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors disabled:opacity-50"
+                      >
+                        Edit
+                      </button>
 
-                <button
-                  onClick={() => handleToggleStatus(r)}
-                  disabled={actionLoadingId === (r.reward_id ?? r.id)}
-                  className="text-xs px-3 py-1 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
-                >
-                  {r.status === 'Active' ? 'Deactivate' : 'Activate'}
-                </button>
+                      <button
+                        onClick={() => handleToggleStatus(r)}
+                        disabled={actionLoadingId === (r.reward_id ?? r.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors disabled:opacity-50"
+                      >
+                        {r.status === 'Active' ? 'Deactivate' : 'Activate'}
+                      </button>
 
-                <button
-                  onClick={() => handleDelete(r)}
-                  disabled={actionLoadingId === (r.reward_id ?? r.id)}
-                  className="text-xs px-3 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                      <button
+                        onClick={() => handleDelete(r)}
+                        disabled={actionLoadingId === (r.reward_id ?? r.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Toast notification */}
       {toast && (
@@ -837,7 +853,7 @@ function InventoryTab() {
       </div>
 
       {/* Inventory table container */}
-      <div className="bg-white rounded-3xl p-6 border border-[#bedef6] shadow-sm">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#bedef6] shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-xl font-bold text-[#112d68]">Inventory Items</h3>
@@ -848,8 +864,8 @@ function InventoryTab() {
         </div>
 
         {/* Search and Filter controls row */}
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <div className="flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-4 py-2 border border-[#bedef6] focus-within:border-[#2776c0] transition-colors">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 mb-5">
+          <div className="w-full sm:w-56 flex items-center gap-2 bg-[#f4fcfc] rounded-xl px-4 py-2 border border-[#bedef6] focus-within:border-[#2776c0] transition-colors">
             <SearchIcon className="w-4 h-4 text-[#112d68]/50" />
             <input
               type="text"
@@ -859,14 +875,14 @@ function InventoryTab() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void handleSearch();
               }}
-              className="bg-transparent outline-none text-sm flex-1 placeholder:text-[#112d68]/40 text-[#112d68] w-56"
+              className="bg-transparent outline-none text-sm flex-1 min-w-0 placeholder:text-[#112d68]/40 text-[#112d68] w-full"
             />
           </div>
 
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="bg-[#112d68] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2776c0] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+            className="self-start bg-[#112d68] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2776c0] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
           >
             {isApplying ? (
               <Loader2Icon className="w-4 h-4 animate-spin" />
@@ -884,15 +900,15 @@ function InventoryTab() {
                 if (e.target.value) void handleSearch();
               });
             }}
-            className="border border-[#bedef6] rounded-xl px-4 py-2 outline-none text-sm text-[#112d68] bg-white hover:bg-[#f4fcfc] transition-colors"
+            className="w-full sm:w-auto border border-[#bedef6] rounded-xl px-4 py-2 outline-none text-sm text-[#112d68] bg-white hover:bg-[#f4fcfc] transition-colors"
           >
             <option value="">Sort by Name</option>
             <option value="name_asc">Ascending (A–Z)</option>
             <option value="name_desc">Descending (Z–A)</option>
           </select>
 
-          <div className="flex items-center gap-2">
-            <div className="pt-0.5">
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:gap-2">
+            <div className="min-w-0 pt-0.5">
               <label className="text-xs font-semibold text-[#112d68] mb-1 flex items-center gap-1.5">
                 <CalendarIcon className="w-3.5 h-3.5" /> From
               </label>
@@ -903,10 +919,10 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
+                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
-            <div className="pt-0.5">
+            <div className="min-w-0 pt-0.5">
               <label className="text-xs font-semibold text-[#112d68] mb-1 flex items-center gap-1.5">
                 <CalendarIcon className="w-3.5 h-3.5" /> To
               </label>
@@ -917,7 +933,7 @@ function InventoryTab() {
                 onBlur={() => {
                   if (dateFrom || dateTo) void handleSearch();
                 }}
-                className="bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
+                className="w-full min-w-0 bg-[#f4fcfc] border border-[#bedef6] rounded-xl px-2 sm:px-3.5 py-2 text-sm text-[#112d68] focus:outline-none focus:border-[#2776c0]"
               />
             </div>
           </div>
@@ -926,14 +942,14 @@ function InventoryTab() {
             <button
               onClick={handleResetFilters}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl border border-[#bedef6] text-[#4d6d85] font-semibold text-xs hover:bg-[#bedef6] hover:text-[#112d68] hover:border-[#148bf0] transition-colors disabled:opacity-40 inline-flex items-center gap-2 mt-6"
+              className="px-4 py-2 rounded-xl border border-[#bedef6] text-[#4d6d85] font-semibold text-xs hover:bg-[#bedef6] hover:text-[#112d68] hover:border-[#148bf0] transition-colors disabled:opacity-40 inline-flex items-center gap-2"
             >
               <RefreshCwIcon className="w-3.5 h-3.5" />
               Reset Filters
             </button>
           )}
 
-          <div className="ml-auto">
+          <div className="ml-auto self-end">
             <button
               onClick={handleExport}
               disabled={isExporting || isLoading}
@@ -949,38 +965,38 @@ function InventoryTab() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[#040f36] border-b">
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[1040px] text-sm">
+            <thead className="bg-[#bedef6]/50 text-[#040f36]">
+              <tr className="text-left border-b border-[#bedef6]/40">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider whitespace-nowrap">
                   Reward
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider text-right whitespace-nowrap">
                   Stocks in Hand
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider whitespace-nowrap">
                   Stock Status
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider text-right whitespace-nowrap">
                   Unit Price
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider text-right whitespace-nowrap">
                   Total Price
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider text-right whitespace-nowrap">
                   Points Value
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider whitespace-nowrap">
                   Last Stock
                 </th>
-                <th className="py-3 font-semibold uppercase text-xs tracking-wider text-right">
+                <th className="px-4 py-4 font-semibold uppercase text-xs tracking-wider text-right whitespace-nowrap">
                   Action
                 </th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[#bedef6]/40">
               {isLoading && (
                 <tr>
                   <td colSpan="8" className="py-16 text-center">
@@ -1006,11 +1022,11 @@ function InventoryTab() {
                     key={item.id}
                     className="border-b hover:bg-[#f4fcfc] transition-colors"
                   >
-                    <td className="py-4 text-[#040f36] font-semibold text-[15px]">
+                    <td className="px-4 py-4 text-[#040f36] font-semibold text-[15px] whitespace-nowrap">
                       {item.name}
                     </td>
                     <td
-                      className={`py-3 text-right font-bold ${
+                      className={`px-4 py-3 text-right font-bold whitespace-nowrap ${
                         item.stocksInHand === 0
                           ? 'text-red-700'
                           : item.stocksInHand <= item.lowStockThreshold
@@ -1020,7 +1036,7 @@ function InventoryTab() {
                     >
                       {item.stocksInHand.toLocaleString()}
                     </td>
-                    <td className="py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                           item.status === 'Out of Stock'
@@ -1040,19 +1056,19 @@ function InventoryTab() {
                         </div>
                       )}
                     </td>
-                    <td className="py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
+                    <td className="px-4 py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
                       {item.unitPriceDisplay}
                     </td>
-                    <td className="py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
+                    <td className="px-4 py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
                       {item.totalPriceDisplay}
                     </td>
-                    <td className="py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
+                    <td className="px-4 py-3 text-right text-[#2776c0] font-semibold whitespace-nowrap">
                       {item.pointsValue.toLocaleString()} pts
                     </td>
-                    <td className="py-3 text-[#040f36] text-xs whitespace-nowrap">
+                    <td className="px-4 py-3 text-[#040f36] text-xs whitespace-nowrap">
                       {item.lastStockFormatted}
                     </td>
-                    <td className="py-3 text-right whitespace-nowrap">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => {
                           setRestockItem(item);

@@ -359,6 +359,7 @@ export default function SectionsRanking() {
           totalPages={totalPages}
           onPageChange={(nextPage) => setPage(Math.max(1, Math.min(totalPages, nextPage)))}
           label="Section ranking pages"
+          compact
         />
       </div>
     </div>

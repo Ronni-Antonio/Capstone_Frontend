@@ -492,7 +492,9 @@ export default function Reports() {
 
         <Card>
           <SectionTitle title="Reward Redemptions" subtitle="Most redeemed rewards in the selected period" />
-          <HorizontalBars data={rewards.map((item) => ({ label: item.name, value: item.redemptions }))} />
+          <div style={{ maxHeight: '280px', overflowY: 'auto', paddingRight: '8px' }}>
+            <HorizontalBars data={rewards.map((item) => ({ label: item.name, value: item.redemptions }))} />
+          </div>
         </Card>
       </div>
 
