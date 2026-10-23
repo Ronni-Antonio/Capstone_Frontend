@@ -23,7 +23,7 @@ export default function Pagination({ page, totalPages, onPageChange, label = 'Pa
   if (compact) {
     return (
       <nav className="border-t border-[#bedef6]/70 px-3 py-4" aria-label={label}>
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => onPageChange(page - 1)}
