@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import { useData } from '../context/DataContext.jsx';
+import Pagination from './Pagination.jsx';
 import {
   UsersIcon,
   LayersIcon,
@@ -249,13 +250,15 @@ export default function StudentPoints() {
   });
 
   // Calculate pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const currentStudents = filteredStudents.slice(
+    (safePage - 1) * itemsPerPage,
+    safePage * itemsPerPage,
+  );
 
   const goToPage = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    setCurrentPage(Math.max(1, Math.min(totalPages, pageNumber)));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1011,66 +1014,7 @@ export default function StudentPoints() {
         </div>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '20px',
-            borderTop: `1px solid ${COLORS.mintLight}`
-          }}>
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.mintLight}`,
-                background: currentPage === 1 ? '#f4f4f4' : 'white',
-                color: currentPage === 1 ? '#aaa' : COLORS.dark,
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                fontWeight: '600'
-              }}
-            >
-              Previous
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                onClick={() => goToPage(page)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: currentPage === page ? COLORS.dark : 'transparent',
-                  color: currentPage === page ? 'white' : COLORS.dark,
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
-              >
-                {page}
-              </button>
-            ))}
-
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.mintLight}`,
-                background: currentPage === totalPages ? '#f4f4f4' : 'white',
-                color: currentPage === totalPages ? '#aaa' : COLORS.dark,
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                fontWeight: '600'
-              }}
-            >
-              Next
-            </button>
-          </div>
-        )}
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={goToPage} label="Student pages" />
       </div>
 
       {showModal && (

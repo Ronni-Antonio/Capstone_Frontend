@@ -426,14 +426,16 @@ export function Settings() {
 
         {/* CONTROLLER 2: Sections Component Embedded Inside Section Management Card */}
         <SettingsCard icon={UsersIcon} title="Grade Level & Section Management" desc="Manage sections separately for Grade 4, Grade 5, and Grade 6">
-          <SectionsManager 
-            onToast={(msg) => showToast(msg)} 
-            refreshSections={refreshSections}
-            gradeLevels={gradeLevels}
-            addSectionToContext={addSectionToContext}
-            updateSectionInContext={updateSectionInContext}
-            removeSectionFromContext={removeSectionFromContext}
-          />
+          <div className="max-h-[440px] overflow-y-auto pr-1 overscroll-contain">
+            <SectionsManager
+              onToast={(msg) => showToast(msg)}
+              refreshSections={refreshSections}
+              gradeLevels={gradeLevels}
+              addSectionToContext={addSectionToContext}
+              updateSectionInContext={updateSectionInContext}
+              removeSectionFromContext={removeSectionFromContext}
+            />
+          </div>
         </SettingsCard>
 
       </div>

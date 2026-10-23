@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { TrophyIcon } from 'lucide-react';
+import Pagination from './Pagination.jsx';
 
 const badges = ['Eco Champion', 'Rising Star', 'Green Warriors', 'Steady Recyclers', 'On the Rise'];
+const PAGE_SIZE = 10;
 
 export default function SectionsRanking() {
   const { students, transactions, sectionsRanking, refreshSectionsRanking } = useData();
   const [period, setPeriod] = useState('weekly');
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let active = true;
@@ -26,6 +29,7 @@ export default function SectionsRanking() {
   const handlePeriodChange = (nextPeriod) => {
     if (nextPeriod === period) return;
     setLoading(true);
+    setPage(1);
     setPeriod(nextPeriod);
   };
   
@@ -117,6 +121,9 @@ export default function SectionsRanking() {
     return sortedSections;
   }, [students, transactions, sectionsRanking, period]);
 
+  const totalPages = Math.max(1, Math.ceil(sectionsData.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const visibleSections = sectionsData.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const topSection = sectionsData && sectionsData[0];
   const podiumSections = sectionsData ? sectionsData.slice(0, 3) : [];
 
@@ -272,7 +279,7 @@ export default function SectionsRanking() {
           </h3>
         </div>
 
-        {sectionsData.map((section) => (
+        {visibleSections.map((section) => (
           <div
             key={section.rank}
             className="p-4 sm:p-6 border-b border-[#f4fcfc] last:border-b-0"
@@ -346,6 +353,13 @@ export default function SectionsRanking() {
             <p>No sections data available yet.</p>
           </div>
         )}
+
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          onPageChange={(nextPage) => setPage(Math.max(1, Math.min(totalPages, nextPage)))}
+          label="Section ranking pages"
+        />
       </div>
     </div>
   );
