@@ -262,6 +262,7 @@ export function Notifications({ onNavigate }) {
         totalPages={totalPages}
         onPageChange={(nextPage) => setPage(Math.max(1, Math.min(totalPages, nextPage)))}
         label="Notification pages"
+        compact
       />
 
       {/* Modal overlay */}

@@ -454,7 +454,9 @@ export default function Reports() {
         </Card>
         <Card>
           <SectionTitle title="Section Performance" subtitle="Recyclable items collected by section" />
-          <HorizontalBars data={sections.map((item) => ({ label: item.name, value: item.total_items }))} />
+          <div style={{ maxHeight: '280px', overflowY: 'auto', paddingRight: '8px' }}>
+            <HorizontalBars data={sections.map((item) => ({ label: item.name, value: item.total_items }))} />
+          </div>
         </Card>
       </div>
 

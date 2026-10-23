@@ -1,3 +1,5 @@
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+
 const getPageItems = (currentPage, totalPages) => {
   if (totalPages <= 15) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -15,8 +17,38 @@ const getPageItems = (currentPage, totalPages) => {
   return pages;
 };
 
-export default function Pagination({ page, totalPages, onPageChange, label = 'Pagination' }) {
+export default function Pagination({ page, totalPages, onPageChange, label = 'Pagination', compact = false }) {
   if (totalPages <= 1) return null;
+
+  if (compact) {
+    return (
+      <nav className="border-t border-[#bedef6]/70 px-3 py-4" aria-label={label}>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 1}
+            className="w-8 h-8 rounded-lg bg-white border border-[#bedef6]/50 text-[#112d68] hover:bg-[#bedef6] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+            aria-label="Previous page"
+          >
+            <ChevronLeftIcon className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold text-[#040f36] px-2" aria-live="polite">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page === totalPages}
+            className="w-8 h-8 rounded-lg bg-white border border-[#bedef6]/50 text-[#112d68] hover:bg-[#bedef6] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+            aria-label="Next page"
+          >
+            <ChevronRightIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </nav>
+    );
+  }
 
   const pageItems = getPageItems(page, totalPages);
 

@@ -81,6 +81,19 @@ textarea {
   -webkit-overflow-scrolling: touch;
 }
 
+.student-csv-label:hover {
+  background: #2776c0 !important;
+}
+
+.student-csv-label:active {
+  transform: translateY(1px);
+}
+
+.student-csv-input:focus-visible ~ div .student-csv-label {
+  outline: 3px solid #2776c0;
+  outline-offset: 3px;
+}
+
 .responsive-card-grid,
 .responsive-two-col,
 .responsive-three-col,
@@ -147,7 +160,68 @@ textarea {
   }
 
   .mobile-table {
-    min-width: 720px;
+    min-width: 1160px;
+    table-layout: fixed;
+  }
+
+  .student-table-scroll {
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .student-points-table th,
+  .student-points-table td {
+    white-space: nowrap;
+  }
+
+  .student-points-table th:first-child,
+  .student-points-table td:first-child {
+    width: 240px;
+    white-space: normal;
+  }
+
+  .student-points-table th:nth-child(2),
+  .student-points-table td:nth-child(2) {
+    width: 100px;
+  }
+
+  .student-points-table th:nth-child(3),
+  .student-points-table td:nth-child(3) {
+    width: 160px;
+  }
+
+  .student-points-table th:nth-child(4),
+  .student-points-table td:nth-child(4) {
+    width: 190px;
+  }
+
+  .student-points-table th:nth-child(5),
+  .student-points-table td:nth-child(5) {
+    width: 130px;
+  }
+
+  .student-points-table th:nth-child(6),
+  .student-points-table td:nth-child(6) {
+    width: 120px;
+  }
+
+  .student-points-table th:nth-child(7),
+  .student-points-table td:nth-child(7) {
+    width: 100px;
+  }
+
+  .student-points-table th:nth-child(8),
+  .student-points-table td:nth-child(8) {
+    width: 120px;
+  }
+
+  .student-table-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .student-table-scroll::-webkit-scrollbar-thumb {
+    background: rgba(17, 45, 104, 0.3);
+    border-radius: 999px;
   }
 }
 

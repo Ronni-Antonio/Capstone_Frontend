@@ -9,6 +9,7 @@ import {
   CircleCheckIcon,
   PencilIcon,
   CreditCardIcon,
+  UploadIcon,
 } from 'lucide-react';
 
 const COLORS = {
@@ -114,6 +115,7 @@ export default function StudentPoints() {
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState(null);
   const [csvSuccess, setCsvSuccess] = useState(null);
+  const [csvFileName, setCsvFileName] = useState('');
 
   // Add Individual Student State
   const [addStudentError, setAddStudentError] = useState(null);
@@ -333,6 +335,7 @@ export default function StudentPoints() {
     const file = e.target.files[0];
     if (!file) return;
 
+    setCsvFileName(file.name);
     setCsvError(null);
     setCsvSuccess(null);
     setCsvLoading(true);
@@ -351,6 +354,7 @@ export default function StudentPoints() {
                 await refreshStudents();
                 // Clear file input
                 e.target.value = '';
+                setCsvFileName('');
               } else {
         // Partial success or all errors - show detailed errors and keep modal open
         let message = '';
@@ -816,9 +820,9 @@ export default function StudentPoints() {
           border: `1px solid ${COLORS.mintLight}`
         }}
       >
-        <div className="mobile-scroll-x">
+        <div className="mobile-scroll-x student-table-scroll">
         <table
-          className="mobile-table"
+          className="mobile-table student-points-table"
           style={{
             width: '100%',
             borderCollapse: 'collapse'
@@ -1014,7 +1018,7 @@ export default function StudentPoints() {
         </div>
 
         {/* Pagination Controls */}
-        <Pagination page={safePage} totalPages={totalPages} onPageChange={goToPage} label="Student pages" />
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={goToPage} label="Student pages" compact />
       </div>
 
       {showModal && (
@@ -1119,17 +1123,40 @@ export default function StudentPoints() {
               </button>
 
               <input
+                id="student-csv-upload"
+                className="student-csv-input sr-only"
                 type="file"
-                accept=".csv"
+                accept=".csv,text/csv"
                 onChange={handleCsvFileChange}
                 disabled={csvLoading}
-                style={{
-                  margin: '0 auto',
-                  display: 'block',
-                  cursor: csvLoading ? 'not-allowed' : 'pointer',
-                  opacity: csvLoading ? 0.6 : 1
-                }}
               />
+              <div className="flex flex-col items-center gap-2">
+                <label
+                  htmlFor="student-csv-upload"
+                  className="student-csv-label"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '9px',
+                    background: COLORS.dark,
+                    color: '#fff',
+                    padding: '12px 18px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    cursor: csvLoading ? 'not-allowed' : 'pointer',
+                    opacity: csvLoading ? 0.6 : 1,
+                    transition: 'background-color 150ms ease, transform 150ms ease'
+                  }}
+                >
+                  <UploadIcon className="w-4 h-4" />
+                  {csvLoading ? 'Uploading...' : 'Choose CSV File'}
+                </label>
+                <span className="text-xs text-[#112d68]/70 max-w-full break-words">
+                  {csvFileName || 'No file selected'}
+                </span>
+              </div>
 
               {/* CSV Error */}
               {csvError && (

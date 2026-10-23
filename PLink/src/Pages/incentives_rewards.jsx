@@ -1578,13 +1578,13 @@ export default function IncentivesRewards() {
     <div className="space-y-6">
 
       {/* Tabs (INVENTORY START - inventory tab added after rewards) */}
-      <div className="bg-white rounded-2xl p-2 inline-flex gap-2 shadow-sm border border-[#bedef6]">
+      <div className="bg-white rounded-2xl p-2 flex w-fit max-w-full gap-2 shadow-sm border border-[#bedef6] overflow-x-auto overscroll-x-contain whitespace-nowrap">
         {['dashboard', 'rewards', 'inventory', 'reports'].map(
           (tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2 text-sm rounded-xl capitalize ${
+              className={`shrink-0 whitespace-nowrap px-5 py-2 text-sm rounded-xl capitalize ${
                 activeTab === tab
                   ? 'bg-[#112d68] text-white font-semibold'
                   : 'text-[#4d6d85]'
