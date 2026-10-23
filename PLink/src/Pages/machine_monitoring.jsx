@@ -56,6 +56,7 @@ function CompartmentCard({ compartment }) {
 
   return (
     <div
+      className="compartment-card"
       style={{
         background: COLORS.ivory,
         border: `1px solid ${COLORS.mintLight}`,
@@ -93,7 +94,7 @@ function CompartmentCard({ compartment }) {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '20px', alignItems: 'center', marginTop: '20px' }}>
+      <div className="compartment-detail-grid" style={{ display: 'grid', gridTemplateColumns: '190px minmax(0, 1fr)', gap: '20px', alignItems: 'center', marginTop: '20px' }}>
         <div style={{ position: 'relative', width: '180px', height: '180px', justifySelf: 'center' }}>
           <svg width="100%" height="100%" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
             <path
@@ -218,6 +219,8 @@ export function MachineMonitoring() {
         .animate-fade-in-up { animation: fadeInUp .45s ease-out forwards; }
         @media (max-width: 760px) {
           .compartment-grid { grid-template-columns: 1fr !important; }
+          .compartment-detail-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 10px !important; }
+          .compartment-card { padding: 16px !important; }
         }
       `}</style>
 

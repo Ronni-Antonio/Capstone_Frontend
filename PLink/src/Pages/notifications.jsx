@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import Pagination from './Pagination.jsx';
 
 const SvgIcon = ({ type }) => {
   if (type === 'alert') {
@@ -71,6 +72,7 @@ const sevStyle = {
 };
 
 const filters = ['All', 'Unread', 'Critical', 'Inventory'];
+const PAGE_SIZE = 10;
 
 export function Notifications({ onNavigate }) {
   const { 
@@ -90,6 +92,7 @@ export function Notifications({ onNavigate }) {
   
   const [filter, setFilter] = useState('All');
   const [selectedNotif, setSelectedNotif] = useState(null);
+  const [page, setPage] = useState(1);
 
   const filtered = items.filter((n) => {
     if (filter === 'Unread') return !n.read;
@@ -97,6 +100,10 @@ export function Notifications({ onNavigate }) {
     if (filter === 'Inventory') return n.type === 'reward_low_stock' || n.type === 'reward_out_of_stock';
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const groups = [
     { key: 'today', label: 'Today' },
@@ -110,8 +117,8 @@ export function Notifications({ onNavigate }) {
     <div className="w-full max-w-none p-0 sm:p-2 lg:p-6 space-y-4 sm:space-y-6 font-sans min-w-0">
       
       {/* Header Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-[#112d68] text-white rounded-2xl p-5 shadow-sm flex items-center gap-4 border border-[#112d68]">
+      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="col-span-2 sm:col-span-1 bg-[#112d68] text-white rounded-2xl p-4 sm:p-5 shadow-sm flex items-center gap-4 border border-[#112d68]">
           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-[#bedef6]">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -128,7 +135,7 @@ export function Notifications({ onNavigate }) {
           { label: 'Warnings', value: items.filter((i) => i.severity === 'warning').length, text: 'text-amber-600' },
           { label: 'Info', value: items.filter((i) => i.severity === 'info').length, text: 'text-[#2776c0]' },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl p-5 border border-[#bedef6]/70 shadow-sm">
+          <div key={s.label} className="bg-white rounded-2xl p-4 sm:p-5 border border-[#bedef6]/70 shadow-sm">
             <div className="text-xs text-gray-500 uppercase tracking-wider font-medium">{s.label}</div>
             <div className={`text-2xl font-bold mt-1 ${s.text}`}>{s.value}</div>
             <div className="mt-2 inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
@@ -144,7 +151,10 @@ export function Notifications({ onNavigate }) {
           {filters.map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => {
+                setPage(1);
+                setFilter(f);
+              }}
               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
                 filter === f ? 'bg-[#112d68] text-white' : 'text-[#4d6d85] hover:bg-[#bedef6]/50'
               }`}
@@ -155,7 +165,7 @@ export function Notifications({ onNavigate }) {
         </div>
         <button
           onClick={markAllNotificationsRead}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#2776c0] hover:bg-[#112d68] text-white rounded-xl text-sm font-semibold transition-colors self-start md:self-auto"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#2776c0] hover:bg-[#112d68] text-white rounded-xl text-sm font-semibold transition-colors self-stretch md:self-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 0 012 2m-6 9l2 2 4-4" />
@@ -167,7 +177,7 @@ export function Notifications({ onNavigate }) {
       {/* Notification Lists */}
       <div className="space-y-6">
         {groups.map((g) => {
-          const groupItems = filtered.filter((n) => n.group === g.key);
+          const groupItems = pageItems.filter((n) => n.group === g.key);
           if (groupItems.length === 0) return null;
           return (
             <div key={g.key}>
@@ -182,7 +192,7 @@ export function Notifications({ onNavigate }) {
                     <div
                       key={nid}
                       onClick={() => setSelectedNotif(n)}
-                      className="w-full text-left relative grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl border border-[#bedef6]/70 bg-white shadow-sm hover:bg-[#f4fcfc] transition-colors cursor-pointer overflow-hidden"
+                      className="w-full text-left relative grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[auto_minmax(0,1fr)_auto] gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl border border-[#bedef6]/70 bg-white shadow-sm hover:bg-[#f4fcfc] transition-colors cursor-pointer overflow-hidden"
                     >
                       <span className={`absolute left-0 top-0 bottom-0 w-1 ${s.bar}`} />
                       
@@ -208,7 +218,7 @@ export function Notifications({ onNavigate }) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col justify-between items-end shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="col-start-2 flex flex-row-reverse justify-end items-center gap-4 sm:col-start-auto sm:flex-col sm:justify-between sm:items-end sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                         {!n.read ? (
                           <button
                             onClick={() => markNotificationRead(nid)}
@@ -246,6 +256,13 @@ export function Notifications({ onNavigate }) {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={(nextPage) => setPage(Math.max(1, Math.min(totalPages, nextPage)))}
+        label="Notification pages"
+      />
 
       {/* Modal overlay */}
       {selectedNotif && (
