@@ -662,15 +662,16 @@ export const DataProvider = ({ children }) => {
     return activityResult.value.response;
   }, []);
 
-  const loadReports = useCallback(async (days = 30, force = false) => {
-    const cacheKey = String(days);
+  const loadReports = useCallback(async (query = 30, force = false) => {
+    const params = query && typeof query === 'object' ? query : { days: query };
+    const cacheKey = query && typeof query === 'object' ? JSON.stringify(params) : String(query);
     if (!force && reportsCacheRef.current[cacheKey]) {
       return reportsCacheRef.current[cacheKey];
     }
 
     setData((prev) => ({ ...prev, reportsLoading: true, reportsError: null }));
     try {
-      const res = await api.getReportsAnalytics({ days });
+      const res = await api.getReportsAnalytics(params);
       const payload = res.data;
       reportsCacheRef.current = {
         ...reportsCacheRef.current,
@@ -696,7 +697,7 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
-  const refreshReports = useCallback((days = 30) => loadReports(days, true), [loadReports]);
+  const refreshReports = useCallback((query = 30) => loadReports(query, true), [loadReports]);
 
   const refreshRedemptions = useCallback(async () => {
     const res = await api.getRedemptions();
