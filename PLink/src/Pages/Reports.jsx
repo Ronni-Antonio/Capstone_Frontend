@@ -16,11 +16,13 @@ const COLORS = {
   danger: '#b35f5f',
 };
 
-const PERIODS = [
-  { label: 'Last 7 days', value: 7 },
-  { label: 'Last 30 days', value: 30 },
-  { label: 'Last 90 days', value: 90 },
-];
+const inclusiveDays = (from, to) => {
+  if (!from || !to) return null;
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return Math.floor((end - start) / 86400000) + 1;
+};
 
 const fmt = (value, digits = 0) =>
   Number(value || 0).toLocaleString(undefined, {
@@ -285,8 +287,43 @@ function MiniMetric({ label, value }) {
   );
 }
 
+function DateFilter({ label, value, onChange, min, max }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: COLORS.dark, fontSize: '12px', lineHeight: 1 }}>
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="3.5" width="12" height="10.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M5 2v3M11 2v3M2.5 6.5h11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+        {label}
+      </span>
+      <input
+        type="date"
+        lang="en-GB"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={label}
+        style={{
+          width: '150px',
+          height: '40px',
+          padding: '0 12px',
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '12px',
+          background: COLORS.light,
+          color: COLORS.dark,
+          fontSize: '14px',
+        }}
+      />
+    </label>
+  );
+}
+
 export default function Reports() {
-  const [period, setPeriod] = useState(30);
+  const period = 30;
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [localError, setLocalError] = useState('');
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('historical');
@@ -297,29 +334,39 @@ export default function Reports() {
     loadReports,
   } = useData();
 
-  const data = reportsCache?.[String(period)] ?? reportsCache?.[period] ?? null;
+  const selectedDays = inclusiveDays(fromDate, toDate) || period;
+  const reportParams = useMemo(() => ({
+    days: selectedDays,
+    ...(fromDate ? { date_from: fromDate } : {}),
+    ...(toDate ? { date_to: toDate } : {}),
+  }), [selectedDays, fromDate, toDate]);
+  const reportCacheKey = JSON.stringify(reportParams);
+  const data = reportsCache?.[reportCacheKey]
+    ?? (!fromDate && !toDate ? reportsCache?.[String(period)] ?? reportsCache?.[period] : null)
+    ?? null;
   const loading = reportsLoading && !data;
   const error = localError || reportsError || '';
+  const invalidRange = Boolean(fromDate && toDate && !inclusiveDays(fromDate, toDate));
 
   useEffect(() => {
-    if (!data) {
-      void Promise.resolve().then(() => loadReports(period)).catch((err) => {
+    if (!data && !invalidRange) {
+      void Promise.resolve().then(() => loadReports(reportParams)).catch((err) => {
         console.error('Reports analytics error:', err);
       });
     }
-  }, [data, period, loadReports]);
+  }, [data, invalidRange, reportParams, loadReports]);
 
   const downloadPdf = async () => {
     setDownloading(true);
     setLocalError('');
     try {
-      const response = await api.downloadSustainabilityReport({ days: period });
+      const response = await api.downloadSustainabilityReport(reportParams);
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const from = data?.range?.from || 'report';
-      const to = data?.range?.to || 'current';
+      const from = fromDate || data?.range?.from || 'report';
+      const to = toDate || data?.range?.to || 'current';
       link.download = `plink-sustainability-report-${from}-to-${to}.pdf`;
       document.body.appendChild(link);
       link.click();
@@ -366,24 +413,10 @@ export default function Reports() {
           gap: '14px',
         }}
       >
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <select
-            value={period}
-            onChange={(e) => setPeriod(Number(e.target.value))}
-            style={{
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: '12px',
-              padding: '10px 12px',
-              color: COLORS.dark,
-              background: COLORS.white,
-              fontWeight: 600,
-            }}
-          >
-            {PERIODS.map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
-            ))}
-          </select>
-          <button onClick={downloadPdf} disabled={downloading} style={buttonStyle(COLORS.dark)}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+          <DateFilter label="From" value={fromDate} onChange={setFromDate} max={toDate || undefined} />
+          <DateFilter label="To" value={toDate} onChange={setToDate} min={fromDate || undefined} />
+          <button onClick={downloadPdf} disabled={downloading || invalidRange} style={buttonStyle(COLORS.dark)}>
             {downloading ? 'Preparing PDF…' : 'Download PDF Report'}
           </button>
         </div>
@@ -392,6 +425,12 @@ export default function Reports() {
       {error && (
         <div style={{ background: '#fff0f0', color: COLORS.danger, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
           {error}
+        </div>
+      )}
+
+      {invalidRange && (
+        <div style={{ background: '#fff0f0', color: COLORS.danger, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
+          The To date must be the same as or later than the From date.
         </div>
       )}
 
