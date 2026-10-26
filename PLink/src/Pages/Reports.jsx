@@ -16,14 +16,6 @@ const COLORS = {
   danger: '#b35f5f',
 };
 
-const inclusiveDays = (from, to) => {
-  if (!from || !to) return null;
-  const start = Date.parse(`${from}T00:00:00Z`);
-  const end = Date.parse(`${to}T00:00:00Z`);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
-  return Math.floor((end - start) / 86400000) + 1;
-};
-
 const fmt = (value, digits = 0) =>
   Number(value || 0).toLocaleString(undefined, {
     maximumFractionDigits: digits,
@@ -321,7 +313,6 @@ function DateFilter({ label, value, onChange, min, max }) {
 }
 
 export default function Reports() {
-  const period = 30;
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [downloading, setDownloading] = useState(false);
@@ -334,19 +325,15 @@ export default function Reports() {
     loadReports,
   } = useData();
 
-  const selectedDays = inclusiveDays(fromDate, toDate) || period;
   const reportParams = useMemo(() => ({
-    days: selectedDays,
     ...(fromDate ? { date_from: fromDate } : {}),
     ...(toDate ? { date_to: toDate } : {}),
-  }), [selectedDays, fromDate, toDate]);
+  }), [fromDate, toDate]);
   const reportCacheKey = JSON.stringify(reportParams);
-  const data = reportsCache?.[reportCacheKey]
-    ?? (!fromDate && !toDate ? reportsCache?.[String(period)] ?? reportsCache?.[period] : null)
-    ?? null;
+  const data = reportsCache?.[reportCacheKey] ?? null;
   const loading = reportsLoading && !data;
   const error = localError || reportsError || '';
-  const invalidRange = Boolean(fromDate && toDate && !inclusiveDays(fromDate, toDate));
+  const invalidRange = Boolean(fromDate && toDate && toDate < fromDate);
 
   useEffect(() => {
     if (!data && !invalidRange) {
