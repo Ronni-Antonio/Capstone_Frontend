@@ -316,44 +316,73 @@ export default function Reports() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [downloading, setDownloading] = useState(false);
-  const [localError, setLocalError] = useState('');
+  const [downloadError, setDownloadError] = useState(null);
+  const [reportRequest, setReportRequest] = useState(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('historical');
   const {
     reportsCache,
-    reportsLoading,
-    reportsError,
     loadReports,
   } = useData();
 
   const reportParams = useMemo(() => ({
-    ...(fromDate ? { date_from: fromDate } : {}),
-    ...(toDate ? { date_to: toDate } : {}),
+    ...(fromDate ? { from: fromDate } : {}),
+    ...(toDate ? { to: toDate } : {}),
   }), [fromDate, toDate]);
   const reportCacheKey = JSON.stringify(reportParams);
-  const data = reportsCache?.[reportCacheKey] ?? null;
-  const loading = reportsLoading && !data;
-  const error = localError || reportsError || '';
+  const incompleteRange = Boolean(fromDate) !== Boolean(toDate);
   const invalidRange = Boolean(fromDate && toDate && toDate < fromDate);
+  const data = invalidRange || incompleteRange ? null : reportsCache?.[reportCacheKey] ?? null;
+  const reportError = !data && reportRequest?.key === reportCacheKey ? reportRequest.error : '';
+  const error = reportError || (downloadError?.key === reportCacheKey ? downloadError.message : '');
+  const loading = !invalidRange && !incompleteRange && !data && !reportError;
 
   useEffect(() => {
-    if (!data && !invalidRange) {
-      void Promise.resolve().then(() => loadReports(reportParams)).catch((err) => {
-        console.error('Reports analytics error:', err);
-      });
-    }
-  }, [data, invalidRange, reportParams, loadReports]);
+    // The backend requires From and To together; empty inputs use its default period.
+    if (data || invalidRange || incompleteRange) return;
+
+    // Keep failures scoped to the selected range when requests finish out of order.
+    let cancelled = false;
+    const timeout = window.setTimeout(async () => {
+      setReportRequest({ key: reportCacheKey, error: '' });
+      try {
+        await loadReports(reportParams);
+      } catch (err) {
+        if (!cancelled) {
+          setReportRequest({
+            key: reportCacheKey,
+            error: err.response?.data?.message || err.message || 'Unable to load this reporting period.',
+          });
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [data, invalidRange, incompleteRange, reportParams, reportCacheKey, loadReports, retryAttempt]);
 
   const downloadPdf = async () => {
+    if (downloading || invalidRange || incompleteRange || loading || !data || reportError) return;
+
+    // Resolve any omitted boundary from the displayed report so the PDF uses
+    // the same effective period, including the backend's default date range.
+    const pdfParams = {
+      ...reportParams,
+      ...(!fromDate && data.range?.from ? { from: data.range.from } : {}),
+      ...(!toDate && data.range?.to ? { to: data.range.to } : {}),
+    };
     setDownloading(true);
-    setLocalError('');
+    setDownloadError(null);
     try {
-      const response = await api.downloadSustainabilityReport(reportParams);
+      const response = await api.downloadSustainabilityReport(pdfParams);
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const from = fromDate || data?.range?.from || 'report';
-      const to = toDate || data?.range?.to || 'current';
+      const from = pdfParams.from || 'report';
+      const to = pdfParams.to || 'current';
       link.download = `plink-sustainability-report-${from}-to-${to}.pdf`;
       document.body.appendChild(link);
       link.click();
@@ -361,7 +390,20 @@ export default function Reports() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('PDF download error:', err);
-      setLocalError(err.response?.data?.message || err.message || 'Unable to download the PDF report.');
+      // Axios returns PDF endpoint errors as blobs too.
+      let message = err.message || 'Unable to download the PDF report.';
+      const responseData = err.response?.data;
+      if (responseData instanceof Blob) {
+        try {
+          const body = JSON.parse(await responseData.text());
+          message = body.message || message;
+        } catch {
+          // Keep the fallback message for non-JSON error responses.
+        }
+      } else {
+        message = responseData?.message || message;
+      }
+      setDownloadError({ key: reportCacheKey, message });
     } finally {
       setDownloading(false);
     }
@@ -377,10 +419,6 @@ export default function Reports() {
       ['Transactions', fmt(s.transactions), 'completed deposits'],
     ];
   }, [data]);
-
-  if (loading && !data) {
-    return <div style={{ padding: '40px', color: COLORS.muted }}>Loading Reports & Analytics…</div>;
-  }
 
   const predictive = data?.predictive || {};
   const wasteTypes = data?.waste_types || [];
@@ -403,15 +441,40 @@ export default function Reports() {
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
           <DateFilter label="From" value={fromDate} onChange={setFromDate} max={toDate || undefined} />
           <DateFilter label="To" value={toDate} onChange={setToDate} min={fromDate || undefined} />
-          <button onClick={downloadPdf} disabled={downloading || invalidRange} style={buttonStyle(COLORS.dark)}>
+          <button onClick={downloadPdf} disabled={downloading || invalidRange || incompleteRange || loading || !data || Boolean(reportError)} style={buttonStyle(COLORS.dark)}>
             {downloading ? 'Preparing PDF…' : 'Download PDF Report'}
           </button>
+          {(fromDate || toDate) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+                setDownloadError(null);
+              }}
+              style={buttonStyle(COLORS.sage2)}
+            >
+              Reset dates
+            </button>
+          )}
         </div>
       </div>
 
       {error && (
         <div style={{ background: '#fff0f0', color: COLORS.danger, borderRadius: '14px', padding: '12px 16px', fontSize: '12px' }}>
           {error}
+          {reportError && (
+            <button
+              type="button"
+              onClick={() => {
+                setReportRequest(null);
+                setRetryAttempt((attempt) => attempt + 1);
+              }}
+              style={{ ...buttonStyle(COLORS.dark), marginLeft: '12px' }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
@@ -421,6 +484,19 @@ export default function Reports() {
         </div>
       )}
 
+      {!invalidRange && (
+        <div role="status" aria-live="polite" style={{ color: COLORS.muted, fontSize: '12px' }}>
+          {incompleteRange
+            ? 'Select both From and To dates to apply the filter.'
+            : loading
+              ? 'Loading reports for the selected period…'
+              : data
+                ? `Reporting period: ${fromDate || data.range?.from || 'Beginning'} to ${toDate || data.range?.to || 'Present'} (inclusive)`
+                : 'No report loaded for the selected period.'}
+        </div>
+      )}
+
+      {data && !reportError && <>
       <div className="mobile-scroll-x" style={{ display: 'inline-flex', maxWidth: '100%', width: 'fit-content', gap: '6px', padding: '6px', borderRadius: '14px', background: '#f4fcfc', border: `1px solid ${COLORS.border}` }}>
         {[['historical', 'Historical Analytics'], ['predictive', 'Predictive Analytics']].map(([key, label]) => (
           <button
@@ -578,6 +654,7 @@ export default function Reports() {
 
         </>
       )}
+      </>}
     </div>
   );
 }
